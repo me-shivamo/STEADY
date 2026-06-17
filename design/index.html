@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>STEADY — Calorie Tracking App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F4F3F8;
+    --card: #FAFAFA;
+    --surface: #EDEAF2;
+    --accent: #C4503A;
+    --accent-soft: #F2E8E5;
+    --accent-pressed: #A8402E;
+    --text: #22202A;
+    --text2: #6B6875;
+    --muted: #A09DAA;
+    --success: #3A9468;
+    --warning: #B88A28;
+    --error: #B03A38;
+    --protein: #3F68B8;
+    --protein-soft: #E8EFF8;
+    --carbs: #B88A28;
+    --carbs-soft: #F5EDDB;
+    --fat: #7248A8;
+    --fat-soft: #EDE5F5;
+    --border: #E0DDEA;
+    --card-shadow: 0 2px 8px rgba(40,30,70,0.06);
+    --card-shadow-lg: 0 5px 18px rgba(40,30,70,0.09);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: #E6E3EF;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  #stage {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(125% 120% at 50% 0%, #EDE9F5 0%, #E8E5F0 52%, #E4E2EC 100%);
+  }
+  #scaler { transform-origin: center center; }
+  .tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1, 'cv01' 1; }
+  /* hide scrollbars inside the phone */
+  .noscroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .noscroll { scrollbar-width: none; -ms-overflow-style: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input { font-family: inherit; }
+  @keyframes steadyFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes steadyPop { 0% { opacity: 0; transform: scale(.96); } 100% { opacity: 1; transform: scale(1); } }
+  @keyframes steadyRingDraw { from { stroke-dashoffset: var(--ring-circ); } to { stroke-dashoffset: var(--ring-off); } }
+</style>
+</head>
+<body>
+  <div id="stage"><div id="scaler"><div id="root"></div></div></div>
+
+  <!-- Screen navigator rail (for review) -->
+  <div id="rail" style="position:fixed; top:50%; left:18px; transform:translateY(-50%); z-index:100;
+    display:flex; flex-direction:column; gap:2px; padding:10px 8px; background:rgba(255,255,255,0.72);
+    backdrop-filter:blur(12px); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.12);
+    border:1px solid rgba(0,0,0,0.08); font-family:'Inter',system-ui; max-height:92vh; overflow:auto;"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="steady-components.jsx"></script>
+  <script type="text/babel" src="steady-screens-a.jsx"></script>
+  <script type="text/babel" src="steady-screens-b.jsx"></script>
+  <script type="text/babel" src="steady-screens-c.jsx"></script>
+  <script type="text/babel" src="steady-screens-d.jsx"></script>
+  <script type="text/babel" src="steady-app.jsx"></script>
+
+  <script>
+    // Fit the 402x874 phone into the viewport.
+    function fitStage() {
+      const W = 402, H = 874, pad = 36;
+      const s = Math.min((window.innerWidth - pad) / W, (window.innerHeight - pad) / H, 1.18);
+      const el = document.getElementById('scaler');
+      if (el) el.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fitStage);
+    fitStage();
+    // keep refitting briefly while fonts/layout settle
+    let n = 0; const iv = setInterval(() => { fitStage(); if (++n > 20) clearInterval(iv); }, 150);
+
+    // ── Screen navigator rail ──
+    const RAIL = [
+      ['welcome','Welcome'], ['signup','Sign Up'], ['onb1','Onboarding'], ['onb6','Plan Reveal'],
+      ['home','Home'], ['camera','Camera'],
+      ['progress','Progress'], ['profile','Profile'],
+    ];
+    const rail = document.getElementById('rail');
+    const railBtns = {};
+    const title = document.createElement('div');
+    title.textContent = 'SCREENS';
+    title.style.cssText = 'font-size:9.5px; font-weight:700; letter-spacing:1.2px; color:#A1A1A6; padding:2px 10px 6px; text-transform:uppercase;';
+    rail.appendChild(title);
+    RAIL.forEach(([id, label]) => {
+      const b = document.createElement('button');
+      b.textContent = label;
+      b.style.cssText = 'text-align:left; border:none; background:transparent; cursor:pointer; font-family:inherit;' +
+        'font-size:13px; font-weight:500; color:#6E6E73; padding:7px 12px; border-radius:9px; transition:all .15s; white-space:nowrap;';
+      b.onmouseenter = () => { if (!b.dataset.on) b.style.background = 'rgba(0,0,0,0.05)'; };
+      b.onmouseleave = () => { if (!b.dataset.on) b.style.background = 'transparent'; };
+      b.onclick = () => { if (window.__steadyNav) window.__steadyNav(id); };
+      railBtns[id] = b;
+      rail.appendChild(b);
+    });
+    window.__railSetActive = (id) => {
+      Object.entries(railBtns).forEach(([k, b]) => {
+        const on = k === id;
+        b.dataset.on = on ? '1' : '';
+        b.style.background = on ? '#C4503A' : 'transparent';
+        b.style.color = on ? '#fff' : '#6E6E73';
+        b.style.fontWeight = on ? '700' : '500';
+      });
+    };
+    // hide rail on very small viewports
+    function railVis() { rail.style.display = window.innerWidth < 720 ? 'none' : 'flex'; }
+    window.addEventListener('resize', railVis); railVis();
+  </script>
+</body>
+</html>
