@@ -2,6 +2,7 @@
   "expo": {
     "name": "STEADY",
     "slug": "steady",
+    "scheme": "steady",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,7 +26,15 @@
       "expo-web-browser",
       "expo-secure-store",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "STEADY uses your photo library to log meals from existing photos.",
+          "cameraPermission": "STEADY uses your camera to photograph meals for AI nutrition logging."
+        }
+      ]
     ]
   }
 }
