@@ -91,7 +91,7 @@ function MonthPills({ displayYear, displayMonth, todayYear, todayMonth, onSelect
 
 // ── MonthGrid ─────────────────────────────────────────────────────────────────
 
-function MonthGrid({ selectedDate, onSelectDate }: {
+export function MonthGrid({ selectedDate, onSelectDate }: {
   selectedDate: string
   onSelectDate: (date: string) => void
 }) {
