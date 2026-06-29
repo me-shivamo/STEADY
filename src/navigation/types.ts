@@ -25,6 +25,20 @@ export type AppStackParamList = {
   Tabs: undefined;
   Weight: undefined;
   Settings: undefined;
+  AdjustMacros: {
+    mealId: string;
+    mealName: string;
+    entries: Array<{
+      id: string;
+      food_name: string;
+      quantity_label: string | null;
+      quantity_g: number;
+      calories: number;
+      protein_g: number;
+      carbs_g: number;
+      fat_g: number;
+    }>;
+  };
 };
 
 // ─── App Bottom Tabs ─────────────────────────────────────────────────────────
