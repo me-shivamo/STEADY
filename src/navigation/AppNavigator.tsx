@@ -9,6 +9,7 @@ import JournalScreen from '../screens/app/JournalScreen';
 import MeScreen from '../screens/app/MeScreen';
 import WeightScreen from '../screens/app/WeightScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
+import AdjustMacrosScreen from '../screens/app/AdjustMacrosScreen';
 
 // ── Tab navigator (unchanged — Home, Journal, Me) ─────────────────────────────
 const Tab = createBottomTabNavigator<AppTabParamList>();
@@ -73,8 +74,9 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs"     component={AppTabs} />
-      <Stack.Screen name="Weight"   component={WeightScreen} />
-      <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Weight"       component={WeightScreen} />
+      <Stack.Screen name="Settings"     component={SettingsScreen} />
+      <Stack.Screen name="AdjustMacros" component={AdjustMacrosScreen} />
     </Stack.Navigator>
   );
 }
