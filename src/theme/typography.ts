@@ -1,11 +1,11 @@
 export const fontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 20,
-  xxl: 24,
-  display: 32,
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 15,
+  xl: 17,
+  xxl: 21,
+  display: 26,
 } as const;
 
 export const fontWeight = {
@@ -20,3 +20,6 @@ export const lineHeight = {
   normal: 1.5,
   relaxed: 1.75,
 } as const;
+
+// Unified object for convenience — screens can do `typography.lg` instead of `fontSize.lg`
+export const typography = fontSize;
