@@ -12,6 +12,7 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -19,6 +20,7 @@ import { AuthStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 import { fontWeight } from '../../theme/typography';
+import { PRIVACY_URL, TERMS_URL } from '../../constants/legal';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -193,9 +195,9 @@ export default function SignupScreen({ navigation }: Props) {
         <View style={styles.footer}>
           <Text style={styles.legal}>
             By creating an account you agree to our{' '}
-            <Text style={styles.legalLink}>Terms</Text>
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(TERMS_URL)}>Terms</Text>
             {' & '}
-            <Text style={styles.legalLink}>Privacy Policy</Text>.
+            <Text style={styles.legalLink} onPress={() => Linking.openURL(PRIVACY_URL)}>Privacy Policy</Text>.
           </Text>
         </View>
       </KeyboardAvoidingView>

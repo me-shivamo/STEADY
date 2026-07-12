@@ -36,12 +36,34 @@ function GoogleLogo() {
 }
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn, signInWithGoogle } = useAuthStore();
+  const { signIn, signInWithGoogle, requestPasswordReset } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+
+  const handleForgotPassword = async () => {
+    const target = email.trim();
+    if (!target) {
+      Alert.alert('Enter your email', 'Type your email address above first, then tap "Forgot password?" again.');
+      return;
+    }
+    if (resetLoading) return;
+    setResetLoading(true);
+    try {
+      await requestPasswordReset(target);
+      Alert.alert(
+        'Check your email',
+        `If an account exists for ${target}, we've sent it a password-reset link. Open the link on this phone to set a new password.`,
+      );
+    } catch (err: any) {
+      Alert.alert('Could not send reset email', err.message ?? 'Please try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -124,8 +146,8 @@ export default function LoginScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.forgotButton}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
+            <TouchableOpacity style={styles.forgotButton} onPress={handleForgotPassword} disabled={resetLoading}>
+              <Text style={styles.forgotText}>{resetLoading ? 'Sending…' : 'Forgot password?'}</Text>
             </TouchableOpacity>
           </View>
 
