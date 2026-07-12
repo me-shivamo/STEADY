@@ -17,11 +17,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import MealCard from '../../components/nutrition/MealCard';
+import WaterHomeCard from '../../components/nutrition/WaterHomeCard';
+import { useWaterStore } from '../../store/waterStore';
 import { useFoodLogStore, MealCard as MealCardType, todayDate } from '../../store/foodLogStore';
 import { useAuthStore } from '../../store/authStore';
 import { homeColors as C } from '../../theme/homeColors';
 import ProfileDrawer from '../../components/profile/ProfileDrawer';
 import DatePickerSheet from '../../components/common/DatePickerSheet';
+import { supabase } from '../../api/supabase';
+import { useStreak } from '../../hooks/useStreak';
 
 // ── Chat message types ─────────────────────────────────────────────────────────
 type ChatMsg =
@@ -87,11 +91,12 @@ function EmptyHistoryBubble({ date }: { date: string }) {
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const [mode, setMode]             = useState<'logs' | 'all'>('all');
-  const [messages, setMessages]     = useState<ChatMsg[]>([]);
-  const [input, setInput]           = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const [mode, setMode]               = useState<'logs' | 'all'>('all');
+  const [messages, setMessages]       = useState<ChatMsg[]>([]);
+  const [isLoadingChat, setIsLoadingChat] = useState(true);
+  const [input, setInput]             = useState('');
+  const [drawerOpen, setDrawerOpen]   = useState(false);
+  const [pickerOpen, setPickerOpen]   = useState(false);
   // pendingPhoto holds the local URI (for the thumbnail preview) and base64
   // string (for the Edge Function). null means no photo is queued.
   const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; base64: string } | null>(null);
@@ -140,32 +145,101 @@ export default function HomeScreen() {
   // Initial load
   useEffect(() => { fetchEntriesForDate(); }, []);
 
-  // When the selected date changes: clear the chat thread so it reseeds for the new day.
-  // Also force 'logs' mode — there's no live coach thread for historical days.
+  // When the selected date changes: clear messages and trigger a fresh merge load.
   useEffect(() => {
     initialSeedDone.current = false;
     setMessages([]);
-    if (!isViewingToday) setMode('logs');
+    setIsLoadingChat(true);
   }, [selectedDate]);
 
-  // Seed previously-logged meals into the chat thread once per date.
-  // After the initial seed, keep meal_card messages in sync with the store
-  // so edits reflect immediately without a full re-fetch.
+  // When meals for the current date arrive from the store (or change), merge them
+  // with chat_messages from Supabase into a single time-ordered thread.
+  //
+  // Why wait for `meals` here instead of loading chat independently?
+  // Because MealCards need full food_entries data that only the store has. We can't
+  // reconstruct a MealCard from chat_messages alone — it only stores a text confirmation.
+  // So the pattern is: meals arrive first (from the store), then we fetch chat rows,
+  // merge both by created_at, and set messages once — no double-render flash.
+  //
+  // After the initial merge, subsequent meals changes (edits, deletes) are synced
+  // in-place so the feed updates immediately without re-fetching chat history.
   useEffect(() => {
-    if (!initialSeedDone.current && meals.length > 0) {
-      setMessages(meals.map(meal => ({ id: meal.id, type: 'meal_card' as const, meal })));
-      initialSeedDone.current = true;
+    if (isFetchingDate) return; // wait for meal fetch to complete first
+
+    if (!initialSeedDone.current) {
+      // Initial load for this date: fetch chat history and merge with meals
+      loadAndMergeHistory(meals, selectedDate);
       return;
     }
-    if (initialSeedDone.current) {
-      const mealsById = new Map(meals.map(m => [m.id, m]));
-      setMessages(prev => prev.map(msg =>
-        msg.type === 'meal_card' && mealsById.has(msg.id)
-          ? { ...msg, meal: mealsById.get(msg.id)! }
-          : msg
-      ));
+
+    // After initial seed: sync meal card updates in-place (edits, deletes)
+    // without touching the chat bubble messages.
+    const mealsById = new Map(meals.map(m => [m.id, m]));
+    setMessages(prev => {
+      // Remove cards for deleted meals, update cards for edited meals
+      const updated = prev
+        .filter(msg => msg.type !== 'meal_card' || mealsById.has(msg.id))
+        .map(msg =>
+          msg.type === 'meal_card' && mealsById.has(msg.id)
+            ? { ...msg, meal: mealsById.get(msg.id)! }
+            : msg
+        );
+      return updated;
+    });
+  }, [meals, isFetchingDate, selectedDate]);
+
+  // Fetches today's (or any date's) chat_messages from Supabase, merges with
+  // the already-loaded MealCards, sorts everything by created_at, and sets messages.
+  async function loadAndMergeHistory(currentMeals: MealCardType[], date: string) {
+    setIsLoadingChat(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch only user bubbles and AI text replies — skip food_log_confirmation
+      // rows because those are already represented by the MealCard from the store.
+      const { data: chatRows } = await supabase
+        .from('chat_messages')
+        .select('id, role, content, message_type, created_at')
+        .eq('user_id', user.id)
+        .eq('chat_date', date)
+        .in('role', ['user', 'assistant'])
+        .neq('message_type', 'food_log_confirmation')
+        .order('created_at', { ascending: true });
+
+      // Build timestamped entries for both sources so we can sort them together.
+      type Stamped = { ts: string; msg: ChatMsg };
+
+      const mealEntries: Stamped[] = currentMeals.map(meal => ({
+        ts: meal.created_at,
+        msg: { id: meal.id, type: 'meal_card' as const, meal },
+      }));
+
+      const chatEntries: Stamped[] = (chatRows ?? []).map(row => ({
+        // created_at is nullable in the row type; a null would crash the
+        // .localeCompare sort below and silently drop the day's chat history.
+        ts: row.created_at ?? '',
+        msg: row.role === 'user'
+          ? { id: row.id, type: 'user' as const, text: row.content }
+          : { id: row.id, type: 'answer' as const, text: row.content },
+      }));
+
+      // Merge and sort by timestamp — this gives the correct interleaved order:
+      // user bubble → AI reply → MealCard → user bubble → etc.
+      const merged = [...mealEntries, ...chatEntries]
+        .sort((a, b) => a.ts.localeCompare(b.ts))
+        .map(e => e.msg);
+
+      setMessages(merged);
+      initialSeedDone.current = true;
+    } catch {
+      // Non-fatal: fall back to showing meals only
+      setMessages(currentMeals.map(meal => ({ id: meal.id, type: 'meal_card' as const, meal })));
+      initialSeedDone.current = true;
+    } finally {
+      setIsLoadingChat(false);
     }
-  }, [meals]);
+  }
 
   const push    = (msg: ChatMsg) => setMessages(prev => [...prev, msg]);
   const replace = (id: string, msg: ChatMsg) =>
@@ -249,6 +323,13 @@ export default function HomeScreen() {
       const result = await logMealFromText(text);
       if (result.type === 'answer') {
         replace(thinkingId, { id: thinkingId, type: 'answer', text: result.reply });
+        // The water insert (if any) happened server-side inside the edge
+        // function — nothing on the client knows about it yet. Refresh the
+        // water store only when the AI actually called log_water, so a plain
+        // "how am I doing?" chat turn doesn't cost an extra fetch.
+        if (result.waterLogged) {
+          useWaterStore.getState().fetchToday();
+        }
       } else {
         if (isViewingToday) {
           replace(thinkingId, { id: thinkingId, type: 'meal_card', meal: result.meal });
@@ -274,7 +355,9 @@ export default function HomeScreen() {
   const proteinGoal = profile?.protein_goal_g  ?? 150;
   const carbGoal    = profile?.carb_goal_g     ?? 200;
   const fatGoal     = profile?.fat_goal_g      ?? 60;
-  const streak      = 7;
+  // Real streak from daily_summaries; meals.length retriggers it so the chip
+  // ticks over right after the first log of the day.
+  const streak      = useStreak(meals.length) ?? 0;
   const remaining   = calorieGoal - totals.calories;
 
   // Date label — derives from selectedDate, not hardcoded to today
@@ -345,7 +428,7 @@ export default function HomeScreen() {
           />
 
           {/* ── Calorie summary card ──────────────────────────────────────── */}
-          <View style={styles.summaryCard}>
+          <View style={[styles.summaryCard, pickerOpen && styles.summaryCardBelowPicker]}>
             {/* headline row: calories eaten / goal  +  remaining pill */}
             <View style={styles.summaryHeadRow}>
               <Text style={styles.calorieHeadline}>
@@ -372,33 +455,47 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* ── Feed mode toggle — hidden on past days (no live coach) ──── */}
-          {isViewingToday && (
-            <View style={styles.toggleWrap}>
-              <View style={styles.togglePill}>
-                {([['logs', 'Food log'], ['all', 'Log + Coach']] as const).map(([id, label]) => {
-                  const on = mode === id;
-                  return (
-                    <TouchableOpacity
-                      key={id}
-                      style={[styles.toggleTab, on && styles.toggleTabActive]}
-                      onPress={() => setMode(id)}
-                      activeOpacity={0.85}
-                    >
-                      {id === 'all' && (
-                        <Ionicons name="sparkles" size={13} color={on ? C.accent : C.muted} />
-                      )}
-                      <Text style={[styles.toggleText, on && styles.toggleTextActive]}>{label}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
+          {/* ── Water card — opt-in via Settings, today only ─────────── */}
+          {profile?.water_tracking_enabled && isViewingToday && (
+            <WaterHomeCard
+              goalMl={profile.water_goal_ml ?? 2500}
+              units={(profile.units_system as 'metric' | 'imperial') ?? 'metric'}
+            />
           )}
+
+          {/* ── Feed mode toggle — shown on all days ──────────────────── */}
+          <View style={styles.toggleWrap}>
+            <View style={styles.togglePill}>
+              {([['logs', 'Food log'], ['all', 'Log + Coach']] as const).map(([id, label]) => {
+                const on = mode === id;
+                return (
+                  <TouchableOpacity
+                    key={id}
+                    style={[styles.toggleTab, on && styles.toggleTabActive]}
+                    onPress={() => setMode(id)}
+                    activeOpacity={0.85}
+                  >
+                    {id === 'all' && (
+                      <Ionicons name="sparkles" size={13} color={on ? C.accent : C.muted} />
+                    )}
+                    <Text style={[styles.toggleText, on && styles.toggleTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           {/* ── Feed ─────────────────────────────────────────────────────── */}
           <View style={styles.feed}>
-            {shownMessages.length === 0 && !isFetchingDate && (
+            {/* Loading spinner while chat history is being fetched and merged */}
+            {isLoadingChat && mode === 'all' && (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={C.accent} />
+                <Text style={styles.loadingText}>Loading conversation…</Text>
+              </View>
+            )}
+
+            {shownMessages.length === 0 && !isFetchingDate && !isLoadingChat && (
               isViewingToday
                 ? <WelcomeBubble />
                 : <EmptyHistoryBubble date={dateLabel} />
@@ -430,7 +527,7 @@ export default function HomeScreen() {
                   <View
                     key={msg.id}
                     style={styles.mealCardGroup}
-                    ref={el => cardRefs.current.set(msg.id, el)}
+                    ref={el => { cardRefs.current.set(msg.id, el); }}
                   >
                     {msg.meal.entries.length > 0 && (
                       <View style={styles.loggedRow}>
@@ -569,7 +666,7 @@ const styles = StyleSheet.create({
   // Top bar
   topBar: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingBottom: 12, gap: 6,
+    paddingHorizontal: 16, paddingTop: 6, paddingBottom: 12, gap: 6,
   },
   menuBtn: {
     width: 42, height: 42, borderRadius: 12, marginLeft: -4,
@@ -594,10 +691,16 @@ const styles = StyleSheet.create({
   // Summary card
   summaryCard: {
     backgroundColor: C.card, borderRadius: 20, padding: 18,
-    marginTop: -6,
+    marginTop: -20,
     shadowColor: 'rgba(60,40,90,1)', shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.12, shadowRadius: 14, elevation: 6,
     gap: 16,
+  },
+  // When the calendar sheet is open it sits between the nav bar and this card —
+  // the -20 pull is meant for the nav bar gap, not the calendar, so drop it here
+  // and let the calendar's own marginBottom (6) provide the spacing instead.
+  summaryCardBelowPicker: {
+    marginTop: 0,
   },
   summaryHeadRow: {
     flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
@@ -651,18 +754,25 @@ const styles = StyleSheet.create({
   toggleText: { fontSize: 13.5, fontWeight: '700', color: C.text2 },
   toggleTextActive: { color: C.accent },
 
+  // Loading history indicator
+  loadingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 20,
+  },
+  loadingText: { fontSize: 13, color: C.muted },
+
   // Feed
   feed: { gap: 12 },
 
   // User bubble
   userRow: { alignItems: 'flex-end' },
   userBubble: {
-    backgroundColor: C.accentSoft,
-    borderWidth: 1, borderColor: C.accentPressed,
+    backgroundColor: '#F0EFFF',
+    borderWidth: 1, borderColor: '#D4D3FF',
     borderRadius: 18, borderBottomRightRadius: 4,
-    paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
+    paddingHorizontal: 14, paddingVertical: 7, maxWidth: '82%',
   },
-  userBubbleText: { color: C.text, fontSize: 14.5, fontWeight: '500', lineHeight: 21 },
+  userBubbleText: { color: C.text, fontSize: 12.5, fontWeight: '400', lineHeight: 18 },
 
   // AI row
   aiBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },

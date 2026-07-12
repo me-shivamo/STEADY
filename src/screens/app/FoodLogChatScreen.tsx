@@ -86,7 +86,7 @@ export default function FoodLogChatScreen() {
       // We use the store's meals array to find the matching MealCard for food log rows.
       const currentMeals = useFoodLogStore.getState().meals;
 
-      const hydrated: ChatMsg[] = data.flatMap(row => {
+      const hydrated: ChatMsg[] = data.flatMap((row): ChatMsg[] => {
         if (row.role === 'user') {
           return [{ id: row.id, type: 'user' as const, text: row.content }];
         }

@@ -10,6 +10,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Pressable,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +21,7 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/authStore';
 import { Tables } from '../../types/database';
+import { PRIVACY_URL, TERMS_URL } from '../../constants/legal';
 
 type Profile = Tables<'profiles'>;
 
@@ -134,7 +138,14 @@ export default function SettingsScreen() {
   const navigation = useNavigation();
   const profile = useAuthStore((s) => s.profile);
   const updateProfile = useAuthStore((s) => s.updateProfile);
+  const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const [saving, setSaving] = useState(false);
+
+  // Delete-account confirmation modal. RN's Alert.prompt is iOS-only, so the
+  // type-DELETE confirmation lives in a cross-platform Modal instead.
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const [name, setName]                 = useState('');
   const [sex, setSex]                   = useState('');
@@ -214,6 +225,24 @@ export default function SettingsScreen() {
       Alert.alert('Could not save', 'Please check your connection and try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await deleteAccount();
+      // No navigation needed: the session becomes null, so RootNavigator
+      // unmounts the whole app stack and shows the welcome screen.
+    } catch {
+      setDeleting(false);
+      Alert.alert('Could not delete account', 'Please check your connection and try again.');
     }
   };
 
@@ -309,9 +338,84 @@ export default function SettingsScreen() {
             </SettingsRow>
           </SettingsCard>
 
+          {/* ── ABOUT ── */}
+          {/* Play's health-apps policy requires the privacy policy to be
+              reachable inside the app, not just on the store listing. */}
+          <SectionLabel label="About" />
+          <SettingsCard>
+            <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(PRIVACY_URL)} activeOpacity={0.7}>
+              <Text style={styles.linkRowText}>Privacy Policy</Text>
+              <Ionicons name="open-outline" size={16} color={C.muted} />
+            </TouchableOpacity>
+            <RowDivider />
+            <TouchableOpacity style={styles.linkRow} onPress={() => Linking.openURL(TERMS_URL)} activeOpacity={0.7}>
+              <Text style={styles.linkRowText}>Terms of Service</Text>
+              <Ionicons name="open-outline" size={16} color={C.muted} />
+            </TouchableOpacity>
+          </SettingsCard>
+
+          {/* ── ACCOUNT ── */}
+          <SectionLabel label="Account" />
+          <SettingsCard>
+            <TouchableOpacity style={styles.dangerRow} onPress={openDeleteModal} activeOpacity={0.7}>
+              <Ionicons name="trash-outline" size={18} color="#E53935" />
+              <Text style={styles.dangerRowText}>Delete account</Text>
+            </TouchableOpacity>
+          </SettingsCard>
+
           <View style={{ height: 16 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Delete-account confirmation modal ── */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setShowDeleteModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => !deleting && setShowDeleteModal(false)}>
+          <Pressable style={styles.modalPanel} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Delete your account?</Text>
+            <Text style={styles.modalBody}>
+              This permanently erases your profile, meal logs, photos, weight and water history —
+              everything. It cannot be undone.
+            </Text>
+            <Text style={styles.modalHint}>Type DELETE to confirm</Text>
+            <TextInput
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="DELETE"
+              placeholderTextColor={C.muted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={styles.modalInput}
+              editable={!deleting}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalDeleteBtn, (deleteConfirmText !== 'DELETE' || deleting) && styles.modalDeleteBtnDisabled]}
+                onPress={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                activeOpacity={0.7}
+              >
+                {deleting
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.modalDeleteText}>Delete forever</Text>
+                }
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -494,5 +598,108 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: C.accent,
     fontWeight: '600',
+  },
+
+  // About links
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 14,
+  },
+  linkRowText: {
+    fontSize: 15,
+    fontWeight: '400',
+    color: C.text,
+  },
+
+  // Danger zone
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 48,
+    paddingHorizontal: 14,
+    gap: 10,
+  },
+  dangerRowText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#E53935',
+  },
+
+  // Delete-account modal
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    paddingHorizontal: 28,
+  },
+  modalPanel: {
+    backgroundColor: C.card,
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: C.text,
+    marginBottom: 8,
+  },
+  modalBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: C.muted,
+    marginBottom: 16,
+  },
+  modalHint: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: C.muted,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: C.text,
+    backgroundColor: C.surface,
+    marginBottom: 16,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: C.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: C.text,
+  },
+  modalDeleteBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#E53935',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalDeleteBtnDisabled: { opacity: 0.45 },
+  modalDeleteText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 });
