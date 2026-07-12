@@ -1,5 +1,4 @@
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 
 // ─── Auth Stack ──────────────────────────────────────────────────────────────
 export type AuthStackParamList = {
@@ -18,12 +17,13 @@ export type OnboardingStackParamList = {
   OnboardingReveal: undefined;
 };
 
-// ─── App Stack (wraps the tab navigator + full-screen push screens) ──────────
-// "Tabs" is the tab navigator itself treated as one stack entry.
-// Weight, Settings (and future screens) push on top of it full-screen.
+// ─── App Stack (Home at the root + full-screen push screens) ─────────────────
+// Weight, Settings (and future screens) push on top of Home full-screen.
 export type AppStackParamList = {
-  Tabs: undefined;
+  Home: undefined;
   Weight: undefined;
+  Water: undefined;
+  BodyMeasurements: undefined;
   Settings: undefined;
   AdjustMacros: {
     mealId: string;
@@ -41,15 +41,7 @@ export type AppStackParamList = {
   };
 };
 
-// ─── App Bottom Tabs ─────────────────────────────────────────────────────────
-export type AppTabParamList = {
-  Home: undefined;
-  Journal: undefined;
-  Me: undefined;
-};
-
 // ─── Navigation prop type helpers ────────────────────────────────────────────
 export type AuthNavProp = NativeStackNavigationProp<AuthStackParamList>;
 export type OnboardingNavProp = NativeStackNavigationProp<OnboardingStackParamList>;
-export type AppTabNavProp = BottomTabNavigationProp<AppTabParamList>;
 export type AppStackNavProp = NativeStackNavigationProp<AppStackParamList>;
