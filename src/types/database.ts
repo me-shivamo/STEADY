@@ -66,6 +66,7 @@ export type Database = {
       }
       chat_messages: {
         Row: {
+          chat_date: string | null
           content: string
           created_at: string | null
           id: string
@@ -75,6 +76,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          chat_date?: string | null
           content: string
           created_at?: string | null
           id?: string
@@ -84,6 +86,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          chat_date?: string | null
           content?: string
           created_at?: string | null
           id?: string
@@ -167,6 +170,7 @@ export type Database = {
           food_item_id: string | null
           food_name: string
           id: string
+          macro_source: string | null
           meal_log_id: string
           protein_g: number
           quantity_g: number
@@ -186,6 +190,7 @@ export type Database = {
           food_item_id?: string | null
           food_name: string
           id?: string
+          macro_source?: string | null
           meal_log_id: string
           protein_g?: number
           quantity_g: number
@@ -205,6 +210,7 @@ export type Database = {
           food_item_id?: string | null
           food_name?: string
           id?: string
+          macro_source?: string | null
           meal_log_id?: string
           protein_g?: number
           quantity_g?: number
@@ -243,15 +249,23 @@ export type Database = {
           barcode: string | null
           brand: string | null
           calories: number | null
+          calories_per_100g: number | null
           carbs_g: number | null
+          carbs_per_100g: number | null
           created_at: string | null
           created_by: string | null
           external_id: string | null
           fat_g: number | null
+          fat_per_100g: number | null
+          fdc_id: number | null
           fiber_g: number | null
+          fiber_per_100g: number | null
           id: string
+          last_used_at: string | null
           name: string
+          normalized_name: string | null
           protein_g: number | null
+          protein_per_100g: number | null
           serving_size_description: string | null
           serving_size_g: number | null
           sodium_mg: number | null
@@ -262,15 +276,23 @@ export type Database = {
           barcode?: string | null
           brand?: string | null
           calories?: number | null
+          calories_per_100g?: number | null
           carbs_g?: number | null
+          carbs_per_100g?: number | null
           created_at?: string | null
           created_by?: string | null
           external_id?: string | null
           fat_g?: number | null
+          fat_per_100g?: number | null
+          fdc_id?: number | null
           fiber_g?: number | null
+          fiber_per_100g?: number | null
           id?: string
+          last_used_at?: string | null
           name: string
+          normalized_name?: string | null
           protein_g?: number | null
+          protein_per_100g?: number | null
           serving_size_description?: string | null
           serving_size_g?: number | null
           sodium_mg?: number | null
@@ -281,15 +303,23 @@ export type Database = {
           barcode?: string | null
           brand?: string | null
           calories?: number | null
+          calories_per_100g?: number | null
           carbs_g?: number | null
+          carbs_per_100g?: number | null
           created_at?: string | null
           created_by?: string | null
           external_id?: string | null
           fat_g?: number | null
+          fat_per_100g?: number | null
+          fdc_id?: number | null
           fiber_g?: number | null
+          fiber_per_100g?: number | null
           id?: string
+          last_used_at?: string | null
           name?: string
+          normalized_name?: string | null
           protein_g?: number | null
+          protein_per_100g?: number | null
           serving_size_description?: string | null
           serving_size_g?: number | null
           sodium_mg?: number | null
@@ -363,6 +393,7 @@ export type Database = {
           units_system: string | null
           updated_at: string | null
           water_goal_ml: number | null
+          water_tracking_enabled: boolean
         }
         Insert: {
           activity_level?: string | null
@@ -387,6 +418,7 @@ export type Database = {
           units_system?: string | null
           updated_at?: string | null
           water_goal_ml?: number | null
+          water_tracking_enabled?: boolean
         }
         Update: {
           activity_level?: string | null
@@ -411,6 +443,7 @@ export type Database = {
           units_system?: string | null
           updated_at?: string | null
           water_goal_ml?: number | null
+          water_tracking_enabled?: boolean
         }
         Relationships: []
       }

@@ -78,10 +78,10 @@ export default function OnboardingRevealScreen() {
         onboarding_complete: true,
       });
       posthog.capture('onboarding_completed', {
-        goal: profile?.goal,
+        goal: profile?.goal ?? null,
         calorie_goal: result.calorieGoal,
-        diet_type: profile?.dietary_restrictions,
-        activity_level: profile?.activity_level,
+        diet_type: profile?.dietary_restrictions ?? null,
+        activity_level: profile?.activity_level ?? null,
       });
     } finally {
       setLoading(false);
