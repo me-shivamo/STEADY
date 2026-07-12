@@ -11,6 +11,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.steadyapp.android",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -26,7 +28,14 @@
       "expo-web-browser",
       "expo-secure-store",
       "expo-font",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#E6F4FE"
+        }
+      ],
       "expo-apple-authentication",
       [
         "expo-image-picker",
@@ -35,6 +44,12 @@
           "cameraPermission": "STEADY uses your camera to photograph meals for AI nutrition logging."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "7f4eb847-e9f4-43b5-a83f-7a91b92dae08"
+      }
+    },
+    "owner": "me-shivamo"
   }
 }
