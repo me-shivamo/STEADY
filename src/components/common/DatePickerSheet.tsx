@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { homeColors as C } from '../../theme/homeColors'
+import { useFoodLogStore } from '../../store/foodLogStore'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -101,11 +102,21 @@ export function MonthGrid({ selectedDate, onSelectDate }: {
   const [displayYear, setDisplayYear]   = useState(selD.getFullYear())
   const [displayMonth, setDisplayMonth] = useState(selD.getMonth())
 
+  const loggedDates = useFoodLogStore(state => state.loggedDates)
+  const fetchLoggedDatesForMonth = useFoodLogStore(state => state.fetchLoggedDatesForMonth)
+
   useEffect(() => {
     const d = parseDate(selectedDate)
     setDisplayYear(d.getFullYear())
     setDisplayMonth(d.getMonth())
   }, [selectedDate])
+
+  // Re-fetch the logged-dates set whenever the visible month changes —
+  // covers initial mount, prev/next arrows, and month-pill taps alike,
+  // since all three funnel through setDisplayYear/setDisplayMonth.
+  useEffect(() => {
+    fetchLoggedDatesForMonth(displayYear, displayMonth)
+  }, [displayYear, displayMonth])
 
   const daysInMonth   = getDaysInMonth(displayYear, displayMonth)
   const firstDayOfWk  = getFirstDayOfWeek(displayYear, displayMonth)
@@ -161,6 +172,7 @@ export function MonthGrid({ selectedDate, onSelectDate }: {
           const future   = isFuture(dateStr)
           const selected = dateStr === selectedDate
           const todayCell = isToday(dateStr)
+          const logged   = loggedDates.has(dateStr)
 
           return (
             <TouchableOpacity
@@ -171,8 +183,9 @@ export function MonthGrid({ selectedDate, onSelectDate }: {
             >
               <View style={[
                 s.gridCellInner,
-                selected && s.selectedCircle,
+                logged && s.loggedCell,
                 !selected && todayCell && s.todayCircle,
+                selected && s.selectedCircle,
               ]}>
                 <Text style={[
                   s.gridDayNum,
@@ -201,11 +214,15 @@ export function MonthGrid({ selectedDate, onSelectDate }: {
 
 // ── DatePickerSheet ───────────────────────────────────────────────────────────
 
-// Large enough to never clip any month layout; actual height is content-driven.
-const MAX_HEIGHT_OPEN = 600
+// Fallback used only until the real content height is measured on first render.
+const FALLBACK_HEIGHT = 340
 
 export default function DatePickerSheet({ visible, selectedDate, onSelectDate }: DatePickerSheetProps) {
   const anim = useRef(new Animated.Value(visible ? 1 : 0)).current
+  // Real measured height of MonthGrid's content — animating to this instead of a
+  // flat guess (previously 600) means every open/close frame does less layout
+  // work, since we're never animating past the height we actually need.
+  const [contentHeight, setContentHeight] = useState(FALLBACK_HEIGHT)
 
   useEffect(() => {
     Animated.timing(anim, {
@@ -217,13 +234,28 @@ export default function DatePickerSheet({ visible, selectedDate, onSelectDate }:
 
   const animHeight = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, MAX_HEIGHT_OPEN],
+    outputRange: [0, contentHeight],
+  })
+  // Fade the content itself alongside the height change — opacity runs on the
+  // native driver, so this part of the transition stays smooth even if the
+  // height animation's JS-thread frames get delayed by other work.
+  const animOpacity = anim.interpolate({
+    inputRange: [0, 0.3, 1],
+    outputRange: [0, 0, 1],
   })
 
   return (
     <View style={s.shadowWrap}>
       <Animated.View style={[s.container, { maxHeight: animHeight }]}>
-        <MonthGrid selectedDate={selectedDate} onSelectDate={onSelectDate} />
+        <Animated.View
+          style={{ opacity: animOpacity }}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height
+            if (h > 0 && Math.abs(h - contentHeight) > 1) setContentHeight(h)
+          }}
+        >
+          <MonthGrid selectedDate={selectedDate} onSelectDate={onSelectDate} />
+        </Animated.View>
       </Animated.View>
     </View>
   )
@@ -305,9 +337,11 @@ const s = StyleSheet.create({
     paddingVertical: 0,
   },
   gridCellInner: {
-    width: 28,
+    width: 32,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -349,6 +383,7 @@ const s = StyleSheet.create({
   },
 
   // State styles
+  loggedCell: { backgroundColor: C.accentSoft, borderColor: C.accentPressed },
   selectedCircle: { backgroundColor: C.accent },
   todayCircle: { borderWidth: 1, borderColor: C.border },
   selectedText: { color: '#fff', fontWeight: '600' },

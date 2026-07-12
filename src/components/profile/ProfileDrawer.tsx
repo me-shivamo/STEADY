@@ -34,15 +34,17 @@ type MenuItem = {
   badge?: string;
   variant?: MenuRowVariant;
   action: 'comingSoon' | 'signOut' | 'navigate';
-  screen?: keyof AppStackParamList;
+  // Only param-less routes belong in the menu — navigate(name) with no params
+  // is only type-safe for routes whose params are undefined.
+  screen?: 'Weight' | 'Water' | 'BodyMeasurements' | 'Settings';
 };
 
 const MENU: MenuItem[] = [
   { icon: 'bar-chart-outline', label: 'Progress Charts', action: 'comingSoon' },
   { icon: 'scale-outline',     label: 'Weight',          action: 'navigate', screen: 'Weight' },
-  { icon: 'water-outline',     label: 'Water',           action: 'comingSoon' },
-  { icon: 'body-outline',      label: 'Body Measurements', action: 'comingSoon' },
-  { icon: 'restaurant-outline', label: 'My Foods', badge: 'Learned 12 foods', action: 'comingSoon' },
+  { icon: 'water-outline',     label: 'Water',           action: 'navigate', screen: 'Water' },
+  { icon: 'body-outline',      label: 'Body Measurements', action: 'navigate', screen: 'BodyMeasurements' },
+  { icon: 'restaurant-outline', label: 'My Foods', action: 'comingSoon' },
   { icon: 'notifications-outline', label: 'Reminders',   action: 'comingSoon' },
   { icon: 'people-outline',    label: 'Groups',          action: 'comingSoon' },
   { icon: 'gift-outline',      label: 'Refer a Friend',  action: 'comingSoon' },

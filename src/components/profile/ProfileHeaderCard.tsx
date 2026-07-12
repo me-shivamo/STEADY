@@ -4,14 +4,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/authStore';
+import { useStreak } from '../../hooks/useStreak';
 
 /**
  * Profile drawer header: avatar + name + "{goal} · {kcal}/day" subtitle + streak.
  *
  * Connected component — it reads `profile` straight from the auth store rather than
  * taking it via props, so it re-renders automatically whenever the profile changes
- * (e.g. after onboarding sets calorie_goal). Name/goal/calories are LIVE; the streak
- * numbers are placeholders until we wire the `streaks` table (see plan).
+ * (e.g. after onboarding sets calorie_goal). All numbers shown are live data.
  */
 
 // DB `goal` enum → human wording used in the Claude design ("Losing weight").
@@ -22,12 +22,9 @@ const GOAL_LABELS: Record<string, string> = {
   build_muscle: 'Building muscle',
 };
 
-// Placeholder streak values — replace with `streaks` table read in a later pass.
-const PLACEHOLDER_STREAK = 7;
-const PLACEHOLDER_BEST = 23;
-
 export default function ProfileHeaderCard() {
   const profile = useAuthStore((s) => s.profile);
+  const streak = useStreak() ?? 0;
 
   const name = profile?.full_name?.trim() || 'STEADY user';
   const initial = name.charAt(0).toUpperCase();
@@ -62,9 +59,8 @@ export default function ProfileHeaderCard() {
         <View style={styles.streakRow}>
           <View style={styles.streakPill}>
             <Ionicons name="flame-outline" size={13} color={C.accent} />
-            <Text style={styles.streakText}>{PLACEHOLDER_STREAK} day streak</Text>
+            <Text style={styles.streakText}>{streak} day streak</Text>
           </View>
-          <Text style={styles.best}>Best: {PLACEHOLDER_BEST} days</Text>
         </View>
       </View>
     </View>
@@ -132,9 +128,5 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '600',
     color: C.accent,
-  },
-  best: {
-    fontSize: 12,
-    color: C.muted,
   },
 });
