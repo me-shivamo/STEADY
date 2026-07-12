@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -24,18 +25,13 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no prose
       "name": "food item name",
       "quantity_description": "e.g. 2 slices, 1 large egg, 1 cup",
       "quantity_g": 120,
-      "calories": 154,
-      "protein_g": 11.5,
-      "carbs_g": 1.2,
-      "fat_g": 10.8,
-      "fiber_g": 0.0,
       "confidence": 0.85
     }
   ],
-  "totals": { "calories": 297, "protein_g": 15.5, "carbs_g": 28.0, "fat_g": 13.0, "fiber_g": 0.0 },
-  "coach_note": "one brief personalised insight about this meal (e.g. how it fits today's goals)"
+  "coach_note": "one brief personalised insight about this meal (qualitative — do NOT state calorie or macro numbers)"
 }
-Logging rules: break compound foods into components, use USDA-level values, quantity_g is your best gram estimate, calories/macros are for that quantity (not per 100g), totals = sum of all foods rounded to 1 decimal.
+Logging rules: break compound foods into components. Do NOT estimate calories or macros — the app computes them from a verified nutrition database after parsing. Focus on accurate food identification and gram quantities. quantity_g is your best gram estimate for the described portion.
+${GRAM_HINTS_PROMPT}
 
 ── COACHING (questions, advice, progress, anything non-food) ──
 Use your tools to look up real data before answering. NEVER give generic advice when you have access to the user's actual numbers.
@@ -220,13 +216,13 @@ Deno.serve(async (req) => {
     ]
 
     // ── 5. Agent loop: Call 1 → execute tools → Call 2 (if needed) ───────────
-    const aiResult = await runAgentLoop(supabase, user.id, messages)
+    const { result: aiResult, waterLogged } = await runAgentLoop(supabase, user.id, messages)
 
     // ── 6. Route on intent ─────────────────────────────────────────────────────
     if (aiResult.intent === 'answer') {
       const reply = (aiResult.reply ?? '').trim() || "I'm not sure how to answer that — try rephrasing?"
       await saveChatTurn(supabase, user.id, logged_date, text, reply, null)
-      return json({ success: true, type: 'answer', reply })
+      return json({ success: true, type: 'answer', reply, water_logged: waterLogged })
     }
 
     // ── 7. Food log path ───────────────────────────────────────────────────────
@@ -235,6 +231,14 @@ Deno.serve(async (req) => {
         error: "I couldn't find any food in that. Try describing what you ate, e.g. \"2 eggs and toast\".",
       }, 422)
     }
+
+    // Resolve macros from real data (cache → USDA → one-time AI estimate).
+    // The parse above only identified foods + grams; numbers are computed here.
+    const { foods, totals } = await resolveFoods(supabase, aiResult.foods as ParsedFood[], {
+      openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
+      fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
+      userId: user.id,
+    })
 
     // Get or create meal_log
     let mealLog: { id: string }
@@ -267,33 +271,16 @@ Deno.serve(async (req) => {
       mealLog = created
     }
 
-    // Insert food entries
+    // Insert food entries. Each references the shared food_items cache row the
+    // resolver returned — no more one-off food_items rows per log.
     const savedEntries = []
-    for (const food of aiResult.foods) {
-      const { data: foodItem, error: foodItemErr } = await supabase
-        .from('food_items')
-        .insert({
-          source: 'ai_estimated',
-          name: food.name,
-          calories: food.calories,
-          protein_g: food.protein_g,
-          carbs_g: food.carbs_g,
-          fat_g: food.fat_g,
-          fiber_g: food.fiber_g ?? 0,
-          serving_size_g: food.quantity_g,
-          serving_size_description: food.quantity_description,
-          created_by: user.id,
-        })
-        .select('id')
-        .single()
-      if (foodItemErr) throw foodItemErr
-
+    for (const food of foods) {
       const { data: entry, error: entryErr } = await supabase
         .from('food_entries')
         .insert({
           meal_log_id: mealLog.id,
           user_id: user.id,
-          food_item_id: foodItem.id,
+          food_item_id: food.food_item_id,
           food_name: food.name,
           quantity_g: food.quantity_g,
           quantity_label: food.quantity_description,
@@ -304,6 +291,7 @@ Deno.serve(async (req) => {
           fiber_g: food.fiber_g ?? 0,
           source: 'ai_text',
           ai_confidence: food.confidence,
+          macro_source: food.macro_source,
         })
         .select()
         .single()
@@ -313,7 +301,7 @@ Deno.serve(async (req) => {
 
     // The coach_note is the AI's personalised insight about this specific meal.
     // It's saved as the assistant message so it appears in history and is readable.
-    const coachNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(aiResult.totals?.calories ?? 0)} cal`
+    const coachNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
     await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id)
 
     return json({
@@ -325,8 +313,8 @@ Deno.serve(async (req) => {
       input_text: text,
       logged_date,
       meal_type,
-      foods: aiResult.foods,
-      totals: aiResult.totals,
+      foods,
+      totals,
       entries: savedEntries,
     })
   } catch (err) {
@@ -340,20 +328,28 @@ Deno.serve(async (req) => {
 // If tools requested: execute them, append results, Call 2: AI gives final answer.
 // Max 2 LLM calls. Simple messages (food log, simple Q&A) only use 1 call.
 // deno-lint-ignore no-explicit-any
-async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<Record<string, unknown>> {
+async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<{ result: Record<string, unknown>; waterLogged: boolean }> {
   const call1 = await callOpenRouter(messages, TOOLS)
 
   // No tool calls → AI responded directly (food log JSON or simple answer)
   if (!call1.tool_calls || call1.tool_calls.length === 0) {
-    return parseAIContent(call1.content ?? '')
+    return { result: parseAIContent(call1.content ?? ''), waterLogged: false }
   }
 
-  // AI requested tool calls — execute them against Supabase
+  // AI requested tool calls — execute them against Supabase.
+  // Track whether log_water actually succeeded so the client knows to refresh
+  // its water store — the water insert happens server-side here, so nothing
+  // on the client would otherwise know a new row exists.
+  let waterLogged = false
+
   const toolResults = await Promise.all(
     call1.tool_calls.map(async (tc: Record<string, unknown>) => {
       const fnName = (tc.function as Record<string, unknown>).name as string
       const fnArgs = JSON.parse((tc.function as Record<string, unknown>).arguments as string ?? '{}')
       const result = await executeTool(supabase, userId, fnName, fnArgs)
+      if (fnName === 'log_water' && (result as Record<string, unknown>)?.success) {
+        waterLogged = true
+      }
       return {
         role: 'tool',
         tool_call_id: tc.id,
@@ -370,7 +366,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
   ]
 
   const call2 = await callOpenRouter(messagesWithTools, TOOLS)
-  return parseAIContent(call2.content ?? '')
+  return { result: parseAIContent(call2.content ?? ''), waterLogged }
 }
 
 // ── OpenRouter call wrapper ───────────────────────────────────────────────────
@@ -385,6 +381,7 @@ async function callOpenRouter(messages: Array<Record<string, unknown>>, tools: t
     },
     body: JSON.stringify({
       model: 'openai/gpt-4o-mini',
+      temperature: 0,
       messages,
       tools,
       tool_choice: 'auto',

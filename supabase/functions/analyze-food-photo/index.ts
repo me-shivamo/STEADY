@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decode } from 'https://deno.land/std@0.177.0/encoding/base64.ts'
+import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -7,10 +8,11 @@ const CORS = {
 }
 
 // Photo logging always produces a food log — photos are never Q&A.
-// The system prompt tells GPT-4o to look at the image and return the
-// standard STEADY nutrition JSON (same shape as log-food-from-text).
+// GPT-4o only IDENTIFIES foods and portions from the image. Macro numbers are
+// resolved afterwards by the shared macro resolver (cache → USDA → AI fallback),
+// so photo logs and text logs of the same food produce identical numbers.
 const SYSTEM_PROMPT = `You are STEADY, a friendly AI nutritionist inside a calorie-tracking app.
-The user has sent you a photo of their meal. Identify all the food and drink in the image and log the nutrition.
+The user has sent you a photo of their meal. Identify all the food and drink in the image.
 
 Return ONLY a valid JSON object — no markdown, no prose outside the JSON.
 
@@ -22,32 +24,19 @@ Return this exact structure:
       "name": "food item name",
       "quantity_description": "e.g. 2 slices, 1 large egg, 1 cup",
       "quantity_g": 120,
-      "calories": 154,
-      "protein_g": 11.5,
-      "carbs_g": 1.2,
-      "fat_g": 10.8,
-      "fiber_g": 0.0,
       "confidence": 0.85
     }
-  ],
-  "totals": {
-    "calories": 297,
-    "protein_g": 15.5,
-    "carbs_g": 28.0,
-    "fat_g": 13.0,
-    "fiber_g": 0.0
-  }
+  ]
 }
 
 Rules:
 - Identify every visible food item, including sides, sauces, drinks, and garnishes
+- Do NOT estimate calories or macros — the app computes them from a verified nutrition database
 - quantity_g is your best gram estimate based on what you can see
-- calories and macros are for that quantity_g amount (not per 100g)
 - confidence is 0.0–1.0 (how certain you are — lower if the image is unclear or the food is obscured)
 - Break compound dishes into components where visible (e.g. rice + curry + naan)
-- Use USDA-level nutrition values
-- totals must equal the sum of all foods rounded to 1 decimal
-- If you cannot identify any food in the image, return foods as an empty array with meal_name "Unknown"`
+- If you cannot identify any food in the image, return foods as an empty array with meal_name "Unknown"
+${GRAM_HINTS_PROMPT}`
 
 Deno.serve(async (req) => {
   // CORS preflight
@@ -84,7 +73,9 @@ Deno.serve(async (req) => {
 
     // ── 3. Upload image to Supabase Storage ────────────────────────────────────
     // Decode base64 → raw bytes, then upload to meal-photos/{userId}/{uuid}.jpg
-    // The public URL is saved to meal_logs.photo_url so the MealCard can display it.
+    // The bucket is PRIVATE (migration 011): the DB stores the storage path and
+    // readers exchange it for a short-lived signed URL. The response carries a
+    // ready signed URL so the just-logged card renders without a second trip.
     const ext = mime_type === 'image/png' ? 'png' : 'jpg'
     const fileName = `${user.id}/${crypto.randomUUID()}.${ext}`
     const imageBytes = decode(image_base64)
@@ -95,9 +86,11 @@ Deno.serve(async (req) => {
 
     if (storageErr) throw new Error(`Storage upload failed: ${storageErr.message}`)
 
-    const { data: { publicUrl } } = supabase.storage
+    const { data: signedData, error: signErr } = await supabase.storage
       .from('meal-photos')
-      .getPublicUrl(fileName)
+      .createSignedUrl(fileName, 60 * 60 * 24)
+    if (signErr || !signedData) throw new Error(`Could not sign photo URL: ${signErr?.message}`)
+    const signedUrl = signedData.signedUrl
 
     // ── 4. Build nutrition context for the AI ─────────────────────────────────
     const contextLine = await buildContextLine(supabase, user.id, logged_date)
@@ -115,6 +108,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'openai/gpt-4o',
+        temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
@@ -153,6 +147,16 @@ Deno.serve(async (req) => {
       }, 422)
     }
 
+    // Resolve macros from real data (cache → USDA → one-time AI estimate).
+    // GPT-4o only identified foods + grams above; numbers are computed here.
+    // The resolver's internal match call uses the text OPENROUTER_API_KEY so
+    // image-key cost tracking stays clean.
+    const { foods, totals } = await resolveFoods(supabase, aiResult.foods as ParsedFood[], {
+      openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
+      fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
+      userId: user.id,
+    })
+
     // ── 6. Insert meal_log with photo_url ──────────────────────────────────────
     const { data: mealLog, error: mealLogErr } = await supabase
       .from('meal_logs')
@@ -161,42 +165,25 @@ Deno.serve(async (req) => {
         logged_date,
         meal_type,
         caption: caption || aiResult.meal_name,
-        photo_url: publicUrl,
+        photo_url: fileName,
       })
       .select('id')
       .single()
 
     if (mealLogErr) throw mealLogErr
 
-    // ── 7. Insert food_items + food_entries for each identified food ───────────
+    // ── 7. Insert food_entries for each resolved food ──────────────────────────
+    // Each references the shared food_items cache row the resolver returned —
+    // no more one-off food_items rows per log.
     const savedEntries = []
 
-    for (const food of aiResult.foods) {
-      const { data: foodItem, error: foodItemErr } = await supabase
-        .from('food_items')
-        .insert({
-          source: 'ai_estimated',
-          name: food.name,
-          calories: food.calories,
-          protein_g: food.protein_g,
-          carbs_g: food.carbs_g,
-          fat_g: food.fat_g,
-          fiber_g: food.fiber_g ?? 0,
-          serving_size_g: food.quantity_g,
-          serving_size_description: food.quantity_description,
-          created_by: user.id,
-        })
-        .select('id')
-        .single()
-
-      if (foodItemErr) throw foodItemErr
-
+    for (const food of foods) {
       const { data: entry, error: entryErr } = await supabase
         .from('food_entries')
         .insert({
           meal_log_id: mealLog.id,
           user_id: user.id,
-          food_item_id: foodItem.id,
+          food_item_id: food.food_item_id,
           food_name: food.name,
           quantity_g: food.quantity_g,
           quantity_label: food.quantity_description,
@@ -207,6 +194,7 @@ Deno.serve(async (req) => {
           fiber_g: food.fiber_g ?? 0,
           source: 'ai_photo',
           ai_confidence: food.confidence,
+          macro_source: food.macro_source,
         })
         .select()
         .single()
@@ -221,11 +209,11 @@ Deno.serve(async (req) => {
       type: 'log',
       meal_log_id: mealLog.id,
       meal_name: aiResult.meal_name,
-      photo_url: publicUrl,
+      photo_url: signedUrl,
       logged_date,
       meal_type,
-      foods: aiResult.foods,
-      totals: aiResult.totals,
+      foods,
+      totals,
       entries: savedEntries,
     })
   } catch (err) {
