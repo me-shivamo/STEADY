@@ -36,7 +36,7 @@ export interface DailyTotals {
 // A discriminated union lets callers branch safely on `.type`.
 export type LogResult =
   | { type: 'log'; meal: MealCard }
-  | { type: 'answer'; reply: string }
+  | { type: 'answer'; reply: string; waterLogged: boolean }
 
 // Photo logging always produces a food log — photos are never Q&A.
 export type LogPhotoResult = { type: 'log'; meal: MealCard }
@@ -55,9 +55,11 @@ interface FoodLogState {
   isFetchingDate: boolean // true while the meals fetch is in flight
   error: string | null
   selectedDate: string  // YYYY-MM-DD; drives which day's feed is shown
+  loggedDates: Set<string>  // YYYY-MM-DD dates with a log, for the currently-viewed calendar month
 
   fetchSummaryForDate: (date: string, userId: string) => Promise<void>
   fetchEntriesForDate: (date?: string, skipTotals?: boolean) => Promise<void>
+  fetchLoggedDatesForMonth: (year: number, month: number) => Promise<void>
   setSelectedDate: (date: string) => void
   logMealFromText: (text: string, meal_type?: string) => Promise<LogResult>
   logMealFromPhoto: (imageBase64: string, mimeType: string, caption?: string) => Promise<LogPhotoResult>
@@ -112,6 +114,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   isFetchingDate: false,
   error: null,
   selectedDate: todayDate(),
+  loggedDates: new Set(),
 
   // Change the active date: fire two queries in parallel.
   // Query A (fast ~50ms): daily_summaries → updates totals + ring immediately.
@@ -150,6 +153,32 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
     // If no row exists (no logs that day), totals stay at ZERO — correct behaviour.
   },
 
+  // Fetch which dates in a given month have at least one log, for the calendar
+  // grid's highlight. Reuses daily_summaries (one row per user per logged day)
+  // since existence alone is enough — no need for the heavier meal_logs join.
+  fetchLoggedDatesForMonth: async (year: number, month: number) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const lastDay = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`
+
+    const { data, error } = await supabase
+      .from('daily_summaries')
+      .select('summary_date')
+      .eq('user_id', user.id)
+      .gte('summary_date', firstDay)
+      .lte('summary_date', lastDay)
+
+    if (error) {
+      console.error('fetchLoggedDatesForMonth:', error.message)
+      return
+    }
+
+    set({ loggedDates: new Set((data ?? []).map(r => r.summary_date)) })
+  },
+
   // Slow path: fetch meal_logs + food_entries for the cards feed.
   // skipTotals=true when called from setSelectedDate (totals already handled
   // by the fast fetchSummaryForDate path). False on initial app load.
@@ -183,6 +212,27 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       entries: (log.food_entries as unknown as FoodEntry[]) ?? [],
     }))
 
+    // Meal photos are private (migration 011): the DB stores storage PATHS,
+    // so exchange them for 24h signed URLs in one batch before rendering.
+    // Anything already http (a legacy or just-signed URL) passes through.
+    const photoPaths = meals
+      .map(m => m.photo_url)
+      .filter((p): p is string => !!p && !p.startsWith('http'))
+    if (photoPaths.length > 0) {
+      const { data: signed } = await supabase.storage
+        .from('meal-photos')
+        .createSignedUrls(photoPaths, 60 * 60 * 24)
+      const urlByPath = new Map<string, string>()
+      for (const s of signed ?? []) {
+        if (s.path && s.signedUrl) urlByPath.set(s.path, s.signedUrl)
+      }
+      for (const m of meals) {
+        if (m.photo_url && !m.photo_url.startsWith('http')) {
+          m.photo_url = urlByPath.get(m.photo_url) ?? null
+        }
+      }
+    }
+
     set(skipTotals
       ? { meals, isFetchingDate: false }
       : { meals, totals: sumTotals(meals), isFetchingDate: false }
@@ -206,7 +256,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       // The AI answered a question — no food to store, just hand back the reply.
       if (data.type === 'answer') {
         set({ isLogging: false })
-        return { type: 'answer', reply: data.reply ?? '' }
+        return { type: 'answer', reply: data.reply ?? '', waterLogged: data.water_logged ?? false }
       }
 
       // Otherwise it's a food log (default). Build the card for this message.
@@ -306,7 +356,11 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       logged_date: data.logged_date,
       // Preserve the original timestamp so the card keeps its place in the feed.
       created_at: existing?.created_at ?? new Date().toISOString(),
-      photo_url: data.photo_url ?? existing?.photo_url ?? null,
+      // In-memory cards hold signed URLs; the function may echo back a bare
+      // storage path — keep the card's working signed URL in that case.
+      photo_url: (data.photo_url && String(data.photo_url).startsWith('http'))
+        ? data.photo_url
+        : existing?.photo_url ?? null,
       input_text: data.input_text ?? text,
       entries: data.entries ?? [],
     }
@@ -411,5 +465,5 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   },
 
   // Clear everything on sign-out so the next user starts fresh.
-  reset: () => set({ meals: [], totals: { ...ZERO }, isLogging: false, error: null, selectedDate: todayDate() }),
+  reset: () => set({ meals: [], totals: { ...ZERO }, isLogging: false, error: null, selectedDate: todayDate(), loggedDates: new Set() }),
 }))

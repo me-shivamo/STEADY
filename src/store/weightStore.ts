@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Alert } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 
@@ -73,18 +74,27 @@ export const useWeightStore = create<WeightState>((set, get) => ({
       .select('id, logged_date, weight_kg, notes')
       .single();
 
-    if (!error && data) {
-      // Merge into local entries — replace today's if it exists, else append
-      set((s) => {
-        const without = s.entries.filter((e) => e.logged_date !== today);
-        const updated = [...without, data as WeightEntry].sort((a, b) =>
-          a.logged_date.localeCompare(b.logged_date)
-        );
-        return { entries: updated };
-      });
+    if (error || !data) {
+      Alert.alert('Could not save weight', 'Check your connection and try again.');
+      return;
+    }
 
-      // Also update profile.current_weight_kg so header card stays in sync
+    // Merge into local entries — replace today's if it exists, else append
+    set((s) => {
+      const without = s.entries.filter((e) => e.logged_date !== today);
+      const updated = [...without, data as WeightEntry].sort((a, b) =>
+        a.logged_date.localeCompare(b.logged_date)
+      );
+      return { entries: updated };
+    });
+
+    // Also update profile.current_weight_kg so header card stays in sync.
+    // Best-effort: the weight row is already saved, so a failed profile sync
+    // must not escape as an unhandled rejection (updateProfile throws).
+    try {
       await useAuthStore.getState().updateProfile({ current_weight_kg: weight_kg });
+    } catch (e) {
+      console.warn('Profile weight sync failed:', e);
     }
   },
 
@@ -92,7 +102,11 @@ export const useWeightStore = create<WeightState>((set, get) => ({
     const userId = useAuthStore.getState().session?.user.id;
     if (!userId) return;
 
-    await supabase.from('weight_logs').delete().eq('id', id).eq('user_id', userId);
+    const { error } = await supabase.from('weight_logs').delete().eq('id', id).eq('user_id', userId);
+    if (error) {
+      Alert.alert('Could not delete', 'Check your connection and try again.');
+      return;
+    }
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
   },
 }));

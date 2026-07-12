@@ -21,6 +21,9 @@ interface AuthState {
   session: Session | null;
   profile: Profile | null;
   isLoading: boolean;
+  // True while the current session came from a password-reset link. Gates
+  // RootNavigator onto the SetNewPassword screen instead of the app.
+  passwordRecovery: boolean;
 
   initialize: () => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<void>;
@@ -28,6 +31,10 @@ interface AuthState {
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  handleAuthDeepLink: (url: string) => Promise<void>;
+  completePasswordReset: (newPassword: string) => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
 }
@@ -36,6 +43,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   profile: null,
   isLoading: true,
+  passwordRecovery: false,
 
   initialize: async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -117,7 +125,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     if (sessionError) throw sessionError;
     if (sessionData.user) {
-      posthog.identify(sessionData.user.id, { email: sessionData.user.email });
+      posthog.identify(sessionData.user.id, { email: sessionData.user.email ?? null });
       posthog.capture('sign_in', { method: 'google' });
     }
   },
@@ -144,7 +152,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     if (error) throw error;
     if (data.user) {
-      posthog.identify(data.user.id, { email: data.user.email });
+      posthog.identify(data.user.id, { email: data.user.email ?? null });
       posthog.capture('sign_in', { method: 'apple' });
     }
   },
@@ -155,8 +163,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Local-first sign-out: clear in-memory state synchronously so the UI swaps
     // to the welcome screen instantly (RootNavigator re-renders the moment
     // `session` becomes null). No awaited network call sits on the UI path, so
-    // there's no perceptible freeze.
-    set({ session: null, profile: null });
+    // there's no perceptible freeze. passwordRecovery is cleared too, so a
+    // half-finished reset flow can't leak into the next sign-in.
+    set({ session: null, profile: null, passwordRecovery: false });
     // Clear the in-memory food log so the next user who signs in on this device
     // never sees the previous user's meals/totals. Centralised here so every
     // sign-out path (drawer, future session-expiry, etc.) always clears it.
@@ -172,6 +181,74 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (error) console.warn('Background sign-out failed:', error.message);
       })
       .catch((e) => console.warn('Background sign-out threw:', e));
+  },
+
+  deleteAccount: async () => {
+    // Deletion happens server-side in the delete-account Edge Function — the
+    // service-role key needed to remove an auth user must never ship in the
+    // app. functions.invoke() attaches this session's token automatically; the
+    // server verifies it and deletes exactly that user (photos + cascade).
+    const { data, error } = await supabase.functions.invoke('delete-account');
+    if (error) throw new Error(error.message);
+    if (!data?.success) throw new Error(data?.error ?? 'Account deletion failed');
+
+    posthog.capture('account_deleted');
+    posthog.reset();
+
+    // Same local teardown as signOut. The server already destroyed the session,
+    // so the background token revoke below is best-effort cleanup of the stored
+    // token and is expected to fail quietly.
+    set({ session: null, profile: null, passwordRecovery: false });
+    useFoodLogStore.getState().reset();
+    supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  },
+
+  requestPasswordReset: async (email) => {
+    // Same dev-vs-prod redirect behaviour as Google OAuth: auth.expo.io in
+    // Expo Go, steady://reset-password in a production build. The URL must be
+    // allow-listed in Supabase Auth → URL Configuration → Redirect URLs.
+    const redirectTo = AuthSession.makeRedirectUri({ scheme: 'steady', path: 'reset-password' });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  },
+
+  handleAuthDeepLink: async (url) => {
+    // Called for every URL that opens the app; only reset links matter here.
+    // (Google OAuth redirects are consumed inside openAuthSessionAsync and
+    // never reach this handler.)
+    if (!url.includes('reset-password')) return;
+
+    const parsed = new URL(url);
+    const hashParams = new URLSearchParams(parsed.hash.slice(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const code = parsed.searchParams.get('code');
+
+    if (accessToken && refreshToken) {
+      // Implicit-flow link: tokens arrive in the hash fragment, exactly like
+      // our Google OAuth callback.
+      const { error } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (error) throw error;
+    } else if (code) {
+      // PKCE-flow link: a one-time code instead of tokens — exchange it.
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) throw error;
+    } else {
+      return;
+    }
+
+    // Session is live, but this user came here to set a new password — flag it
+    // so RootNavigator shows SetNewPasswordScreen instead of the app.
+    set({ passwordRecovery: true });
+  },
+
+  completePasswordReset: async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    set({ passwordRecovery: false });
   },
 
   fetchProfile: async (userId) => {
