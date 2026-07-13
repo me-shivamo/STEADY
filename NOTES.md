@@ -35,10 +35,6 @@ Why --template blank-typescript? Expo has several starter templates. The default
 
 
 
-
-
-
-
 # Task to perform 
 
 1. Make the card componenet looks better and editable 
