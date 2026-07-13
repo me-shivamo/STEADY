@@ -28,6 +28,16 @@ A test failed the day after it was written, with zero code changes to the thing 
 
 Running `npm install --legacy-peer-deps` locally fixes the install on your own machine, but that flag lives only in your shell history — it doesn't travel with the code. EAS's cloud build servers clone the repo fresh and run their own plain `npm install`, with no idea you typed a flag on your laptop yesterday, so the same peer-dependency conflict that broke locally broke the cloud build the exact same way. `.npmrc` is npm's project-level config file (same idea as a `pip.conf` or a Maven `settings.xml`, but repo-scoped) — anything you'd normally pass as a CLI flag can be written there instead as a persistent default that every environment reads automatically, including EAS's build machine, a teammate's laptop, or a future CI pipeline. The general principle: if a command needs a special flag to work correctly on *this* project, that flag belongs in a config file checked into the repo, not in personal muscle memory.
 
+### Node polyfills: why React Native sometimes needs a package for things Python/Node take for granted
+*2026-07-13 · Concept*
+
+In Python, `import base64` just works everywhere — CPython ships a full standard library no matter where the script runs. Node.js is similar: `Buffer`, `fs`, `path` are all built in. React Native's JavaScript runtime is neither of those — it's a from-scratch JS engine (Hermes) embedded in a mobile app, with no filesystem, no OS process, none of Node's built-in modules, because a phone app isn't a server or a CLI tool. When a library written with Node habits (like `react-native-svg`, which needs `Buffer` to decode `data:` URIs) gets used in React Native, Metro (the bundler) needs an actual npm package — here, literally the `buffer` package, a pure-JS reimplementation of Node's `Buffer` API — installed so the `import` has something real to resolve to. This is a very common category of RN error: "Unable to resolve module X" where X is a Node built-in, and the fix is almost always "install the userland polyfill package with that exact name."
+
+### Local export vs. EAS cloud build: same JS bundling step, different native toolchain underneath
+*2026-07-13 · Tool*
+
+`npx expo export --platform android` runs the exact same Metro JavaScript-bundling step that EAS Build runs in its "Bundle JavaScript" phase — which made it possible to reproduce and fix the `buffer` polyfill error locally in seconds instead of waiting through a 10+ minute cloud build just to see the same error again. But `expo export` stops after bundling the JS; it doesn't go on to compile the native Android app the way a full EAS build does (that needs the Android SDK, NDK, and Gradle, none of which are set up on this dev machine, by design — that's the whole point of using EAS Build instead of a local Android Studio setup). So `expo export` is a genuinely useful fast feedback loop for catching JS-bundling bugs early, but it can't validate the later native-compile steps — those still need a real EAS build (or a full local Android toolchain) to verify.
+
 ---
 
 ### EAS Build: why a managed Expo app can't just run `gradlew bundleRelease`
