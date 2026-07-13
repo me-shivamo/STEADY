@@ -3,6 +3,13 @@
 > A chronological story of building STEADY, an AI-powered calorie tracking app for iOS and Android.
 > Written as it happens — raw, real, and ready to share.
 
+### A push got blocked, and it turned up real credentials sitting in plaintext notes
+*2026-07-13 · Bug*
+
+Tried to push five queued-up commits and GitHub's secret-scanning push protection rejected it outright — a live OpenRouter API key was sitting in `NOTES.md`, committed four commits back. Digging into that one flagged line turned up more than expected: the same block of personal notes also had the Supabase database password and project ref typed out in plaintext, all from an early session where credentials got jotted down next to genuinely useful learning notes instead of going straight into env vars. We used `git filter-branch` with a `tree-filter` to strip the credential lines out of `NOTES.md` across every commit that touched it — not just the one GitHub flagged — and had to do it twice: once on `master`, and again on a second local branch (`worktree-test-scenarios-automation`) tied to an active worktree, since it carried an independent copy of the same leaked block in its own history. That worktree was mid-edit on three Supabase edge functions with uncommitted changes, so we saved a patch of that work before tearing the worktree down, rewrote the branch, then rebuilt the worktree and reapplied the patch — nothing lost. After confirming with a grep across every local ref that the secret was gone, we deleted the rebase backup refs, ran `git gc`, and pushed clean.
+
+The bigger lesson: rewriting git history only removes the *evidence trail* — it does nothing to un-expose a key that was already sitting in a repo, even briefly, even just in a rejected push attempt. The actual fix is rotating the OpenRouter key and the Supabase DB password at the source, which has to happen independent of any git surgery. `NOTES.md` is going to need a firm rule going forward: it's for learning notes, not a place to paste credentials while setting things up — those belong directly in `.env` (already gitignored) from the first keystroke.
+
 ### Writing the first two E2E flows — and proving WSL2's USB bridge can't sustain them
 *2026-07-12 · Setup*
 
