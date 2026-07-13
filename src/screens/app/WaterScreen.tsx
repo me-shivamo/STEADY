@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   ringCenter: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
