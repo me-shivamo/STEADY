@@ -24,6 +24,7 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      "./plugins/withHermesCommandFix.js",
       "expo-web-browser",
       "expo-secure-store",
       "expo-font",

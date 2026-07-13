@@ -38,6 +38,11 @@ In Python, `import base64` just works everywhere — CPython ships a full standa
 
 `npx expo export --platform android` runs the exact same Metro JavaScript-bundling step that EAS Build runs in its "Bundle JavaScript" phase — which made it possible to reproduce and fix the `buffer` polyfill error locally in seconds instead of waiting through a 10+ minute cloud build just to see the same error again. But `expo export` stops after bundling the JS; it doesn't go on to compile the native Android app the way a full EAS build does (that needs the Android SDK, NDK, and Gradle, none of which are set up on this dev machine, by design — that's the whole point of using EAS Build instead of a local Android Studio setup). So `expo export` is a genuinely useful fast feedback loop for catching JS-bundling bugs early, but it can't validate the later native-compile steps — those still need a real EAS build (or a full local Android toolchain) to verify.
 
+### Expo config plugins: patching generated native code so the patch survives regeneration
+*2026-07-13 · Architecture*
+
+STEADY has no `android/` folder in git — it's fully regenerated from scratch by `expo prebuild` on every EAS build, which is exactly what makes managed Expo convenient (no native project to keep in sync by hand) but also means you can never just hand-edit a generated file like `android/app/build.gradle` to fix a bug in it; the next build wipes it and starts over. Expo's answer is a **config plugin**: a small Node.js function, referenced in `app.json`'s `plugins` array, that Expo calls automatically during every `prebuild` and hands the generated native project to, so it can programmatically edit files right after they're created and before the native compiler ever sees them. `@expo/config-plugins` ships helpers like `withAppBuildGradle` that hand you the generated Gradle file's text as a string to regex-replace. It's the same idea as a Terraform provisioner or a post-generation codemod — you don't fight the code generator, you let it run and then patch its output, every time, automatically, as a permanent part of the build pipeline instead of a one-off manual fix that silently stops applying the moment someone re-runs prebuild.
+
 ---
 
 ### EAS Build: why a managed Expo app can't just run `gradlew bundleRelease`
