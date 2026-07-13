@@ -31,6 +31,11 @@ import { useAuthStore } from '../../src/store/authStore';
 const mockSupabase = supabase as unknown as import('../../test-utils/supabaseMock').SupabaseMock;
 
 const USER_ID = 'test-user-id';
+// addEntry() always upserts against *today's* real date, so fixtures that stand in for the
+// server's returned row must use today's date too — a hardcoded date silently drifts stale
+// the next calendar day (the store's own `today` no longer matches the fixture's `logged_date`,
+// so the "remove today's old entry before appending the merged one" filter stops matching).
+const TODAY = new Date().toISOString().split('T')[0];
 
 function setSignedIn(userId: string | null) {
   useAuthStore.setState({
@@ -58,7 +63,7 @@ describe('bodyMeasurementsStore', () => {
     it('7.1 upserts only the typed field — other measurement keys are entirely absent from the payload, not undefined', async () => {
       const returnedRow = {
         id: 'row-1',
-        logged_date: '2026-07-12',
+        logged_date: TODAY,
         waist_cm: 80,
         hips_cm: null,
         chest_cm: null,
@@ -98,7 +103,7 @@ describe('bodyMeasurementsStore', () => {
     it('7.2 logging a second field later the same day sends only that field — payload does not re-send/null the first field', async () => {
       const firstReturn = {
         id: 'row-1',
-        logged_date: '2026-07-12',
+        logged_date: TODAY,
         waist_cm: 80,
         hips_cm: null,
         chest_cm: null,
@@ -126,7 +131,7 @@ describe('bodyMeasurementsStore', () => {
       // Local state reflects the server's merged row (both fields present) for today, and only
       // one entry exists for today (the second call replaced, not duplicated, today's entry).
       const { entries } = useBodyMeasurementsStore.getState();
-      const todays = entries.filter((e) => e.logged_date === '2026-07-12');
+      const todays = entries.filter((e) => e.logged_date === TODAY);
       expect(todays).toHaveLength(1);
       expect(todays[0].waist_cm).toBe(80);
       expect(todays[0].hips_cm).toBe(95);
@@ -144,7 +149,7 @@ describe('bodyMeasurementsStore', () => {
         neck_cm: 38,
         body_fat_pct: 18.5,
       };
-      const returnedRow = { id: 'row-1', logged_date: '2026-07-12', ...fullValues };
+      const returnedRow = { id: 'row-1', logged_date: TODAY, ...fullValues };
       const query = makeQueryResult(returnedRow, null);
       mockSupabase.from.mockReturnValueOnce(query);
 

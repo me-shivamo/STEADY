@@ -3,6 +3,26 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### EAS environment variables: server-side secrets instead of file-based ones
+*2026-07-13 · Tool*
+
+`eas.json` is a config file checked into git, so anything written literally inside it — like `"EXPO_PUBLIC_SUPABASE_URL": "https://..."` — is public the moment it's pushed, same as hardcoding a password in a `.java` file instead of reading it from an environment variable. EAS (Expo Application Services) has its own secret store per project, set with `eas env:create --environment production --name X --value Y`, scoped separately per build profile (production, preview, etc). At build time, EAS injects any stored variable whose name matches what the build script expects — so `eas.json` no longer needs an `env` block at all for these two values; the cloud build machine pulls them itself. Same mental model as GitHub Actions secrets or a Kubernetes Secret object: the value lives in the platform's vault, and the config file just references it implicitly by name.
+
+### `--legacy-peer-deps`: npm's escape hatch for React Native's tangled peer-dependency graph
+*2026-07-13 · Tool*
+
+npm normally refuses to install if two packages declare incompatible peer-dependency version ranges for the same library (e.g. one wants `react@19.1.0`, another insists on `react@^19.2.3`). In a typical backend Python/Java project this kind of conflict is rare because dependency graphs are shallower; React Native's ecosystem is deep and fast-moving enough that devDependencies (like the test runner `jest-expo`) routinely publish peer-dep ranges slightly ahead of what the actual Expo SDK version supports, purely because of publishing-schedule lag, not a real incompatibility. `--legacy-peer-deps` tells npm "install anyway, resolve each package's own dependencies independently, don't cross-check peer ranges strictly" — npm's pre-v7 default behavior. It's not a hack specific to this project; it's the standard, expected flag for Expo/RN projects whenever this exact class of conflict shows up, and it's safe here because the conflicting package (`jest-expo`) never ships inside the actual app bundle.
+
+### Hoisting: why a package can be "installed" but still unreachable by `require()`
+*2026-07-13 · Concept*
+
+npm normally "hoists" every dependency to the top level of `node_modules/` so any file in the project can `require()` it directly — like a single shared classpath. But if two different packages need conflicting versions of the same dependency, npm nests the second copy inside the dependent package's own `node_modules/` folder instead (e.g. `node_modules/expo/node_modules/expo-modules-core`) so both versions can coexist without clashing. Node's module resolution only walks *up* the directory tree from the requiring file, so a top-level test setup script has no way to see a copy buried inside another package's private folder. The fix here wasn't really "install harder" — it was declaring `expo-modules-core` as a direct dependency of the project itself (`package.json`, not just relying on `expo` pulling it in transitively), which forces npm to place a single shared copy at the top level where everything can find it.
+
+### Stale test fixtures: a test that "always passes" isn't the same as a test that's always correct
+*2026-07-13 · Pattern*
+
+A test failed the day after it was written, with zero code changes to the thing it was testing — the fixture data had hardcoded `logged_date: '2026-07-12'` standing in for "today's" row from the database, but the store code being tested computes the real `today` fresh every time via `new Date()`. The day the calendar rolled over, the fixture's fake "today" and the code's real "today" stopped matching, and a filter that depends on that comparison silently broke. The lesson generalizes: any test fixture representing "the current date" needs to be *computed the same way the code under test computes it* (same `new Date()` call, same format), never typed in as a literal string — otherwise the test is quietly coupled to the day it was written, not to the behavior it claims to verify.
+
 ---
 
 ### EAS Build: why a managed Expo app can't just run `gradlew bundleRelease`
