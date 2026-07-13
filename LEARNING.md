@@ -23,6 +23,11 @@ npm normally "hoists" every dependency to the top level of `node_modules/` so an
 
 A test failed the day after it was written, with zero code changes to the thing it was testing — the fixture data had hardcoded `logged_date: '2026-07-12'` standing in for "today's" row from the database, but the store code being tested computes the real `today` fresh every time via `new Date()`. The day the calendar rolled over, the fixture's fake "today" and the code's real "today" stopped matching, and a filter that depends on that comparison silently broke. The lesson generalizes: any test fixture representing "the current date" needs to be *computed the same way the code under test computes it* (same `new Date()` call, same format), never typed in as a literal string — otherwise the test is quietly coupled to the day it was written, not to the behavior it claims to verify.
 
+### `.npmrc`: making an install flag a property of the repo, not a fact you have to remember
+*2026-07-13 · Tool*
+
+Running `npm install --legacy-peer-deps` locally fixes the install on your own machine, but that flag lives only in your shell history — it doesn't travel with the code. EAS's cloud build servers clone the repo fresh and run their own plain `npm install`, with no idea you typed a flag on your laptop yesterday, so the same peer-dependency conflict that broke locally broke the cloud build the exact same way. `.npmrc` is npm's project-level config file (same idea as a `pip.conf` or a Maven `settings.xml`, but repo-scoped) — anything you'd normally pass as a CLI flag can be written there instead as a persistent default that every environment reads automatically, including EAS's build machine, a teammate's laptop, or a future CI pipeline. The general principle: if a command needs a special flag to work correctly on *this* project, that flag belongs in a config file checked into the repo, not in personal muscle memory.
+
 ---
 
 ### EAS Build: why a managed Expo app can't just run `gradlew bundleRelease`
