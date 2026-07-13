@@ -30,3 +30,7 @@ android/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Maestro E2E test artifacts (see .maestro/README or pass
+# --test-output-dir .maestro/screenshots to `maestro test`)
+.maestro/screenshots/

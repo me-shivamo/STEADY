@@ -48,9 +48,29 @@ const supabase = createClient(url, key)
 const dataPath = join(dirname(fileURLToPath(import.meta.url)), 'data', 'indb.json')
 const foods: IndbFood[] = JSON.parse(readFileSync(dataPath, 'utf8'))
 
+interface FoodItemRow {
+  source: string
+  external_id: string
+  name: string
+  normalized_name: string
+  calories_per_100g: number
+  protein_per_100g: number
+  carbs_per_100g: number
+  fat_per_100g: number
+  fiber_per_100g: number
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  fiber_g: number
+  serving_size_g: number
+  serving_size_description: string
+  created_by: null
+}
+
 // Dedupe on normalized name (a few INDB names collide once normalized) — keep first.
 const seen = new Set<string>()
-const rows = []
+const rows: FoodItemRow[] = []
 for (const f of foods) {
   if (!f.calories_per_100g && f.calories_per_100g !== 0) continue
   const norm = normalizeName(f.name)

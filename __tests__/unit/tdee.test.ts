@@ -189,6 +189,9 @@ describe('calculateAge', () => {
     const fixed = new REAL_DATE(isoDate);
     // @ts-expect-error — intentionally replacing the global Date constructor for this test only
     global.Date = class extends REAL_DATE {
+      // @ts-expect-error — intentionally not calling super(); this constructor
+      // always returns an override object instead, which JS permits but TS's
+      // "derived classes must call super()" rule doesn't know how to allow.
       constructor(...args: unknown[]) {
         if (args.length === 0) return fixed;
         // @ts-expect-error — forwarding varargs to the real Date constructor

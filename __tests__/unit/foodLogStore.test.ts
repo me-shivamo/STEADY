@@ -63,10 +63,14 @@ describe('sumTotals', () => {
   });
 
   it('treats null macro fields as 0 rather than propagating null/NaN', () => {
-    // The AI resolver can leave a field null if it genuinely couldn't estimate it —
-    // sumTotals must not let one null entry poison the whole day's total.
+    // protein_g/fat_g are NOT NULL in the DB (see 001_initial_schema.sql), so this
+    // null can never actually arrive from Supabase — but sumTotals should still
+    // defend against it (upstream resolver logic, future schema changes, etc.),
+    // so we force the type here to exercise that defensive branch.
     const result = sumTotals([
-      meal([entry({ calories: 200, protein_g: null, carbs_g: 15, fat_g: null })]),
+      meal([
+        entry({ calories: 200, protein_g: null, carbs_g: 15, fat_g: null } as unknown as Partial<FoodEntry>),
+      ]),
     ]);
     expect(result).toEqual({ calories: 200, protein_g: 0, carbs_g: 15, fat_g: 0 });
     expect(Number.isNaN(result.protein_g)).toBe(false);

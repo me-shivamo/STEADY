@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decode } from 'https://deno.land/std@0.177.0/encoding/base64.ts'
-import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.js'
+import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
