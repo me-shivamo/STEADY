@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.ts'
+import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.js'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

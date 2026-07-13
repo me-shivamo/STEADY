@@ -12,7 +12,7 @@
 // The LLM never outputs final macro numbers — identical input therefore
 // resolves to identical macros, and repeat foods cost zero external calls.
 
-import { searchUsda, UsdaUnavailableError, type UsdaCandidate } from './usda.ts'
+import { searchUsda, UsdaUnavailableError, type UsdaCandidate } from './usda.js'
 
 export interface ParsedFood {
   name: string

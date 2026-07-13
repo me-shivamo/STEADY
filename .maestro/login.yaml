@@ -1,0 +1,32 @@
+# TEST_SCENARIOS.md §1.2.1 — sign out then log back in with the same account.
+# Depends on signup-onboarding-home.yaml having already created the account
+# for this RUN_ID (same email/password), so run these two flows back to back:
+#   RUN_ID=$(date +%s)
+#   maestro test -e RUN_ID=$RUN_ID .maestro/signup-onboarding-home.yaml
+#   maestro test -e RUN_ID=$RUN_ID .maestro/login.yaml
+appId: com.steadyapp.android
+---
+- launchApp:
+    clearState: false
+
+# ── Sign out first (app should already be signed in from the signup flow) ──
+- tapOn:
+    point: "6%, 8%"          # ProfileDrawer hamburger icon — no accessible label, position-based
+- tapOn: "Sign Out"
+- assertVisible: "Get Started"
+
+# ── Log back in (TEST_SCENARIOS.md §1.2.1) ─────────────────────────────────
+- tapOn: "I already have an account"
+- assertVisible: "Email address"
+- tapOn: "Email address"
+- inputText: "maestro-test-${RUN_ID}@example.com"
+- tapOn: "Password"
+- inputText: "TestPass1234"
+- hideKeyboard
+- tapOn: "Log In"
+
+# Lands on Home (onboarding_complete is already true from the first flow).
+- extendedWaitUntil:
+    visible: "kcal"
+    timeout: 10000
+- takeScreenshot: login-final

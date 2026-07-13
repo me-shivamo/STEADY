@@ -1,0 +1,84 @@
+# TEST_SCENARIOS.md §1.1.1, §2.4.1 — full signup through onboarding to Home.
+# Uses a throwaway, uniquely-timestamped email so repeated runs never collide
+# with a previous run's account (see TESTING.md §8: "use a throwaway signup").
+#
+# Requires a RUN_ID env var passed at invocation time (Maestro has no built-in
+# timestamp variable), e.g.:
+#   maestro test -e RUN_ID=$(date +%s) .maestro/signup-onboarding-home.yaml
+appId: com.steadyapp.android
+---
+# clearState is NOT used here: this OEM's (OPPO/ColorOS) locked-down adb shell
+# user lacks CLEAR_APP_USER_DATA permission, so `pm clear` throws a
+# SecurityException and the flow fails before it even starts. Not needed
+# anyway — signUp() always creates a fresh session regardless of prior state.
+- launchApp
+
+# Defensive: if a previous session (real or a prior test run) left the app
+# signed in on Home, sign out first so the flow can rely on starting at
+# Welcome. No-ops instantly if already signed out.
+- runFlow:
+    when:
+      visible: "kcal"
+    commands:
+      - tapOn:
+          point: "9%, 8%"       # ProfileDrawer hamburger icon — no accessible label, position-based
+      - tapOn: "Sign Out"
+
+# ── Welcome -> Signup ──────────────────────────────────────────────────────
+- assertVisible: "Get Started"
+- tapOn: "Get Started"
+- assertVisible: "Create your account"
+
+# ── Signup form (TEST_SCENARIOS.md §1.1.1) ──────────────────────────────────
+- tapOn: "Full name"
+- inputText: "Maestro Test"
+- tapOn: "Email address"
+- inputText: "maestro-test-${RUN_ID}@example.com"
+- tapOn: "Password"
+- inputText: "TestPass1234"
+- hideKeyboard
+- tapOn: "Create Account"
+
+# Signup redirects into onboarding once a session exists (no explicit
+# navigate() call in the app — this is a declarative nav swap per LEARNING.md).
+# Give it extra time since this is the first network round trip in the flow.
+- extendedWaitUntil:
+    visible: "Lose weight"
+    timeout: 15000
+
+# ── Onboarding step 1: Goal ──────────────────────────────────────────────
+- tapOn: "Lose weight"
+- tapOn: "Continue"
+
+# ── Onboarding step 2: Stats (drum pickers — accept defaults) ────────────
+- assertVisible: "Age"
+- tapOn: "Continue"
+
+# ── Onboarding step 3: Target weight ──────────────────────────────────────
+- assertVisible: "Target weight"
+- tapOn: "3 months"
+- tapOn: "Continue"
+
+# ── Onboarding step 4: Activity level ─────────────────────────────────────
+- assertVisible: "Desk life"
+- tapOn: "Light mover"
+- tapOn: "Continue"
+
+# ── Onboarding step 5: Diet (no restrictions path) ────────────────────────
+- assertVisible: "No restrictions"
+- tapOn: "No restrictions"
+
+# ── Onboarding step 6: Reveal — wait for the count-up animation to settle ──
+- extendedWaitUntil:
+    visible: "kcal / day"
+    timeout: 10000
+- assertVisible: "Protein"
+- assertVisible: "Carbs"
+- assertVisible: "Fat"
+- tapOn: "Let's start! →"
+
+# ── Lands on Home ─────────────────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: "kcal"
+    timeout: 10000
+- takeScreenshot: signup-onboarding-home-final

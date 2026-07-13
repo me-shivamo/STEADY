@@ -75,7 +75,7 @@ interface FoodLogState {
 
 const ZERO: DailyTotals = { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
 
-function sumTotals(meals: MealCard[]): DailyTotals {
+export function sumTotals(meals: MealCard[]): DailyTotals {
   const t = { ...ZERO }
   for (const meal of meals) {
     for (const e of meal.entries) {
