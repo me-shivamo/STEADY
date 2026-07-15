@@ -1012,3 +1012,8 @@ We tracked down why tapping a date in the calendar felt sluggish — it turned o
 *2026-07-13 · Milestone*
 
 Sixth time was the charm. After tracing five straight EAS build failures down through a missing Node polyfill, a broken Expo SDK 57 Gradle template, and finally an entire dependency tree that had drifted out of sync with `expo@57.0.4`, the real fix — running `expo install --fix` to bring all 21 packages back into alignment — produced a clean production build on the first try. STEADY has a real, signed Android App Bundle: versionCode 7, app version 1.0.0, built from commit `a421c29`. Every fix that got us here is committed and will apply automatically to every future build, so this isn't a one-off — the pipeline itself is fixed, not just this build.
+
+### Created a dedicated Play Store reviewer account
+*2026-07-13 · Setup*
+
+Google's app reviewers need real login access to test STEADY, and handing them a personal account would expose real health data for no reason — so we created a dedicated Supabase auth user (`shivambhawsar.next+playreview@gmail.com`, a Gmail alias that still lands in Shivam's inbox but reads as a distinct account to Supabase) purely for Play Console's "Sign in details" declaration. Created it via Supabase's Admin API using the service role key rather than through the app's own signup screen, since no device was handy — verified afterward that the `handle_new_user()` trigger fired correctly and created the matching `profiles` row, confirming this account behaves identically to a real signup. The one-off script and the service role key were never written to any file in the repo, only passed as command-line arguments and deleted immediately after running.
