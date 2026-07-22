@@ -42,8 +42,7 @@
           "photosPermission": "STEADY uses your photo library to log meals from existing photos.",
           "cameraPermission": "STEADY uses your camera to photograph meals for AI nutrition logging."
         }
-      ],
-      "expo-status-bar"
+      ]
     ],
     "extra": {
       "eas": {

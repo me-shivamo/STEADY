@@ -152,7 +152,7 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.42)',
   },
   panel: {
