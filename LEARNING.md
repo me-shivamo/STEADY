@@ -724,3 +724,18 @@ When a UI has sections that load at different speeds, fire separate queries for 
 *2026-06-24 · Architecture*
 
 `supabase.auth.getSession()` reads the JWT token from AsyncStorage, which is the phone's local key-value store (backed by disk I/O). `supabase.auth.getUser()` uses the token already held in memory by the Supabase JS client — no disk read required. In a hot path like `fetchEntriesForDate` (called on every date tap), that disk read adds 10–50ms of latency before the network call even starts. For STEADY, always prefer `getUser()` in data-fetching code; `getSession()` is only needed when you specifically need the full session object (e.g. to read the refresh token).
+
+### Expo Go is a fixed native binary, not your app
+*2026-07-22 · Architecture*
+
+Expo Go is a pre-built app you download from the App/Play Store — it ships with a fixed set of native modules compiled in at whatever SDK version Expo released it at. When you run `expo start` and scan the QR code, only your JavaScript gets sent over; Expo Go runs that JS inside its own already-compiled native shell. If your project's JS expects native APIs from a newer or older SDK than what your specific Expo Go install has, it fails to load — think of it like trying to run a Python script against a C extension module compiled for a different Python ABI version: the interpreter (Expo Go) is fixed, and your code has to match what it was built with. This is why "the app doesn't load in Expo Go" is almost always a version-matching problem, not a code bug — and why the whole SDK (Expo, React, React Native, and every `expo-*`/native peer package) has to move together as one matched set, never individually.
+
+### Config plugins vs. runtime packages — two different jobs, same import path
+*2026-07-22 · Pattern*
+
+Some `expo-*` packages export two unrelated things under one name: a runtime API (a component or function you `import` and use in your JS, like `<StatusBar />`) and, separately, a config plugin (a function that mutates native project files during `expo prebuild`, only relevant for `app.json`'s `plugins` array). `expo-splash-screen` ships both. `expo-status-bar` only ships the runtime API — it has no `plugin/` folder at all — so listing it under `plugins` in `app.json` is a category error: like passing a plain function where a decorator was expected. Different Expo SDK versions handle that mistake differently (some warn and skip it, others throw), which is exactly why this one-line mistake sat unnoticed through an entire SDK upgrade before a stricter version caught it. Rule of thumb: only add an entry to `plugins` if the package's own docs specifically say it needs prebuild-time native configuration — importing and rendering it in JS never requires a `plugins` entry.
+
+### Bisection — cutting a silent failure in half until it can't hide
+*2026-07-22 · Pattern*
+
+When a command fails with zero error output — no stack trace, no stderr, just a bad exit code — the fastest way to find the cause usually isn't reading minified library source line by line. It's the same idea as `git bisect`: take the set of things that could be responsible (here, six entries in `app.json`'s `plugins` array), cut it in half, test each half in isolation, and keep halving whichever side still fails until exactly one culprit is left. Six candidates became zero (nothing), then three, then confirmed to one specific package in four rounds — far faster than tracing through Expo's CLI internals hoping to spot where an exception gets silently swallowed.
