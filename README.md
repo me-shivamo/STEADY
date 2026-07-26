@@ -4,7 +4,7 @@
 
 ### AI-Powered Calorie Tracking — Built for Real Life
 
-*Snap a photo. Log a meal. Talk to your nutritionist. That's it.*
+*Snap a photo or type a meal. Get instant calories and macros.*
 
 <br/>
 
@@ -22,11 +22,7 @@
 
 ## What is STEADY?
 
-STEADY is an AI-first calorie and nutrition tracker that gets out of your way. No more manually searching food databases or guessing portion sizes. You snap a photo of your meal, STEADY's AI identifies what's on the plate, estimates macros, and logs it — in seconds.
-
-But it goes further than just logging. STEADY includes a built-in **AI Nutritionist** (powered by Claude) that you can actually talk to. Ask it why your energy crashes at 3pm. Ask it to suggest a high-protein breakfast. It knows your food history and gives real, personalized answers.
-
-> *Inspired by CalAI, HealthifyMe, and Journable — built to be better than all three.*
+STEADY is an AI-first calorie and nutrition tracker that gets out of your way. No more manually searching food databases or guessing portion sizes. You snap a photo of your meal or describe it in a chat box, STEADY's AI identifies what's on the plate (or in the text), estimates macros, and logs it — in seconds.
 
 ---
 
@@ -37,41 +33,41 @@ But it goes further than just logging. STEADY includes a built-in **AI Nutrition
 <td width="50%">
 
 **📸 AI Photo Scanning**
-Point your camera at any meal. GPT-4o Vision identifies food items, estimates portions, and calculates calories + macros. One tap from anywhere in the app.
+Point your camera at any meal. GPT-4o Vision identifies food items, estimates portions, and calculates calories + macros.
 
 </td>
 <td width="50%">
 
-**🤖 AI Nutritionist Chat**
-A Claude-powered nutritionist that knows your entire food history. Type food to log it, or ask a question — it handles both in the same chat.
+**💬 AI Text Logging**
+Type what you ate in plain English in the same chat screen — the AI extracts the food items and nutrition and logs it.
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-**🍽️ Card-Based Journal Feed**
-Every meal logged appears as a rich card in your daily feed. Scroll back through your week. See patterns. Edit entries on the fly.
+**⭕ Calorie Ring & Home Dashboard**
+An animated ring on your home screen tracks calories toward your daily goal, alongside macro breakdowns.
 
 </td>
-<td width="50%">
-
-**⭕ Calorie Ring**
-A satisfying animated ring on your home screen tracks calories toward your daily goal. Fills up with a haptic pulse every time you log food.
-
-</td>
-</tr>
-<tr>
 <td width="50%">
 
 **💬 Conversational Onboarding**
-No forms. A 7-step chat-style setup — tap cards to answer, not type in fields. Feels like talking to a friend, not filling out a tax form.
+A chat-style setup — tap cards to answer, not fill in fields — that ends with a calculated calorie and macro target.
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**⚖️ Weight, Water & Measurements**
+Log weight, water intake, and body measurements over time.
 
 </td>
 <td width="50%">
 
-**🧠 My Foods Memory**
-STEADY learns from your edits. Correct a portion size once, it remembers for next time. Your preferences build up over time.
+**🛠️ Manual Macro Adjustment**
+Override calculated calorie/macro targets by hand from Settings.
 
 </td>
 </tr>
@@ -90,16 +86,14 @@ STEADY learns from your edits. Correct a portion size once, it remembers for nex
 │  Navigation    React Navigation (tabs + stack)       │
 │  State         Zustand (global store)                │
 │  Forms         React Hook Form + Zod validation      │
-│  Charts        Victory Native                        │
-│  Animations    React Native Reanimated               │
 ├─────────────────────────────────────────────────────┤
 │  Backend       Supabase (PostgreSQL + Auth)          │
 │  Storage       Supabase Storage (meal photos)        │
 │  Edge Fns      Supabase Edge Functions (Deno)        │
 ├─────────────────────────────────────────────────────┤
 │  AI — Vision   OpenAI GPT-4o (food photo analysis)  │
-│  AI — Chat     Anthropic Claude Sonnet (nutritionist)│
-│  Food DB       USDA FoodData Central + Open Food Facts│
+│  AI — Text     Food/macro extraction from chat text  │
+│  Food DB       USDA FoodData Central (RAG cache)     │
 ├─────────────────────────────────────────────────────┤
 │  Analytics     PostHog                               │
 │  Auth          Supabase Auth + Apple Sign-In         │
@@ -113,11 +107,14 @@ STEADY learns from your edits. Correct a portion size once, it remembers for nex
 ```
 src/
 ├── screens/
-│   ├── app/          # Home, Journal, AI Chat, Profile
-│   ├── auth/         # Login, Sign Up
-│   └── onboarding/   # 7-step conversational setup
+│   ├── app/          # Home, AI food-log chat, Weight, Water, Body Measurements, Settings
+│   ├── auth/         # Welcome, Login, Signup, Password reset
+│   └── onboarding/   # Conversational setup (stats, activity, diet, goal, target weight, reveal)
 ├── components/
-│   └── nutrition/    # MealCard and food UI components
+│   ├── nutrition/    # MealCard and food UI components
+│   ├── onboarding/   # ChatBubble and onboarding-specific UI
+│   ├── profile/      # Profile drawer components
+│   └── common/       # Shared UI primitives
 ├── api/              # Supabase + AI API calls
 ├── store/            # Zustand global state slices
 ├── navigation/       # Tab + stack navigator config
@@ -154,7 +151,7 @@ npm install
 
 # Set up environment variables
 cp .env.example .env
-# Fill in your Supabase URL, anon key, OpenAI key, Anthropic key
+# Fill in your Supabase URL and anon key
 
 # Start the dev server
 npm start
@@ -175,34 +172,17 @@ AI keys live in Supabase Edge Function secrets — they never touch the client.
 
 ---
 
-## Roadmap
-
-- [x] Conversational onboarding
-- [x] User profile & settings
-- [x] Home dashboard with calorie ring
-- [x] PostHog analytics integration
-- [ ] AI photo scanning (in progress)
-- [ ] AI Nutritionist chat
-- [ ] Journal feed with meal cards
-- [ ] Barcode scanner (Open Food Facts)
-- [ ] Weekly nutrition charts
-- [ ] RevenueCat IAP for premium tier
-
----
-
 ## Philosophy
 
 Most calorie trackers fail because they're too much friction. Logging a meal shouldn't feel like filing an expense report.
 
-STEADY is built on one principle: **the fastest log is one you'll actually do.** Photo → confirm → done. Or type it in chat. Or just ask the AI — it'll figure out what you ate from context.
-
-The AI doesn't replace thinking about food. It removes the boring parts so you can focus on the interesting ones.
+STEADY is built on one principle: **the fastest log is one you'll actually do.** Photo → confirm → done. Or type it in chat.
 
 ---
 
 <div align="center">
 
-Built in public · React Native + Expo + Supabase + Claude + GPT-4o
+Built in public · React Native + Expo + Supabase + GPT-4o
 
 *A first mobile app. Made with curiosity and too many snacks.*
 
