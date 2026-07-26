@@ -323,12 +323,6 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
               <Text style={styles.sheetRowText}>Change Date & Time</Text>
             </TouchableOpacity>
 
-            {/* Add to Saved Entries — coming soon */}
-            <TouchableOpacity style={styles.sheetRow} onPress={() => { setShowOptions(false); Alert.alert('Coming soon', 'Saved entries (meal templates) are coming in a future update.') }} activeOpacity={0.7}>
-              <Ionicons name="bookmark-outline" size={22} color={C.text} />
-              <Text style={styles.sheetRowText}>Add to Saved Entries</Text>
-            </TouchableOpacity>
-
             {/* Delete */}
             <TouchableOpacity style={styles.sheetRow} onPress={handleDelete} activeOpacity={0.7}>
               <Ionicons name="trash-outline" size={22} color="#E53935" />
