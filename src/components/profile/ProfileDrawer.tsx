@@ -31,26 +31,18 @@ interface ProfileDrawerProps {
 type MenuItem = {
   icon: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
-  badge?: string;
   variant?: MenuRowVariant;
-  action: 'comingSoon' | 'signOut' | 'navigate';
+  action: 'signOut' | 'navigate';
   // Only param-less routes belong in the menu — navigate(name) with no params
   // is only type-safe for routes whose params are undefined.
   screen?: 'Weight' | 'Water' | 'BodyMeasurements' | 'Settings';
 };
 
 const MENU: MenuItem[] = [
-  { icon: 'bar-chart-outline', label: 'Progress Charts', action: 'comingSoon' },
   { icon: 'scale-outline',     label: 'Weight',          action: 'navigate', screen: 'Weight' },
   { icon: 'water-outline',     label: 'Water',           action: 'navigate', screen: 'Water' },
   { icon: 'body-outline',      label: 'Body Measurements', action: 'navigate', screen: 'BodyMeasurements' },
-  { icon: 'restaurant-outline', label: 'My Foods', action: 'comingSoon' },
-  { icon: 'notifications-outline', label: 'Reminders',   action: 'comingSoon' },
-  { icon: 'people-outline',    label: 'Groups',          action: 'comingSoon' },
-  { icon: 'gift-outline',      label: 'Refer a Friend',  action: 'comingSoon' },
   { icon: 'settings-outline',  label: 'Settings',        action: 'navigate', screen: 'Settings' },
-  { icon: 'help-circle-outline', label: 'Help & Support', action: 'comingSoon' },
-  { icon: 'star-outline',      label: 'Go Premium', variant: 'premium', action: 'comingSoon' },
   { icon: 'log-out-outline',   label: 'Sign Out',   variant: 'destructive', action: 'signOut' },
 ];
 
@@ -108,8 +100,6 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
       // Close drawer first so it doesn't show behind the new screen
       onClose();
       navigation.navigate(item.screen);
-    } else {
-      Alert.alert(item.label, 'Coming soon — this feature is on the way.');
     }
   };
 
@@ -136,7 +126,6 @@ export default function ProfileDrawer({ open, onClose }: ProfileDrawerProps) {
                   key={item.label}
                   icon={item.icon}
                   label={item.label}
-                  badge={item.badge}
                   variant={item.variant}
                   showDivider={i < MENU.length - 1}
                   onPress={() => handlePress(item)}
