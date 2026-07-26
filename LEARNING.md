@@ -3,6 +3,16 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### A privacy policy is a factual claim about the code, not a template you fill in once
+*2026-07-23 · Pattern*
+
+A privacy policy isn't prose you write once from a template and forget — every sentence in it is a testable claim about what the running code actually does, and it goes stale the moment the code changes underneath it. STEADY's policy said "OpenRouter / OpenAI" for AI processing and separately, in `CLAUDE.md`, claimed Anthropic's Claude model was used for the nutritionist chat — but grepping the actual edge functions showed only OpenRouter-routed OpenAI calls exist; Claude is never invoked. Same pattern with PostHog: the policy said "usage analytics" in the vague, anonymous-sounding sense, but the real `identify()` calls in `authStore.ts` attach name and email to every event. The general lesson: before writing or updating a privacy policy, grep the actual API calls, database schema, and third-party SDK inits rather than trusting a tech-stack doc or your own memory of what you built — docs and memory drift, running code doesn't.
+
+### Play Console's "App content" declarations are a policy gate, not a code check
+*2026-07-22 · Protocol*
+
+Before an app is even inspected for bugs or crashes, Google Play runs it through an account-tier policy check based entirely on what you *declare* in Play Console's App content questionnaire — things like app category and, for health-adjacent apps, a checklist of specific health features. Certain declarations (financial services, VPN, government apps, and select health features like period tracking) require the developer to be registered as a business Organization account rather than an individual one, regardless of what the app's code actually does. This is a legal/compliance layer sitting outside the app bundle entirely — the fix for a rejection here is correcting the declaration to match reality, not touching a single line of code, which is why STEADY's rejection cleared by unchecking one mistaken checkbox instead of a code change.
+
 ### EAS environment variables: server-side secrets instead of file-based ones
 *2026-07-13 · Tool*
 
@@ -739,3 +749,8 @@ Some `expo-*` packages export two unrelated things under one name: a runtime API
 *2026-07-22 · Pattern*
 
 When a command fails with zero error output — no stack trace, no stderr, just a bad exit code — the fastest way to find the cause usually isn't reading minified library source line by line. It's the same idea as `git bisect`: take the set of things that could be responsible (here, six entries in `app.json`'s `plugins` array), cut it in half, test each half in isolation, and keep halving whichever side still fails until exactly one culprit is left. Six candidates became zero (nothing), then three, then confirmed to one specific package in four rounds — far faster than tracing through Expo's CLI internals hoping to spot where an exception gets silently swallowed.
+
+### anon key vs. service_role key — same client library, opposite trust level
+*2026-07-22 · Protocol*
+
+Supabase issues two API keys for the same project, and the difference isn't which endpoints they can reach — it's whether Row Level Security applies. The `anon` key (the one embedded in STEADY's app bundle via `EXPO_PUBLIC_SUPABASE_URL`/`ANON_KEY`) is scoped by whichever `auth.uid()` is currently logged in — every RLS policy in `002_rls_policies.sql` checks that against `user_id`, so a request with the anon key physically cannot read or write another user's rows even if you know their ID. The `service_role` key skips RLS checking entirely — it's the equivalent of a Postgres superuser connection over HTTP. That's exactly why it's required for admin-style scripts (creating a user without a device, seeding another account's data) and exactly why it must never ship inside the app or sit in a committed file: anything holding it can read or write any row for any user in the whole project. Same `createClient()` call as the app uses — the only thing that changes is which key you hand it.

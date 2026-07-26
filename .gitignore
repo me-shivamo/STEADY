@@ -34,3 +34,6 @@ yarn-error.log*
 # Maestro E2E test artifacts (see .maestro/README or pass
 # --test-output-dir .maestro/screenshots to `maestro test`)
 .maestro/screenshots/
+
+# One-off local ops scripts (never committed — may reference prod credentials via env vars)
+scripts/tmp/

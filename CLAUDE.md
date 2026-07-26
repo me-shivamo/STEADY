@@ -13,10 +13,10 @@ Entries should be written in a conversational, build-in-public voice — like a 
 **Rule 2 — Teach before you build.** Before any code or technical action, explain what it is, why we're doing it, how it fits the system architecture, and log the learning to `LEARNING.md`.
 
 ## Project context
-This is STEADY — an AI calorie tracking app for iOS + Android. Full product plan is in `.claude/plans/`. Memory files with all design decisions are in `.claude/memory/`.
+This is STEADY — an AI calorie tracking app for iOS + Android. Memory files with all design decisions are in `.claude/memory/`.
 
 ## Tech stack
-React Native + Expo · Supabase · OpenAI GPT-4o (food photos) · Claude claude-sonnet-4-6 (AI nutritionist) · Zustand · TypeScript
+React Native + Expo · Supabase · OpenAI GPT-4o (food photos + text logging, via OpenRouter) · Zustand · TypeScript
 
 ## Developer background
 Non-JS background (Python/Java/C++). Explain TypeScript patterns, React hooks, and mobile-specific concepts clearly. Don't assume familiarity with JSX or the React ecosystem.
