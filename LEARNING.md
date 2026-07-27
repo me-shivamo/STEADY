@@ -3,6 +3,16 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### Push notification architecture: token, Edge Function, and pg_cron as three separable concerns
+*2026-07-27 · Architecture*
+
+A push token is an address, not a connection — Apple/Google hand your app a unique string per install, you store it in Supabase against the user, and later "notify Shivam" means "look up his token and hand it to Expo's push API," which relays to APNs/FCM. There's no persistent connection to maintain, same mental model as registering a callback URL. Supabase Edge Functions are the decision logic — small TypeScript functions that only run when invoked and then shut down, no always-on server to manage, closer to a Lambda than a Java service. `pg_cron` is the heartbeat that lives inside Postgres itself and fires the Edge Function on a schedule (e.g. every 5 minutes) — together these three pieces mean STEADY's "automatic" reminder system has zero servers to keep running: a scheduler, a stateless decision function, and a delivery relay, each swappable independently.
+
+### Timezone math is the hidden hard part of "remind me at 8pm"
+*2026-07-27 · Pattern*
+
+`pg_cron`'s heartbeat runs in UTC, but a user's reminder time is local — so the Edge Function can't just check "is it 8pm," it has to convert each user's stored `timezone` + `reminder_time` into UTC and compare against right now, every single run. This is also the real cost difference between Expo Notifications and OneSignal: OneSignal does this timezone conversion for you inside its dashboard, Expo makes you write the comparison yourself. It's not algorithmically hard, but it's the one part of this feature where a bug is silent — a user just quietly stops getting reminders at the right time, with no error to notice.
+
 ### A privacy policy is a factual claim about the code, not a template you fill in once
 *2026-07-23 · Pattern*
 
