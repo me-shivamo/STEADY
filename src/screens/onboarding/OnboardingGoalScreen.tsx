@@ -36,6 +36,20 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
     }
   };
 
+  // Skips the entire onboarding flow, not just this step — goes straight to
+  // Home with no calorie/macro targets set yet. Home shows a "finish your
+  // profile" prompt instead of the calorie ring until the user fills these in
+  // (from Settings), rather than silently guessing at numbers for them.
+  const handleSkipToHome = async () => {
+    setLoading(true);
+    try {
+      await updateProfile({ onboarding_complete: true });
+      posthog.capture('onboarding_skipped_to_home', { step: 'goal' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <OnboardingScreen
       step={1}
@@ -43,8 +57,13 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
       onContinue={handleContinue}
       disabled={!selected}
       loading={loading}
+      secondaryLabel="Skip for now"
+      onSecondary={handleSkipToHome}
     >
-      <ChatBubble message="Hey! I'm STEADY 👋 I'll help you track food, hit your goals, and understand your body better. What's your main goal?" />
+      <ChatBubble
+        animated
+        message="Hey! I'm STEADY 👋 I'll help you track food, hit your goals, and understand your body better. What's your main goal?"
+      />
 
       <View style={styles.list}>
         {GOALS.map((goal) => (
@@ -64,7 +83,7 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   list: {
-    gap: spacing.sm + 2,
-    marginTop: spacing.lg,
+    gap: spacing.xs + 2,
+    marginTop: spacing.md,
   },
 });
