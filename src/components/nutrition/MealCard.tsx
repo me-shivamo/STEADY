@@ -8,8 +8,11 @@ import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { AppStackParamList } from '../../navigation/types'
 import { MealCard as MealCardType, useFoodLogStore } from '../../store/foodLogStore'
+import { useSavedEntriesStore } from '../../store/savedEntriesStore'
 import { useAuthStore } from '../../store/authStore'
 import ChangeDateTimeSheet from '../common/ChangeDateTimeSheet'
+import ConfirmSheet from '../common/ConfirmSheet'
+import { fontFamily } from '../../theme/typography'
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>
 
@@ -69,6 +72,7 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   const { profile } = useAuthStore()
   const editMealFromText = useFoodLogStore(s => s.editMealFromText)
   const deleteMeal       = useFoodLogStore(s => s.deleteMeal)
+  const saveMealAsEntry  = useSavedEntriesStore(s => s.saveMealAsEntry)
 
   // ── Per-card edit state (local UI state — no other screen cares about it) ──
   const [isEditing,    setIsEditing]    = useState(false)
@@ -76,6 +80,10 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   const [isSaving,     setIsSaving]     = useState(false)
   const [showOptions,  setShowOptions]  = useState(false)
   const [showDateTime, setShowDateTime] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting,   setIsDeleting]   = useState(false)
+  const [deleteError,  setDeleteError]  = useState<string | null>(null)
+  const [justSaved,    setJustSaved]    = useState(false)
 
   const startEdit = () => {
     setShowOptions(false)
@@ -87,23 +95,27 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
 
   const handleDelete = () => {
     setShowOptions(false)
-    Alert.alert(
-      'Delete meal?',
-      'This will permanently remove this entry and its macros from today.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete', style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteMeal(meal.id)
-            } catch {
-              Alert.alert('Error', 'Could not delete. Please try again.')
-            }
-          },
-        },
-      ],
-    )
+    setDeleteError(null)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleSaveAsEntry = async () => {
+    await saveMealAsEntry(meal)
+    setShowOptions(false)
+    setJustSaved(true)
+    setTimeout(() => setJustSaved(false), 1500)
+  }
+
+  const confirmDelete = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteMeal(meal.id)
+      setShowDeleteConfirm(false)
+    } catch {
+      setDeleteError('Could not delete. Please try again.')
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   const confirmEdit = async () => {
@@ -157,14 +169,9 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   return (
     <View style={styles.card}>
 
-      {/* ── Optional photo — shown ONLY when the user uploaded one ─────────── */}
-      {meal.photo_url ? (
-        <Image source={{ uri: meal.photo_url }} style={styles.photo} />
-      ) : null}
-
       <View style={styles.body}>
 
-        {/* ── User-input line — editable when in edit mode ─────────────────── */}
+        {/* ── User-input line (+ small photo thumbnail alongside it) ──────── */}
         {isEditing ? (
           /* Row: [TextInput flex:1] [✓] [✕]  — icons sit right of the input box */
           <View style={styles.inputEditRow}>
@@ -185,8 +192,17 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
               <Ionicons name="close" size={20} color={C.muted} />
             </TouchableOpacity>
           </View>
-        ) : meal.input_text ? (
-          <Text style={styles.inputText}>{meal.input_text}</Text>
+        ) : (meal.input_text || meal.photo_url) ? (
+          <View style={styles.inputTextRow}>
+            {meal.input_text ? (
+              <Text style={[styles.inputText, meal.photo_url && styles.inputTextWithPhoto]}>
+                {meal.input_text}
+              </Text>
+            ) : null}
+            {meal.photo_url ? (
+              <Image source={{ uri: meal.photo_url }} style={styles.photoThumb} />
+            ) : null}
+          </View>
         ) : null}
 
         {/* ── Per-food rows: name (quantity) + plain macro line ───────────── */}
@@ -323,10 +339,10 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
               <Text style={styles.sheetRowText}>Change Date & Time</Text>
             </TouchableOpacity>
 
-            {/* Add to Saved Entries — coming soon */}
-            <TouchableOpacity style={styles.sheetRow} onPress={() => { setShowOptions(false); Alert.alert('Coming soon', 'Saved entries (meal templates) are coming in a future update.') }} activeOpacity={0.7}>
-              <Ionicons name="bookmark-outline" size={22} color={C.text} />
-              <Text style={styles.sheetRowText}>Add to Saved Entries</Text>
+            {/* Add to Saved Entries */}
+            <TouchableOpacity style={styles.sheetRow} onPress={handleSaveAsEntry} activeOpacity={0.7}>
+              <Ionicons name={justSaved ? 'checkmark-circle' : 'bookmark-outline'} size={22} color={justSaved ? C.accent : C.text} />
+              <Text style={styles.sheetRowText}>{justSaved ? 'Saved!' : 'Add to Saved Entries'}</Text>
             </TouchableOpacity>
 
             {/* Delete */}
@@ -348,6 +364,18 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
         onClose={() => setShowDateTime(false)}
       />
 
+      {/* ── Delete confirmation ──────────────────────────────────────────── */}
+      <ConfirmSheet
+        visible={showDeleteConfirm}
+        title="Delete meal?"
+        message="This will permanently remove this entry and its macros from today."
+        confirmLabel="Delete"
+        loading={isDeleting}
+        errorMessage={deleteError}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+
     </View>
   )
 }
@@ -365,23 +393,36 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
 
-  // Optional uploaded photo (full-width banner above the body)
-  photo: {
-    width: '100%',
-    height: 130,
-    backgroundColor: C.surface,
-  },
-
   body: {
     paddingHorizontal: 16,
     paddingTop: 10,
   },
 
+  // Row pairing the raw input text with a small photo thumbnail, instead of
+  // the photo being a separate full-width banner above the whole card.
+  inputTextRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+
   // Faded gray line = the user's raw typed text
   inputText: {
     fontSize: 11.5,
+    fontFamily: fontFamily.regular,
     color: C.muted,
-    marginBottom: 4,
+  },
+  inputTextWithPhoto: {
+    flex: 1,
+    marginRight: 8,
+  },
+  // Small square thumbnail shown next to the text when a photo was attached —
+  // was previously a 130px-tall full-width banner above the whole card.
+  photoThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: C.surface,
   },
 
   // Editable version of the input line (edit mode) — row contains input + ✓/✕
@@ -394,6 +435,7 @@ const styles = StyleSheet.create({
   inputEdit: {
     flex: 1,
     fontSize: 13,
+    fontFamily: fontFamily.regular,
     color: C.ink,
     paddingVertical: 6,
     paddingHorizontal: 8,
@@ -422,6 +464,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.text2,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
 
   // Per-food row
@@ -435,12 +478,14 @@ const styles = StyleSheet.create({
   foodName: {
     fontSize: 14,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.ink,
     marginBottom: 3,
   },
   foodQty: {
     color: C.ink,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
   },
 
   // Macros under each food — each value in its own content-sized light-grey chip
@@ -459,6 +504,7 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     color: C.text2,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
   },
 
   // Divider before the total grid
@@ -478,10 +524,10 @@ const styles = StyleSheet.create({
   },
   macroCol: { flex: 1 },
   macroColLabel: {
-    fontSize: 11.5, color: C.text2, fontWeight: '500',
+    fontSize: 11.5, color: C.text2, fontWeight: '500', fontFamily: fontFamily.medium,
   },
   macroColVal: {
-    fontSize: 15.5, fontWeight: '700', color: C.text,
+    fontSize: 15.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text,
     marginTop: 1, marginBottom: 3,
   },
   macroBar: {
@@ -490,7 +536,7 @@ const styles = StyleSheet.create({
   },
   macroBarFill: { height: '100%', borderRadius: 2 },
   macroColPct: {
-    fontSize: 10.5, color: C.muted, marginTop: 2,
+    fontSize: 10.5, color: C.muted, marginTop: 2, fontFamily: fontFamily.regular,
   },
 
   // Footer — time + actions
@@ -504,7 +550,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: C.surface,
   },
-  timeText: { fontSize: 11.5, color: C.muted },
+  timeText: { fontSize: 11.5, color: C.muted, fontFamily: fontFamily.regular },
   footerActions: { flexDirection: 'row', gap: 4 },
   iconBtn: {
     width: 28, height: 28, borderRadius: 8,
@@ -542,6 +588,7 @@ const styles = StyleSheet.create({
   sheetRowText: {
     fontSize: 16,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.text,
   },
 })
