@@ -7,6 +7,7 @@ import { Platform } from 'react-native';
 import { supabase } from '../api/supabase';
 import { Tables } from '../types/database';
 import { useFoodLogStore } from './foodLogStore';
+import { useGroupStore } from './groupStore';
 import { posthog } from '../utils/posthog';
 
 // The generated DB types export the generic `Tables<>` helper, not a named
@@ -170,6 +171,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // never sees the previous user's meals/totals. Centralised here so every
     // sign-out path (drawer, future session-expiry, etc.) always clears it.
     useFoodLogStore.getState().reset();
+    useGroupStore.getState().reset();
 
     // Revoke the device's stored session token in the background. scope: 'local'
     // only invalidates THIS device (no all-devices round-trip), and we don't
@@ -200,6 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // token and is expected to fail quietly.
     set({ session: null, profile: null, passwordRecovery: false });
     useFoodLogStore.getState().reset();
+    useGroupStore.getState().reset();
     supabase.auth.signOut({ scope: 'local' }).catch(() => {});
   },
 
@@ -263,6 +266,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
     set({ profile: data });
+
+    // Keep profiles.timezone current every time a session starts (fresh
+    // launch, login, signup — anywhere fetchProfile runs), not only when the
+    // user happens to grant push notification permission. Postgres functions
+    // that need "the user's local day" (usage-limit resets, reminders) read
+    // this column, so a stale/missing value silently breaks them for anyone
+    // who never enabled notifications. Intl.DateTimeFormat reads the phone's
+    // OS timezone setting directly — no location permission involved.
+    const deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (data && data.timezone !== deviceTimezone) {
+      get().updateProfile({ timezone: deviceTimezone }).catch((err) => {
+        console.warn('Failed to sync device timezone:', err);
+      });
+    }
   },
 
   updateProfile: async (updates) => {
