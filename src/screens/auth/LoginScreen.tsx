@@ -4,21 +4,22 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
-import { fontWeight } from '../../theme/typography';
+import { fontWeight, fontFamily } from '../../theme/typography';
+import { useScreenChrome } from '../../hooks/useScreenChrome';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
@@ -36,6 +37,7 @@ function GoogleLogo() {
 }
 
 export default function LoginScreen({ navigation }: Props) {
+  useScreenChrome(colors.bgPrimary, 'dark');
   const { signIn, signInWithGoogle, requestPasswordReset } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -43,35 +45,37 @@ export default function LoginScreen({ navigation }: Props) {
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [resetInfoText, setResetInfoText] = useState<string | null>(null);
 
   const handleForgotPassword = async () => {
+    setErrorText(null);
+    setResetInfoText(null);
     const target = email.trim();
     if (!target) {
-      Alert.alert('Enter your email', 'Type your email address above first, then tap "Forgot password?" again.');
+      setErrorText('Type your email address above first, then tap "Forgot password?" again.');
       return;
     }
     if (resetLoading) return;
     setResetLoading(true);
     try {
       await requestPasswordReset(target);
-      Alert.alert(
-        'Check your email',
-        `If an account exists for ${target}, we've sent it a password-reset link. Open the link on this phone to set a new password.`,
-      );
+      setResetInfoText(`If an account exists for ${target}, we've sent it a password-reset link.`);
     } catch (err: any) {
-      Alert.alert('Could not send reset email', err.message ?? 'Please try again.');
+      setErrorText(err.message ?? 'Could not send reset email. Please try again.');
     } finally {
       setResetLoading(false);
     }
   };
 
   const handleGoogleSignIn = async () => {
+    setErrorText(null);
     try {
       setGoogleLoading(true);
       await signInWithGoogle();
     } catch (error: any) {
       if (error?.message !== 'User cancelled') {
-        Alert.alert('Sign in failed', error?.message ?? 'Something went wrong. Please try again.');
+        setErrorText(error?.message ?? 'Sign in failed. Please try again.');
       }
     } finally {
       setGoogleLoading(false);
@@ -79,15 +83,17 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   const handleLogin = async () => {
+    setErrorText(null);
+    setResetInfoText(null);
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      setErrorText('Please enter your email and password.');
       return;
     }
     setIsLoading(true);
     try {
       await signIn(email.trim(), password);
     } catch (err: any) {
-      Alert.alert('Login failed', err.message ?? 'Invalid email or password.');
+      setErrorText(err.message ?? 'Invalid email or password.');
     } finally {
       setIsLoading(false);
     }
@@ -142,13 +148,20 @@ export default function LoginScreen({ navigation }: Props) {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(v => !v)}
               >
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.forgotButton} onPress={handleForgotPassword} disabled={resetLoading}>
               <Text style={styles.forgotText}>{resetLoading ? 'Sending…' : 'Forgot password?'}</Text>
             </TouchableOpacity>
+
+            {errorText ? <Text style={styles.inlineError}>{errorText}</Text> : null}
+            {resetInfoText ? <Text style={styles.inlineInfo}>{resetInfoText}</Text> : null}
           </View>
 
           {/* Divider */}
@@ -222,12 +235,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
     color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
   },
   form: {
     gap: 12,
@@ -242,6 +257,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   passwordContainer: {
     height: 46,
@@ -257,6 +273,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   eyeButton: {
     paddingHorizontal: 14,
@@ -264,16 +281,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eyeIcon: {
-    fontSize: 16,
-  },
   forgotButton: {
     alignSelf: 'flex-end',
+  },
+  inlineError: {
+    fontSize: 13,
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    textAlign: 'right',
+    marginTop: 8,
+  },
+  inlineInfo: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
+    textAlign: 'right',
+    marginTop: 8,
   },
   forgotText: {
     fontSize: 13,
     color: colors.accent,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -290,6 +319,7 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 13,
     color: colors.textMuted,
+    fontFamily: fontFamily.regular,
   },
   socialButtons: {
     gap: 12,
@@ -309,6 +339,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 16,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
     color: colors.textPrimary,
   },
   primaryButton: {
@@ -331,15 +362,18 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold,
     letterSpacing: 0.2,
   },
   switchText: {
     fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
+    fontFamily: fontFamily.regular,
   },
   switchLink: {
     color: colors.accent,
     fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold,
   },
 });
