@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   Dimensions,
   Platform,
@@ -33,6 +32,8 @@ import {
   MeasurementInput,
 } from '../../store/bodyMeasurementsStore';
 import { useAuthStore } from '../../store/authStore';
+import { fontFamily } from '../../theme/typography';
+import ConfirmSheet from '../../components/common/ConfirmSheet';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_H = 160;
@@ -183,12 +184,7 @@ function HistoryRow({
   const date = new Date(entry.logged_date + 'T00:00:00');
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-  const handleDelete = () => {
-    Alert.alert('Delete entry', `Remove this measurement from ${dateStr}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: onDelete },
-    ]);
-  };
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   return (
     <View style={styles.historyRow}>
@@ -201,9 +197,17 @@ function HistoryRow({
           </Text>
         )}
       </View>
-      <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => setConfirmVisible(true)} style={styles.deleteBtn} activeOpacity={0.6}>
         <Ionicons name="trash-outline" size={15} color={C.muted} />
       </TouchableOpacity>
+
+      <ConfirmSheet
+        visible={confirmVisible}
+        title="Delete entry?"
+        message={`Remove this measurement from ${dateStr}?`}
+        onConfirm={() => { setConfirmVisible(false); onDelete(); }}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }
@@ -222,6 +226,7 @@ export default function BodyMeasurementsScreen() {
   });
   const [saving, setSaving] = useState(false);
   const [chartWidth, setChartWidth] = useState(SCREEN_W - 32);
+  const [saveErrorText, setSaveErrorText] = useState<string | null>(null);
 
   useEffect(() => { fetchEntries(); }, []);
 
@@ -247,6 +252,7 @@ export default function BodyMeasurementsScreen() {
   };
 
   const handleSave = async () => {
+    setSaveErrorText(null);
     const values: MeasurementInput = {};
     let anyValid = false;
 
@@ -255,7 +261,7 @@ export default function BodyMeasurementsScreen() {
       if (!text) continue;
       const val = parseFloat(text);
       if (isNaN(val) || val <= 0) {
-        Alert.alert('Invalid value', `Please enter a valid number for ${FIELDS.find((f) => f.field === field)!.label}, or leave it blank.`);
+        setSaveErrorText(`Please enter a valid number for ${FIELDS.find((f) => f.field === field)!.label}, or leave it blank.`);
         return;
       }
       values[field] = parseFloat(toStored(field, val).toFixed(1));
@@ -263,7 +269,7 @@ export default function BodyMeasurementsScreen() {
     }
 
     if (!anyValid) {
-      Alert.alert('Nothing to save', 'Enter at least one measurement.');
+      setSaveErrorText('Enter at least one measurement.');
       return;
     }
 
@@ -296,7 +302,7 @@ export default function BodyMeasurementsScreen() {
           {/* ── Log entry ── */}
           <View style={styles.logCard}>
             <Text style={styles.sectionLabel}>Log today's measurements</Text>
-            <Text style={styles.sectionHint}>Fill in whichever ones you took — leave the rest blank</Text>
+            <Text style={styles.sectionHint}>Fill in whichever ones you took, leave the rest blank</Text>
 
             <View style={styles.fieldGrid}>
               {FIELDS.map(({ field, label }) => (
@@ -332,6 +338,7 @@ export default function BodyMeasurementsScreen() {
                 : <Text style={styles.saveBtnText}>Save measurements</Text>
               }
             </TouchableOpacity>
+            {saveErrorText ? <Text style={styles.inlineError}>{saveErrorText}</Text> : null}
           </View>
 
           {/* ── Metric picker ── */}
@@ -412,15 +419,15 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: 18, backgroundColor: C.surface,
     alignItems: 'center', justifyContent: 'center',
   },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', color: C.text },
+  headerTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text },
 
   scroll: { paddingHorizontal: 16, paddingTop: 16, gap: 12 },
 
   sectionLabel: {
-    fontSize: 13, fontWeight: '600', color: C.text2,
+    fontSize: 13, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text2,
     textTransform: 'uppercase', letterSpacing: 0.4,
   },
-  sectionHint: { fontSize: 12, color: C.muted, marginTop: -4 },
+  sectionHint: { fontSize: 12, color: C.muted, marginTop: -4, fontFamily: fontFamily.regular },
 
   // Log card
   logCard: {
@@ -430,20 +437,21 @@ const styles = StyleSheet.create({
   },
   fieldGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   fieldWrap: { width: '31%', gap: 5 },
-  fieldLabel: { fontSize: 11.5, fontWeight: '600', color: C.text2 },
+  fieldLabel: { fontSize: 11.5, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text2 },
   fieldInputWrap: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: C.surface,
     borderRadius: 10, paddingHorizontal: 10, height: 40, gap: 3,
   },
-  fieldInput: { flex: 1, fontSize: 15, fontWeight: '700', color: C.text },
-  fieldUnit: { fontSize: 11, color: C.muted, fontWeight: '500' },
+  fieldInput: { flex: 1, fontSize: 15, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text },
+  fieldUnit: { fontSize: 11, color: C.muted, fontWeight: '500', fontFamily: fontFamily.medium },
 
   saveBtn: {
     height: 46, borderRadius: 12, backgroundColor: C.accent,
     alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
   saveBtnDisabled: { opacity: 0.45 },
-  saveBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  saveBtnText: { fontSize: 15, fontWeight: '700', fontFamily: fontFamily.bold, color: '#fff' },
+  inlineError: { fontSize: 13, color: C.error, fontFamily: fontFamily.medium, marginTop: 2 },
 
   // Metric picker
   metricRow: { gap: 8, paddingVertical: 2 },
@@ -454,7 +462,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 6, elevation: 1,
   },
   metricChipActive: { backgroundColor: C.accent },
-  metricChipText: { fontSize: 13, fontWeight: '600', color: C.text },
+  metricChipText: { fontSize: 13, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text },
   metricChipTextActive: { color: '#fff' },
   metricDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: C.border },
 
@@ -468,9 +476,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 14, marginBottom: 10,
   },
-  chartTitle: { fontSize: 15, fontWeight: '600', color: C.text },
+  chartTitle: { fontSize: 15, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text },
   chartEmpty: { alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 24 },
-  chartEmptyText: { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 18 },
+  chartEmptyText: { fontSize: 13, color: C.muted, textAlign: 'center', lineHeight: 18, fontFamily: fontFamily.regular },
 
   rangePill: { flexDirection: 'row', backgroundColor: C.surface, borderRadius: 10, padding: 3, gap: 2 },
   rangeTab: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 7 },
@@ -478,8 +486,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.card,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1,
   },
-  rangeText: { fontSize: 11.5, fontWeight: '500', color: C.muted },
-  rangeTextActive: { color: C.accent, fontWeight: '700' },
+  rangeText: { fontSize: 11.5, fontWeight: '500', fontFamily: fontFamily.medium, color: C.muted },
+  rangeTextActive: { color: C.accent, fontWeight: '700', fontFamily: fontFamily.bold },
 
   // History
   historyCard: {
@@ -488,15 +496,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 1, shadowRadius: 10, elevation: 2,
   },
   historyTitle: {
-    fontSize: 13, fontWeight: '600', color: C.text2,
+    fontSize: 13, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text2,
     textTransform: 'uppercase', letterSpacing: 0.4,
     paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8,
   },
   historyRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8 },
-  historyDate: { flex: 1, fontSize: 14, fontWeight: '500', color: C.text },
+  historyDate: { flex: 1, fontSize: 14, fontWeight: '500', fontFamily: fontFamily.medium, color: C.text },
   historyRight: { alignItems: 'flex-end', gap: 2 },
-  historyValue: { fontSize: 15, fontWeight: '700', color: C.text },
-  historyDelta: { fontSize: 11.5, fontWeight: '600' },
+  historyValue: { fontSize: 15, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text },
+  historyDelta: { fontSize: 11.5, fontWeight: '600', fontFamily: fontFamily.semibold },
   deleteBtn: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
   historyDivider: { height: 1, backgroundColor: C.border, marginLeft: 14 },
 });

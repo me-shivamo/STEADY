@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
+import { todayLocalDate, daysAgoLocalDate } from '../utils/localDate';
 
 export type MeasurementField =
   | 'waist_cm' | 'hips_cm' | 'chest_cm' | 'arms_cm' | 'thighs_cm' | 'neck_cm' | 'body_fat_pct';
@@ -21,13 +22,23 @@ export type MeasurementInput = Partial<Record<MeasurementField, number>>;
 
 type Range = '30d' | '90d' | '1y';
 
+export interface LatestMeasurementSummary {
+  latestField: 'body_fat_pct' | 'waist_cm' | null;
+  latestValue: number | null;
+  deltaFromPrevious: number | null;
+  latestDate: string | null;
+}
+
 interface BodyMeasurementsState {
   entries: BodyMeasurementEntry[];
   range: Range;
   loading: boolean;
+  latestSummary: LatestMeasurementSummary | null;
+  latestSummaryLoading: boolean;
 
   setRange: (r: Range) => void;
   fetchEntries: () => Promise<void>;
+  fetchLatestTwo: () => Promise<void>;
   addEntry: (values: MeasurementInput) => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
 }
@@ -36,6 +47,8 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
   entries: [],
   range: '90d',
   loading: false,
+  latestSummary: null,
+  latestSummaryLoading: false,
 
   setRange: (range) => {
     set({ range });
@@ -50,9 +63,7 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
 
     const rangeMap: Record<Range, number> = { '30d': 30, '90d': 90, '1y': 365 };
     const days = rangeMap[get().range];
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-    const sinceStr = since.toISOString().split('T')[0];
+    const sinceStr = daysAgoLocalDate(days);
 
     const { data, error } = await supabase
       .from('body_measurements')
@@ -71,7 +82,7 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
     const userId = useAuthStore.getState().session?.user.id;
     if (!userId) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocalDate();
 
     // Upsert — one entry per day, same as weight_logs. Unset fields stay
     // whatever they already were for today (undefined keys are simply
@@ -102,5 +113,49 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
 
     await supabase.from('body_measurements').delete().eq('id', id).eq('user_id', userId);
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+  },
+
+  // Lightweight fetch for the Progress screen's trend-link card — only the
+  // 2 most recent rows and 2 columns, regardless of the `range` setting,
+  // since all that's needed here is "latest value + direction of change",
+  // not a full chart's worth of history.
+  fetchLatestTwo: async () => {
+    const userId = useAuthStore.getState().session?.user.id;
+    if (!userId) return;
+
+    set({ latestSummaryLoading: true });
+
+    const { data, error } = await supabase
+      .from('body_measurements')
+      .select('logged_date, waist_cm, body_fat_pct')
+      .eq('user_id', userId)
+      .order('logged_date', { ascending: false })
+      .limit(2);
+
+    if (error || !data || data.length === 0) {
+      if (error) console.error('fetchLatestTwo:', error.message);
+      set({ latestSummary: null, latestSummaryLoading: false });
+      return;
+    }
+
+    const [latest, previous] = data;
+    // Prefer body_fat_pct as the single headline number when present — it's
+    // more informative than a circumference measurement — else fall back to waist.
+    const field: 'body_fat_pct' | 'waist_cm' | null =
+      latest.body_fat_pct != null ? 'body_fat_pct' : latest.waist_cm != null ? 'waist_cm' : null;
+
+    const latestValue = field ? latest[field] : null;
+    const previousValue = field && previous ? previous[field] : null;
+
+    set({
+      latestSummary: {
+        latestField: field,
+        latestValue,
+        deltaFromPrevious:
+          latestValue != null && previousValue != null ? latestValue - previousValue : null,
+        latestDate: latest.logged_date,
+      },
+      latestSummaryLoading: false,
+    });
   },
 }));

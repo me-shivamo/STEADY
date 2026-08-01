@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   Dimensions,
   Platform,
@@ -28,6 +27,8 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useWeightStore, WeightEntry } from '../../store/weightStore';
 import { useAuthStore } from '../../store/authStore';
+import { fontFamily } from '../../theme/typography';
+import ConfirmSheet from '../../components/common/ConfirmSheet';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CHART_H = 180;
@@ -183,12 +184,7 @@ function HistoryRow({
   const date = new Date(entry.logged_date + 'T00:00:00');
   const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-  const handleDelete = () => {
-    Alert.alert('Delete entry', `Remove ${display} logged on ${dateStr}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: onDelete },
-    ]);
-  };
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   return (
     <View style={styles.historyRow}>
@@ -204,9 +200,17 @@ function HistoryRow({
           </Text>
         )}
       </View>
-      <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => setConfirmVisible(true)} style={styles.deleteBtn} activeOpacity={0.6}>
         <Ionicons name="trash-outline" size={15} color={C.muted} />
       </TouchableOpacity>
+
+      <ConfirmSheet
+        visible={confirmVisible}
+        title="Delete entry?"
+        message={`Remove ${display} logged on ${dateStr}?`}
+        onConfirm={() => { setConfirmVisible(false); onDelete(); }}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }
@@ -223,6 +227,7 @@ export default function WeightScreen() {
   const [inputNote, setInputNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [chartWidth, setChartWidth] = useState(SCREEN_W - 32);
+  const [logErrorText, setLogErrorText] = useState<string | null>(null);
 
   useEffect(() => { fetchEntries(); }, []);
 
@@ -239,11 +244,12 @@ export default function WeightScreen() {
   const weightUnit = units === 'imperial' ? 'lbs' : 'kg';
 
   const handleLog = async () => {
+    setLogErrorText(null);
     const val = parseFloat(inputVal);
     const minVal = units === 'imperial' ? 44 : 20;
     const maxVal = units === 'imperial' ? 1100 : 500;
     if (isNaN(val) || val < minVal || val > maxVal) {
-      Alert.alert('Invalid weight', `Please enter a weight between ${minVal} and ${maxVal} ${weightUnit}.`);
+      setLogErrorText(`Please enter a weight between ${minVal} and ${maxVal} ${weightUnit}.`);
       return;
     }
     const kg = units === 'imperial' ? val / 2.20462 : val;
@@ -309,6 +315,7 @@ export default function WeightScreen() {
               placeholderTextColor={C.muted}
               maxLength={100}
             />
+            {logErrorText ? <Text style={styles.inlineError}>{logErrorText}</Text> : null}
           </View>
 
           {/* ── Stats strip ── */}
@@ -415,6 +422,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
 
@@ -427,6 +435,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text2,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -463,12 +472,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 22,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
   },
   logUnit: {
     fontSize: 15,
     color: C.muted,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
   logBtn: {
     height: 46,
@@ -482,6 +493,7 @@ const styles = StyleSheet.create({
   logBtnText: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: '#fff',
   },
   noteInput: {
@@ -491,6 +503,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: C.text,
+    fontFamily: fontFamily.regular,
+  },
+  inlineError: {
+    fontSize: 13,
+    color: C.error,
+    fontFamily: fontFamily.medium,
+    marginTop: 4,
   },
 
   // Stats
@@ -514,6 +533,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
     textAlign: 'center',
   },
@@ -522,11 +542,13 @@ const styles = StyleSheet.create({
     color: C.text2,
     marginTop: 2,
     textAlign: 'center',
+    fontFamily: fontFamily.regular,
   },
   statSub: {
     fontSize: 10,
     color: '#34C759',
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     marginTop: 1,
   },
 
@@ -553,6 +575,7 @@ const styles = StyleSheet.create({
   chartTitle: {
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   chartEmpty: {
@@ -566,6 +589,7 @@ const styles = StyleSheet.create({
     color: C.muted,
     textAlign: 'center',
     lineHeight: 18,
+    fontFamily: fontFamily.regular,
   },
   xLabels: {
     flexDirection: 'row',
@@ -577,6 +601,7 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: C.muted,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
 
   // Range toggle
@@ -603,11 +628,13 @@ const styles = StyleSheet.create({
   rangeText: {
     fontSize: 11.5,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.muted,
   },
   rangeTextActive: {
     color: C.accent,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
   },
 
   // History
@@ -624,6 +651,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text2,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -642,11 +670,13 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 14,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.text,
   },
   historyNote: {
     fontSize: 12,
     color: C.muted,
+    fontFamily: fontFamily.regular,
   },
   historyRight: {
     alignItems: 'flex-end',
@@ -655,11 +685,13 @@ const styles = StyleSheet.create({
   historyWeight: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
   },
   historyDelta: {
     fontSize: 11.5,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
   },
   deleteBtn: {
     width: 30,
