@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Alert } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
+import { todayLocalDate } from '../utils/localDate';
 
 export type WaterEntry = {
   id: string;
@@ -29,7 +30,7 @@ export const useWaterStore = create<WaterState>((set, get) => ({
 
     set({ loading: true });
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayLocalDate();
 
     const { data, error } = await supabase
       .from('water_logs')
@@ -49,10 +50,12 @@ export const useWaterStore = create<WaterState>((set, get) => ({
     if (!userId) return;
 
     // Water is logged multiple times a day, unlike weight — plain insert,
-    // no upsert/conflict target needed.
+    // no upsert/conflict target needed. logged_date is sent explicitly (the
+    // device's local today) rather than relying on the column's CURRENT_DATE
+    // default, which resolves in the database's UTC session timezone.
     const { data, error } = await supabase
       .from('water_logs')
-      .insert({ user_id: userId, amount_ml })
+      .insert({ user_id: userId, amount_ml, logged_date: todayLocalDate() })
       .select('id, logged_date, amount_ml, logged_at')
       .single();
 

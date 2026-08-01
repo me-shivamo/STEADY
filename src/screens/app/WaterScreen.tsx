@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -20,6 +19,8 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useWaterStore, WaterEntry } from '../../store/waterStore';
 import { useAuthStore } from '../../store/authStore';
+import { fontFamily } from '../../theme/typography';
+import ConfirmSheet from '../../components/common/ConfirmSheet';
 
 const RING_SIZE = 168;
 const RING_STROKE = 14;
@@ -85,12 +86,7 @@ function HistoryRow({
     ? new Date(entry.logged_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     : '';
 
-  const handleDelete = () => {
-    Alert.alert('Delete entry', `Remove ${display} logged at ${time}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: onDelete },
-    ]);
-  };
+  const [confirmVisible, setConfirmVisible] = useState(false);
 
   return (
     <View style={styles.historyRow}>
@@ -101,9 +97,17 @@ function HistoryRow({
         <Text style={styles.historyAmount}>{display}</Text>
         <Text style={styles.historyTime}>{time}</Text>
       </View>
-      <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => setConfirmVisible(true)} style={styles.deleteBtn} activeOpacity={0.6}>
         <Ionicons name="trash-outline" size={15} color={C.muted} />
       </TouchableOpacity>
+
+      <ConfirmSheet
+        visible={confirmVisible}
+        title="Delete entry?"
+        message={`Remove ${display} logged at ${time}?`}
+        onConfirm={() => { setConfirmVisible(false); onDelete(); }}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </View>
   );
 }
@@ -118,13 +122,15 @@ function EnableWaterPrompt({ units, onEnable, enabling }: {
   const unitLabel = units === 'imperial' ? 'fl oz' : 'ml';
   const defaultGoal = units === 'imperial' ? '85' : '2500'; // ~2500ml
   const [goalInput, setGoalInput] = useState(defaultGoal);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const handleEnable = () => {
     const val = parseFloat(goalInput);
     if (isNaN(val) || val <= 0) {
-      Alert.alert('Invalid goal', `Please enter a goal in ${unitLabel}.`);
+      setErrorText(`Please enter a goal in ${unitLabel}.`);
       return;
     }
+    setErrorText(null);
     const ml = units === 'imperial' ? Math.round(val * ML_PER_OZ) : Math.round(val);
     onEnable(ml);
   };
@@ -155,6 +161,8 @@ function EnableWaterPrompt({ units, onEnable, enabling }: {
           <Text style={styles.logUnit}>{unitLabel}</Text>
         </View>
       </View>
+
+      {errorText ? <Text style={styles.inlineError}>{errorText}</Text> : null}
 
       <TouchableOpacity
         style={[styles.enableBtn, enabling && styles.logBtnDisabled]}
@@ -188,6 +196,9 @@ export default function WaterScreen() {
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState('');
   const [togglingTracking, setTogglingTracking] = useState(false);
+  const [logErrorText, setLogErrorText] = useState<string | null>(null);
+  const [goalErrorText, setGoalErrorText] = useState<string | null>(null);
+  const [disableConfirmVisible, setDisableConfirmVisible] = useState(false);
 
   useEffect(() => {
     if (trackingEnabled) fetchToday();
@@ -199,23 +210,11 @@ export default function WaterScreen() {
     setTogglingTracking(false);
   };
 
-  const handleDisableTracking = () => {
-    Alert.alert(
-      'Turn off water tracking?',
-      'Your logged history stays saved, but the water card will disappear from Home.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Turn off',
-          style: 'destructive',
-          onPress: async () => {
-            setTogglingTracking(true);
-            await updateProfile({ water_tracking_enabled: false });
-            setTogglingTracking(false);
-          },
-        },
-      ]
-    );
+  const confirmDisableTracking = async () => {
+    setTogglingTracking(true);
+    await updateProfile({ water_tracking_enabled: false });
+    setTogglingTracking(false);
+    setDisableConfirmVisible(false);
   };
 
   const totalMl = entries.reduce((sum, e) => sum + e.amount_ml, 0);
@@ -232,9 +231,10 @@ export default function WaterScreen() {
   const handleLog = async () => {
     const val = parseFloat(inputVal);
     if (isNaN(val) || val <= 0) {
-      Alert.alert('Invalid amount', `Please enter an amount in ${unitLabel}.`);
+      setLogErrorText(`Please enter an amount in ${unitLabel}.`);
       return;
     }
+    setLogErrorText(null);
     const ml = units === 'imperial' ? Math.round(val * ML_PER_OZ) : Math.round(val);
     setSaving(true);
     await addEntry(ml);
@@ -244,15 +244,17 @@ export default function WaterScreen() {
 
   const openEditGoal = () => {
     setGoalInput(String(fmt(goalMl)));
+    setGoalErrorText(null);
     setEditingGoal(true);
   };
 
   const handleSaveGoal = async () => {
     const val = parseFloat(goalInput);
     if (isNaN(val) || val <= 0) {
-      Alert.alert('Invalid goal', `Please enter a goal in ${unitLabel}.`);
+      setGoalErrorText(`Please enter a goal in ${unitLabel}.`);
       return;
     }
+    setGoalErrorText(null);
     const ml = units === 'imperial' ? Math.round(val * ML_PER_OZ) : Math.round(val);
     setSavingGoal(true);
     await updateProfile({ water_goal_ml: ml });
@@ -276,7 +278,7 @@ export default function WaterScreen() {
             </TouchableOpacity>
             <Switch
               value={trackingEnabled}
-              onValueChange={(next) => { if (!next) handleDisableTracking(); }}
+              onValueChange={(next) => { if (!next) setDisableConfirmVisible(true); }}
               trackColor={{ false: C.border, true: C.accent }}
               thumbColor="#fff"
               disabled={togglingTracking}
@@ -347,6 +349,7 @@ export default function WaterScreen() {
                 >
                   <Ionicons name="close" size={18} color={C.muted} />
                 </TouchableOpacity>
+                {goalErrorText ? <Text style={styles.inlineError}>{goalErrorText}</Text> : null}
               </View>
             ) : (
               <TouchableOpacity onPress={openEditGoal} activeOpacity={0.6}>
@@ -401,6 +404,7 @@ export default function WaterScreen() {
                 }
               </TouchableOpacity>
             </View>
+            {logErrorText ? <Text style={styles.inlineError}>{logErrorText}</Text> : null}
           </View>
 
           {/* ── Today's history ── */}
@@ -424,6 +428,16 @@ export default function WaterScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
       )}
+
+      <ConfirmSheet
+        visible={disableConfirmVisible}
+        title="Turn off water tracking?"
+        message="Your logged history stays saved, but the water card will disappear from Home."
+        confirmLabel="Turn off"
+        loading={togglingTracking}
+        onConfirm={confirmDisableTracking}
+        onCancel={() => setDisableConfirmVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -431,6 +445,12 @@ export default function WaterScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  inlineError: {
+    fontSize: 13,
+    color: '#E5484D',
+    fontFamily: fontFamily.medium,
+    marginTop: 8,
+  },
   safe: {
     flex: 1,
     backgroundColor: C.bg,
@@ -466,6 +486,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   headerRight: {
@@ -500,11 +521,13 @@ const styles = StyleSheet.create({
   promptTitle: {
     fontSize: 19,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
     textAlign: 'center',
   },
   promptBody: {
     fontSize: 14,
+    fontFamily: fontFamily.regular,
     color: C.muted,
     textAlign: 'center',
     lineHeight: 20,
@@ -518,6 +541,7 @@ const styles = StyleSheet.create({
   promptGoalLabel: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   enableBtn: {
@@ -533,12 +557,14 @@ const styles = StyleSheet.create({
   enableBtnText: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: '#fff',
   },
 
   sectionLabel: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text2,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -565,21 +591,25 @@ const styles = StyleSheet.create({
   ringValue: {
     fontSize: 26,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
   },
   ringSub: {
     fontSize: 12.5,
+    fontFamily: fontFamily.regular,
     color: C.muted,
     marginTop: 2,
   },
   goalHitText: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.accent,
   },
   editGoalText: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.muted,
     textDecorationLine: 'underline',
   },
@@ -604,6 +634,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   goalSaveBtn: {
@@ -651,6 +682,7 @@ const styles = StyleSheet.create({
   quickChipText: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   logRow: {
@@ -672,12 +704,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 22,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
   },
   logUnit: {
     fontSize: 15,
     color: C.muted,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
   logBtn: {
     height: 46,
@@ -691,6 +725,7 @@ const styles = StyleSheet.create({
   logBtnText: {
     fontSize: 15,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: '#fff',
   },
 
@@ -708,6 +743,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 13,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text2,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -734,10 +770,12 @@ const styles = StyleSheet.create({
   historyAmount: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   historyTime: {
     fontSize: 12,
+    fontFamily: fontFamily.regular,
     color: C.muted,
   },
   deleteBtn: {

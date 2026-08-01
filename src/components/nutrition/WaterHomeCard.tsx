@@ -7,6 +7,7 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useWaterStore } from '../../store/waterStore';
 import { AppStackParamList } from '../../navigation/types';
+import { fontFamily } from '../../theme/typography';
 
 const ML_PER_OZ = 29.5735;
 const QUICK_ADD_ML = 250; // ~1 cup
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
   total: {
     fontSize: 12.5,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   track: {

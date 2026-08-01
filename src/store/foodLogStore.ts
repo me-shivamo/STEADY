@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../api/supabase'
 import { Tables } from '../types/database'
+import { todayLocalDate } from '../utils/localDate'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ export function sumTotals(meals: MealCard[]): DailyTotals {
 }
 
 export function todayDate(): string {
-  return new Date().toISOString().split('T')[0]
+  return todayLocalDate()
 }
 
 function labelFromType(type: string): string {
@@ -111,7 +112,10 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   meals: [],
   totals: { ...ZERO },
   isLogging: false,
-  isFetchingDate: false,
+  // Starts true (not false) so the very first render can never race ahead of
+  // the initial fetchEntriesForDate() call — see HomeScreen's merge effect,
+  // which uses this flag to know whether it's safe to build `messages` yet.
+  isFetchingDate: true,
   error: null,
   selectedDate: todayDate(),
   loggedDates: new Set(),
@@ -247,7 +251,12 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
 
     try {
       const { data, error } = await supabase.functions.invoke('log-food-from-text', {
-        body: { text, meal_type, logged_date: todayDate() },
+        // logged_hour lets the server infer breakfast/lunch/dinner/snack from
+        // the user's own local clock when meal_type is omitted — the server
+        // has no timezone of its own, so guessing from its own clock would
+        // mislabel meals for anyone outside UTC (e.g. dinner in India would
+        // read as UTC afternoon and get called "lunch").
+        body: { text, meal_type, logged_date: todayDate(), logged_hour: new Date().getHours() },
       })
 
       if (error) throw new Error(error.message)
@@ -299,6 +308,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
           mime_type: mimeType,
           caption: caption ?? '',
           logged_date: todayDate(),
+          logged_hour: new Date().getHours(),
         },
       })
 
@@ -339,6 +349,24 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         // Keep the card's original slot/date so the re-eval doesn't reclassify them.
         meal_type: existing?.meal_type,
         logged_date: existing?.logged_date ?? todayDate(),
+        // The entries as they exist right now, before this edit. The function
+        // uses these to tell "same food, new quantity" (rescale the existing
+        // macros) apart from "genuinely different food" (re-resolve from
+        // scratch) — without this, editing "60 g" to "90 g" in the text blob
+        // re-derives nutrition facts from the AI's own knowledge instead of
+        // the verified numbers the entry already had (e.g. a label photo's
+        // exact printed macros).
+        previous_entries: existing?.entries.map(e => ({
+          name: e.food_name,
+          quantity_g: e.quantity_g,
+          calories: e.calories,
+          protein_g: e.protein_g,
+          carbs_g: e.carbs_g,
+          fat_g: e.fat_g,
+          fiber_g: e.fiber_g,
+          food_item_id: e.food_item_id,
+          macro_source: e.macro_source,
+        })) ?? [],
       },
     })
 
@@ -465,5 +493,8 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   },
 
   // Clear everything on sign-out so the next user starts fresh.
-  reset: () => set({ meals: [], totals: { ...ZERO }, isLogging: false, error: null, selectedDate: todayDate(), loggedDates: new Set() }),
+  // isFetchingDate resets to true (not false) for the same reason as the
+  // initial state above — HomeScreen's merge effect must see "still fetching"
+  // until the next login's fetchEntriesForDate() actually resolves.
+  reset: () => set({ meals: [], totals: { ...ZERO }, isLogging: false, isFetchingDate: true, error: null, selectedDate: todayDate(), loggedDates: new Set() }),
 }))
