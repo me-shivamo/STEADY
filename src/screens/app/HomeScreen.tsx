@@ -10,12 +10,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   PanResponder,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppStackParamList } from '../../navigation/types';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { resizeForUpload } from '../../utils/imageResize';
 import MealCard from '../../components/nutrition/MealCard';
 import WaterHomeCard from '../../components/nutrition/WaterHomeCard';
 import { useWaterStore } from '../../store/waterStore';
@@ -24,16 +27,32 @@ import { useAuthStore } from '../../store/authStore';
 import { homeColors as C } from '../../theme/homeColors';
 import ProfileDrawer from '../../components/profile/ProfileDrawer';
 import DatePickerSheet from '../../components/common/DatePickerSheet';
+import SavedEntriesSheet from '../../components/nutrition/SavedEntriesSheet';
+import { useSavedEntriesStore } from '../../store/savedEntriesStore';
 import { supabase } from '../../api/supabase';
+import { toLocalDateString } from '../../utils/localDate';
 import { useStreak } from '../../hooks/useStreak';
+import { fontFamily } from '../../theme/typography';
+import TypewriterText from '../../components/common/TypewriterText';
+import { useScreenChrome } from '../../hooks/useScreenChrome';
 
 // ── Chat message types ─────────────────────────────────────────────────────────
 type ChatMsg =
-  | { id: string; type: 'user';      text: string }
+  | { id: string; type: 'user';      text: string; sentAt?: string }
   | { id: string; type: 'thinking' }
   | { id: string; type: 'meal_card'; meal: MealCardType }
-  | { id: string; type: 'answer';    text: string }
+  | { id: string; type: 'answer';    text: string; sentAt?: string }
   | { id: string; type: 'error';     text: string };
+
+// Formats an ISO timestamp as a short local time (e.g. "12:30 PM") for display
+// under chat bubbles. Falls back to an empty string for messages sent before
+// this field existed, so old rows just render without a time rather than crashing.
+function formatBubbleTime(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
 
 let _id = 0;
 const uid = () => String(++_id);
@@ -59,16 +78,49 @@ function MacroCol({ label, current, goal, dotColor }: {
   );
 }
 
+// Greeting variants for the typewriter intro — picked once per mount so the
+// first-time experience doesn't feel identical on every fresh install.
+// `{name}` is replaced with the user's first name when we have one, or the
+// whole clause is dropped for a name-less variant when we don't (see
+// buildGreetings below) — every entry here must read naturally either way.
+const GREETING_TEMPLATES = [
+  "Hey{name}! Tell me what you ate and I'll log the calories and macros automatically.",
+  "Hi there{name}! Just describe your meal and I'll handle the calorie and macro math.",
+  "Welcome{name}! Tell me what you're eating, in plain English, and I'll log it for you.",
+  "Good to see you{name}! Type or snap a photo of your meal, and I'll take it from there.",
+  "Hey{name}, ready when you are. Tell me what's on your plate and I'll do the math.",
+  "Hi{name}! I'm STEADY. Describe a meal, or send a photo, and I'll log it for you.",
+  "Let's get started{name}! Just tell me what you ate, and I'll track the rest.",
+  "Hey{name}, glad you're here! Describe your food and I'll handle the calories and macros.",
+  "Welcome back{name}! Tell me what you're eating and I'll keep your log up to date.",
+  "Hi{name}, no need to overthink it. Just tell me what you ate, however you'd normally say it.",
+];
+
+// Builds the final greeting pool: if we have a first name, "{name}" becomes
+// ", Shivam"; otherwise it's dropped entirely so the sentence still reads
+// naturally without one (e.g. "Hey! Tell me..." vs "Hey, Shivam! Tell me...").
+function buildGreetings(firstName: string | null): string[] {
+  const suffix = firstName ? `, ${firstName}` : '';
+  return GREETING_TEMPLATES.map(t => t.replace('{name}', suffix));
+}
+
 // ── WelcomeBubble — shown on today when no meals logged ───────────────────────
-function WelcomeBubble() {
+function WelcomeBubble({ firstName }: { firstName: string | null }) {
+  const [greeting] = useState(() => {
+    const pool = buildGreetings(firstName);
+    return pool[Math.floor(Math.random() * pool.length)];
+  });
+  const [introDone, setIntroDone] = useState(false);
+
   return (
     <View style={styles.aiBubbleRow}>
-      <View style={styles.aiAvatar}><Text style={styles.aiAvatarText}>S</Text></View>
       <View style={styles.aiBubble}>
-        <Text style={styles.aiBubbleText}>
-          Hey! Tell me what you ate and I'll log the calories and macros automatically.{'\n\n'}
-          Try: <Text style={{ fontWeight: '700' }}>"I had two eggs on toast with a coffee"</Text>
-        </Text>
+        <TypewriterText text={greeting} onDone={() => setIntroDone(true)} style={styles.aiBubbleText} />
+        {introDone && (
+          <Text style={styles.aiBubbleText}>
+            {'\n\n'}Try: <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>"I had two eggs on toast with a coffee"</Text>
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -78,10 +130,9 @@ function WelcomeBubble() {
 function EmptyHistoryBubble({ date }: { date: string }) {
   return (
     <View style={styles.aiBubbleRow}>
-      <View style={styles.aiAvatar}><Text style={styles.aiAvatarText}>S</Text></View>
       <View style={styles.aiBubble}>
         <Text style={styles.aiBubbleText}>
-          Nothing was logged on <Text style={{ fontWeight: '700' }}>{date}</Text>.
+          Nothing was logged on <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>{date}</Text>.
           {'\n\n'}You can still ask me questions about your nutrition goals.
         </Text>
       </View>
@@ -91,15 +142,23 @@ function EmptyHistoryBubble({ date }: { date: string }) {
 
 // ── HomeScreen ────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
+  useScreenChrome(C.bg, 'dark');
+  const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const [mode, setMode]               = useState<'logs' | 'all'>('all');
   const [messages, setMessages]       = useState<ChatMsg[]>([]);
   const [isLoadingChat, setIsLoadingChat] = useState(true);
   const [input, setInput]             = useState('');
   const [drawerOpen, setDrawerOpen]   = useState(false);
+  // Real measured height of topBar — KeyboardAvoidingView only knows its own
+  // frame, not this sibling's height above it, so without this offset it
+  // under-pads by exactly topBar's height and the keyboard covers the composer.
+  const [topBarHeight, setTopBarHeight] = useState(0);
   const [pickerOpen, setPickerOpen]   = useState(false);
   // pendingPhoto holds the local URI (for the thumbnail preview) and base64
   // string (for the Edge Function). null means no photo is queued.
   const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; base64: string } | null>(null);
+  const [photoErrorText, setPhotoErrorText] = useState<string | null>(null);
+  const [savedEntriesSheetOpen, setSavedEntriesSheetOpen] = useState(false);
   const scrollRef                   = useRef<ScrollView>(null);
   const cardRefs                    = useRef<Map<string, View | null>>(new Map());
   const initialSeedDone             = useRef(false);
@@ -109,6 +168,7 @@ export default function HomeScreen() {
     isFetchingDate, selectedDate, setSelectedDate,
   } = useFoodLogStore();
   const { profile } = useAuthStore();
+  const logSavedEntry = useSavedEntriesStore(s => s.logSavedEntry);
 
   // Keep a ref to selectedDate so the PanResponder closure (created once)
   // always reads the live value — not the stale one captured at mount time.
@@ -129,12 +189,12 @@ export default function HomeScreen() {
         if (g.dx < -50) {
           // swipe left → next day (blocked if already on today)
           d.setDate(d.getDate() + 1);
-          const next = d.toISOString().split('T')[0];
+          const next = toLocalDateString(d);
           if (next <= todayDate()) useFoodLogStore.getState().setSelectedDate(next);
         } else if (g.dx > 50) {
           // swipe right → previous day
           d.setDate(d.getDate() - 1);
-          useFoodLogStore.getState().setSelectedDate(d.toISOString().split('T')[0]);
+          useFoodLogStore.getState().setSelectedDate(toLocalDateString(d));
         }
       },
     })
@@ -173,18 +233,41 @@ export default function HomeScreen() {
     }
 
     // After initial seed: sync meal card updates in-place (edits, deletes)
-    // without touching the chat bubble messages.
+    // without touching the chat bubble messages — EXCEPT when a card's
+    // created_at actually changed (via Change Date & Time), in which case
+    // the whole feed is re-sorted so the card moves to its new chronological
+    // position instead of staying frozen where it was first inserted.
     const mealsById = new Map(meals.map(m => [m.id, m]));
     setMessages(prev => {
-      // Remove cards for deleted meals, update cards for edited meals
+      let timeChanged = false;
       const updated = prev
+        // Remove cards for deleted meals, update cards for edited meals
         .filter(msg => msg.type !== 'meal_card' || mealsById.has(msg.id))
-        .map(msg =>
-          msg.type === 'meal_card' && mealsById.has(msg.id)
-            ? { ...msg, meal: mealsById.get(msg.id)! }
-            : msg
-        );
-      return updated;
+        .map(msg => {
+          if (msg.type !== 'meal_card' || !mealsById.has(msg.id)) return msg;
+          const nextMeal = mealsById.get(msg.id)!;
+          if (nextMeal.created_at !== msg.meal.created_at) timeChanged = true;
+          return { ...msg, meal: nextMeal };
+        });
+
+      if (!timeChanged) return updated;
+
+      const tsOf = (msg: ChatMsg): string =>
+        msg.type === 'meal_card' ? msg.meal.created_at : '';
+      // Non-timestamped messages (thinking/answer/error bubbles) have no
+      // created_at to sort by — localeCompare treats '' as always-earliest,
+      // which would yank them to the top. Keep every non-meal-card message
+      // pinned at its current index and only re-sort the meal cards among
+      // themselves, merged back into those fixed slots.
+      const cardIndices = updated
+        .map((msg, i) => (msg.type === 'meal_card' ? i : -1))
+        .filter(i => i !== -1);
+      const sortedCards = cardIndices
+        .map(i => updated[i])
+        .sort((a, b) => tsOf(a).localeCompare(tsOf(b)));
+      const resorted = [...updated];
+      cardIndices.forEach((slot, k) => { resorted[slot] = sortedCards[k]; });
+      return resorted;
     });
   }, [meals, isFetchingDate, selectedDate]);
 
@@ -220,8 +303,8 @@ export default function HomeScreen() {
         // .localeCompare sort below and silently drop the day's chat history.
         ts: row.created_at ?? '',
         msg: row.role === 'user'
-          ? { id: row.id, type: 'user' as const, text: row.content }
-          : { id: row.id, type: 'answer' as const, text: row.content },
+          ? { id: row.id, type: 'user' as const, text: row.content, sentAt: row.created_at ?? undefined }
+          : { id: row.id, type: 'answer' as const, text: row.content, sentAt: row.created_at ?? undefined },
       }));
 
       // Merge and sort by timestamp — this gives the correct interleaved order:
@@ -245,12 +328,25 @@ export default function HomeScreen() {
   const replace = (id: string, msg: ChatMsg) =>
     setMessages(prev => prev.map(m => (m.id === id ? msg : m)));
 
+  // Re-logging a saved entry never calls the AI, so there's no "thinking"
+  // bubble step — the card just appears in the feed immediately.
+  const handleLogSavedEntry = async (entryId: string) => {
+    try {
+      const meal = await logSavedEntry(entryId);
+      push({ id: meal.id, type: 'meal_card', meal });
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (err: any) {
+      push({ id: uid(), type: 'error', text: err?.message ?? 'Could not log this entry. Please try again.' });
+    }
+  };
+
   // Open the OS native camera. On success, stores the local URI + base64 in
   // pendingPhoto so the composer shows a thumbnail and the send button is ready.
   const handleCameraPress = async () => {
+    setPhotoErrorText(null);
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Camera access needed', 'Please allow camera access in your device Settings to log food by photo.');
+      setPhotoErrorText('Please allow camera access in your device Settings to log food by photo.');
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -260,15 +356,22 @@ export default function HomeScreen() {
       allowsEditing: false,
     });
     if (!result.canceled && result.assets[0]?.base64) {
-      setPendingPhoto({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+      const asset = result.assets[0];
+      // Downscale before it ever leaves the device — a raw phone photo can be
+      // several MB, and that same base64 string gets sent twice server-side
+      // (once to Storage, once to OpenRouter), so shrinking here speeds up
+      // both the upload and the vision call.
+      const base64 = await resizeForUpload(asset.uri, asset.width, asset.height);
+      setPendingPhoto({ uri: asset.uri, base64 });
     }
   };
 
   // Open the photo library (gallery) as an alternative to the live camera.
   const handleGalleryPress = async () => {
+    setPhotoErrorText(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Photo library access needed', 'Please allow photo library access in your device Settings.');
+      setPhotoErrorText('Please allow photo library access in your device Settings.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -278,7 +381,9 @@ export default function HomeScreen() {
       allowsEditing: false,
     });
     if (!result.canceled && result.assets[0]?.base64) {
-      setPendingPhoto({ uri: result.assets[0].uri, base64: result.assets[0].base64 });
+      const asset = result.assets[0];
+      const base64 = await resizeForUpload(asset.uri, asset.width, asset.height);
+      setPendingPhoto({ uri: asset.uri, base64 });
     }
   };
 
@@ -293,6 +398,9 @@ export default function HomeScreen() {
       setInput('');
       setMode('all');
       initialSeedDone.current = true;
+      if (caption) {
+        push({ id: uid(), type: 'user', text: caption, sentAt: new Date().toISOString() });
+      }
       const thinkingId = uid();
       push({ id: thinkingId, type: 'thinking' });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
@@ -315,14 +423,14 @@ export default function HomeScreen() {
     initialSeedDone.current = true;
     setInput('');
     setMode('all');
-    push({ id: uid(), type: 'user', text });
+    push({ id: uid(), type: 'user', text, sentAt: new Date().toISOString() });
     const thinkingId = uid();
     push({ id: thinkingId, type: 'thinking' });
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
       const result = await logMealFromText(text);
       if (result.type === 'answer') {
-        replace(thinkingId, { id: thinkingId, type: 'answer', text: result.reply });
+        replace(thinkingId, { id: thinkingId, type: 'answer', text: result.reply, sentAt: new Date().toISOString() });
         // The water insert (if any) happened server-side inside the edge
         // function — nothing on the client knows about it yet. Refresh the
         // water store only when the AI actually called log_water, so a plain
@@ -338,6 +446,7 @@ export default function HomeScreen() {
           replace(thinkingId, {
             id: thinkingId, type: 'answer',
             text: `That looks like about ${kcal} kcal. Switch to Today to log new meals.`,
+            sentAt: new Date().toISOString(),
           });
         }
       }
@@ -350,7 +459,10 @@ export default function HomeScreen() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  // Goals
+  // Goals — profile.calorie_goal is only null when onboarding was skipped
+  // (see OnboardingGoalScreen's "Skip for now") or manually cleared; the
+  // summary card shows a "finish your profile" prompt instead of guessing.
+  const hasCalorieGoal = profile?.calorie_goal != null;
   const calorieGoal = profile?.calorie_goal   ?? 2000;
   const proteinGoal = profile?.protein_goal_g  ?? 150;
   const carbGoal    = profile?.carb_goal_g     ?? 200;
@@ -374,7 +486,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <View style={styles.topBar}>
+      <View style={styles.topBar} onLayout={e => setTopBarHeight(e.nativeEvent.layout.height)}>
         <TouchableOpacity style={styles.menuBtn} activeOpacity={0.7} onPress={() => setDrawerOpen(true)}>
           <Ionicons name="menu-outline" size={26} color={C.text} />
         </TouchableOpacity>
@@ -405,30 +517,26 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Keyboard-aware area ──────────────────────────────────────────── */}
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        {...swipeResponder.panHandlers}
-      >
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* ── Date picker sheet — inside ScrollView so it pushes content down ── */}
-          <DatePickerSheet
-            visible={pickerOpen}
-            selectedDate={selectedDate}
-            onSelectDate={(date) => {
-              setSelectedDate(date);
-            }}
-          />
+      {/* ── Fixed header: date picker + calorie/macro card ────────────────
+          Deliberately OUTSIDE the ScrollView below — anything not inside a
+          ScrollView never moves when the user scrolls, so this stays pinned
+          while only the feed scrolls underneath it. The date picker used to
+          live inside the scroll and "push content down" when opened; now
+          that it's a sibling, opening it instead grows this fixed block's
+          own height, which shrinks the flex:1 ScrollView beneath it by the
+          same amount — same visual effect, correctly contained. ────────── */}
+      <View style={styles.fixedHeader}>
+        <DatePickerSheet
+          visible={pickerOpen}
+          selectedDate={selectedDate}
+          onSelectDate={(date) => {
+            setSelectedDate(date);
+          }}
+        />
 
-          {/* ── Calorie summary card ──────────────────────────────────────── */}
-          <View style={[styles.summaryCard, pickerOpen && styles.summaryCardBelowPicker]}>
+        {/* ── Calorie summary card (or a setup prompt if goals aren't set) ── */}
+        {hasCalorieGoal ? (
+          <View style={styles.summaryCard}>
             {/* headline row: calories eaten / goal  +  remaining pill */}
             <View style={styles.summaryHeadRow}>
               <Text style={styles.calorieHeadline}>
@@ -454,7 +562,38 @@ export default function HomeScreen() {
               <MacroCol label="Fat"     current={totals.fat_g}     goal={fatGoal}     dotColor={C.fat} />
             </View>
           </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.summaryCard, styles.setupCard]}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <View style={styles.setupIconWrap}>
+              <Ionicons name="flag-outline" size={20} color={C.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.setupTitle}>Finish setting up your profile</Text>
+              <Text style={styles.setupSubtitle}>Add your goal and stats to see calorie and macro targets.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={C.muted} />
+          </TouchableOpacity>
+        )}
+      </View>
 
+      {/* ── Keyboard-aware area ──────────────────────────────────────────── */}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? topBarHeight : 0}
+        {...swipeResponder.panHandlers}
+      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* ── Water card — opt-in via Settings, today only ─────────── */}
           {profile?.water_tracking_enabled && isViewingToday && (
             <WaterHomeCard
@@ -497,7 +636,7 @@ export default function HomeScreen() {
 
             {shownMessages.length === 0 && !isFetchingDate && !isLoadingChat && (
               isViewingToday
-                ? <WelcomeBubble />
+                ? <WelcomeBubble firstName={profile?.full_name?.trim().split(' ')[0] || null} />
                 : <EmptyHistoryBubble date={dateLabel} />
             )}
 
@@ -508,13 +647,15 @@ export default function HomeScreen() {
                     <View style={styles.userBubble}>
                       <Text style={styles.userBubbleText}>{msg.text}</Text>
                     </View>
+                    {!!formatBubbleTime(msg.sentAt) && (
+                      <Text style={styles.bubbleTimeRight}>{formatBubbleTime(msg.sentAt)}</Text>
+                    )}
                   </View>
                 );
               }
               if (msg.type === 'thinking') {
                 return (
                   <View key={msg.id} style={styles.aiBubbleRow}>
-                    <View style={styles.aiAvatar}><Text style={styles.aiAvatarText}>S</Text></View>
                     <View style={styles.thinkingBubble}>
                       <ActivityIndicator size="small" color={C.accent} />
                       <Text style={styles.thinkingText}>Analysing your meal…</Text>
@@ -529,12 +670,6 @@ export default function HomeScreen() {
                     style={styles.mealCardGroup}
                     ref={el => { cardRefs.current.set(msg.id, el); }}
                   >
-                    {msg.meal.entries.length > 0 && (
-                      <View style={styles.loggedRow}>
-                        <Ionicons name="checkmark-circle" size={13} color={C.accent} />
-                        <Text style={styles.loggedLabel}>Logged by STEADY</Text>
-                      </View>
-                    )}
                     <MealCard
                       meal={msg.meal}
                       onEditStart={() => {
@@ -558,18 +693,19 @@ export default function HomeScreen() {
               }
               if (msg.type === 'answer') {
                 return (
-                  <View key={msg.id} style={styles.aiBubbleRow}>
-                    <View style={styles.aiAvatar}><Text style={styles.aiAvatarText}>S</Text></View>
+                  <View key={msg.id} style={styles.aiRow}>
                     <View style={styles.aiBubble}>
                       <Text style={styles.aiBubbleText}>{msg.text}</Text>
                     </View>
+                    {!!formatBubbleTime(msg.sentAt) && (
+                      <Text style={styles.bubbleTimeLeft}>{formatBubbleTime(msg.sentAt)}</Text>
+                    )}
                   </View>
                 );
               }
               if (msg.type === 'error') {
                 return (
                   <View key={msg.id} style={styles.aiBubbleRow}>
-                    <View style={styles.aiAvatar}><Text style={styles.aiAvatarText}>S</Text></View>
                     <View style={styles.errorBubble}>
                       <Text style={styles.errorText}>{msg.text}</Text>
                     </View>
@@ -583,6 +719,8 @@ export default function HomeScreen() {
 
         {/* ── Composer — always visible; camera/image hidden on past days ── */}
         <View style={styles.composerWrap}>
+          {photoErrorText ? <Text style={styles.photoErrorText}>{photoErrorText}</Text> : null}
+
           {/* Photo thumbnail strip — shown only when a photo is queued */}
           {pendingPhoto && (
             <View style={styles.photoPreviewRow}>
@@ -619,6 +757,12 @@ export default function HomeScreen() {
               blurOnSubmit={false}
               multiline
             />
+            {/* Saved Entries button — quick-log a previously saved meal */}
+            {isViewingToday && !pendingPhoto && (
+              <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => setSavedEntriesSheetOpen(true)}>
+                <Ionicons name="bookmark-outline" size={22} color={C.text2} />
+              </TouchableOpacity>
+            )}
             {/* Gallery button — opens photo library */}
             {isViewingToday && !pendingPhoto && (
               <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={handleGalleryPress}>
@@ -654,6 +798,13 @@ export default function HomeScreen() {
         onClose={() => setDrawerOpen(false)}
       />
 
+      {/* Saved Entries quick-picker */}
+      <SavedEntriesSheet
+        visible={savedEntriesSheetOpen}
+        onClose={() => setSavedEntriesSheetOpen(false)}
+        onSelect={handleLogSavedEntry}
+      />
+
     </SafeAreaView>
   );
 }
@@ -673,43 +824,60 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   dateBlock: { flex: 1 },
-  dateSub: { fontSize: 13, fontWeight: '500', color: C.text2 },
+  dateSub: { fontSize: 12.5, fontWeight: '500', fontFamily: fontFamily.medium, color: C.text2 },
   dateLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  datePrimary: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.2, lineHeight: 22 },
+  datePrimary: { fontSize: 17.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text, letterSpacing: -0.2, lineHeight: 22 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   streakChip: {
     flexDirection: 'row', alignItems: 'center',
     height: 32, paddingHorizontal: 12, borderRadius: 20,
     backgroundColor: C.accentSoft, borderWidth: 1, borderColor: C.accentPressed,
   },
-  streakText: { fontSize: 13.5, fontWeight: '700', color: C.accent, whiteSpace: 'nowrap' } as any,
+  streakText: { fontSize: 13, fontWeight: '700', fontFamily: fontFamily.bold, color: C.accent, whiteSpace: 'nowrap' } as any,
 
   // Scroll
   scroll: { flex: 1 },
   scrollContent: { padding: 20, paddingTop: 0, paddingBottom: 24, gap: 14 },
 
-  // Summary card
+  // Fixed header — sits above the ScrollView as a sibling, not inside it, so
+  // it never scrolls. paddingHorizontal: 20 stands in for scrollContent's old
+  // 20px padding, which DatePickerSheet's marginHorizontal: -20 (its own
+  // "bleed to screen edges" trick) is designed to cancel out exactly.
+  fixedHeader: {
+    paddingHorizontal: 20,
+  },
+  // Summary card — was the scroll's first child with a -20 marginTop that
+  // cancelled scrollContent's 20px padding; now a normal block inside
+  // fixedHeader (which already provides the horizontal padding), so it just
+  // needs bottom spacing before the ScrollView starts.
   summaryCard: {
     backgroundColor: C.card, borderRadius: 20, padding: 18,
-    marginTop: -20,
+    marginBottom: 14,
     shadowColor: 'rgba(60,40,90,1)', shadowOffset: { width: 0, height: 5 },
     shadowOpacity: 0.12, shadowRadius: 14, elevation: 6,
     gap: 16,
   },
-  // When the calendar sheet is open it sits between the nav bar and this card —
-  // the -20 pull is meant for the nav bar gap, not the calendar, so drop it here
-  // and let the calendar's own marginBottom (6) provide the spacing instead.
-  summaryCardBelowPicker: {
-    marginTop: 0,
+  setupCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  setupIconWrap: {
+    width: 38, height: 38, borderRadius: 19, backgroundColor: C.accentSoft,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  setupTitle: {
+    fontSize: 14.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text,
+  },
+  setupSubtitle: {
+    fontSize: 11.5, fontFamily: fontFamily.regular, color: C.text2, marginTop: 2,
   },
   summaryHeadRow: {
     flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
   },
   calorieHeadline: {
-    fontSize: 26, fontWeight: '800', color: C.text, letterSpacing: -0.5, lineHeight: 28,
+    fontSize: 25.5, fontWeight: '800', fontFamily: fontFamily.bold, color: C.text, letterSpacing: -0.5, lineHeight: 28,
   },
   calorieGoalText: {
-    fontSize: 13, fontWeight: '500', color: C.text2,
+    fontSize: 12.5, fontWeight: '500', fontFamily: fontFamily.medium, color: C.text2,
   },
   remainingPill: {
     height: 28, paddingHorizontal: 12, borderRadius: 16,
@@ -719,7 +887,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF3DF',
   },
   remainingPillText: {
-    fontSize: 13, fontWeight: '700', color: C.accent,
+    fontSize: 12.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.accent,
   },
   remainingPillTextOver: {
     color: C.carbs,
@@ -731,9 +899,9 @@ const styles = StyleSheet.create({
   macroColHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   macroDivider: { width: 1, backgroundColor: C.surface, marginHorizontal: 12 },
   macroDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
-  macroLabel: { fontSize: 12, fontWeight: '600', color: C.text2 },
-  macroValue: { fontSize: 14, fontWeight: '700', color: C.text },
-  macroGoal: { fontSize: 11.5, fontWeight: '500', color: C.muted },
+  macroLabel: { fontSize: 11.5, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text2 },
+  macroValue: { fontSize: 13.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text },
+  macroGoal: { fontSize: 11, fontWeight: '500', fontFamily: fontFamily.medium, color: C.muted },
   macroTrack: { height: 5, borderRadius: 3, backgroundColor: C.surface, overflow: 'hidden' },
 
   // Toggle
@@ -751,7 +919,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.12, shadowRadius: 4, elevation: 2,
   },
-  toggleText: { fontSize: 13.5, fontWeight: '700', color: C.text2 },
+  toggleText: { fontSize: 13, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text2 },
   toggleTextActive: { color: C.accent },
 
   // Loading history indicator
@@ -759,37 +927,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 20,
   },
-  loadingText: { fontSize: 13, color: C.muted },
+  loadingText: { fontSize: 12.5, color: C.muted, fontFamily: fontFamily.regular },
 
   // Feed
-  feed: { gap: 12 },
+  feed: { gap: 8 },
 
   // User bubble
-  userRow: { alignItems: 'flex-end' },
+  userRow: { alignItems: 'flex-end', gap: 4 },
   userBubble: {
-    backgroundColor: '#F0EFFF',
-    borderWidth: 1, borderColor: '#D4D3FF',
+    backgroundColor: C.accent,
     borderRadius: 18, borderBottomRightRadius: 4,
-    paddingHorizontal: 14, paddingVertical: 7, maxWidth: '82%',
+    paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
-  userBubbleText: { color: C.text, fontSize: 12.5, fontWeight: '400', lineHeight: 18 },
+  userBubbleText: { color: '#FFFFFF', fontSize: 14, fontWeight: '400', fontFamily: fontFamily.regular, lineHeight: 21 },
+  bubbleTimeRight: { fontSize: 9, color: C.muted, fontFamily: fontFamily.regular, paddingHorizontal: 2 },
 
   // AI row
-  aiBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  aiAvatar: {
-    width: 30, height: 30, borderRadius: 15, backgroundColor: '#7476F6',
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginBottom: 2,
-    shadowColor: 'rgba(99,102,241,1)', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 3,
-  },
-  aiAvatarText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  aiBubbleRow: { flexDirection: 'row' },
+  aiRow: { alignItems: 'flex-start', gap: 4 },
   aiBubble: {
-    backgroundColor: C.card, borderRadius: 16, borderBottomLeftRadius: 4,
-    paddingHorizontal: 13, paddingVertical: 10, maxWidth: '82%',
-    shadowColor: 'rgba(60,40,90,1)', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
+    backgroundColor: C.surface, borderRadius: 18, borderBottomLeftRadius: 4,
+    paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
-  aiBubbleText: { fontSize: 14.5, color: C.text, lineHeight: 21 },
+  aiBubbleText: { fontSize: 14, color: C.text, lineHeight: 21, fontFamily: fontFamily.regular },
+  bubbleTimeLeft: { fontSize: 9, color: C.muted, fontFamily: fontFamily.regular, paddingHorizontal: 2 },
   thinkingBubble: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: C.card, borderRadius: 16, borderBottomLeftRadius: 4,
@@ -797,23 +958,25 @@ const styles = StyleSheet.create({
     shadowColor: 'rgba(60,40,90,1)', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
   },
-  thinkingText: { fontSize: 14, color: C.muted, fontWeight: '500' },
+  thinkingText: { fontSize: 13.5, color: C.muted, fontWeight: '500', fontFamily: fontFamily.medium },
 
   // Meal card
   mealCardGroup: { gap: 5 },
-  loggedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 2 },
-  loggedLabel: { fontSize: 11.5, color: C.accent, fontWeight: '600' },
 
   errorBubble: {
     backgroundColor: '#FFF0F0', borderRadius: 18, borderBottomLeftRadius: 4,
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '80%',
     borderWidth: 1, borderColor: '#FFD0D0',
   },
-  errorText: { fontSize: 13, color: C.error, lineHeight: 18 },
+  errorText: { fontSize: 12.5, color: C.error, lineHeight: 18, fontFamily: fontFamily.regular },
 
   // Composer
   composerWrap: {
     borderTopWidth: 1, borderTopColor: C.divider, backgroundColor: C.card,
+  },
+  photoErrorText: {
+    fontSize: 11.5, fontFamily: fontFamily.medium, color: C.error,
+    textAlign: 'center', paddingTop: 8, paddingHorizontal: 16,
   },
   photoPreviewRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -827,7 +990,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   photoHint: {
-    flex: 1, fontSize: 12.5, color: C.muted, fontWeight: '500',
+    flex: 1, fontSize: 12, color: C.muted, fontWeight: '500', fontFamily: fontFamily.medium,
   },
   composer: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 4,
@@ -836,7 +999,7 @@ const styles = StyleSheet.create({
   composerInput: {
     flex: 1, minHeight: 40, maxHeight: 120, borderRadius: 20,
     backgroundColor: C.surface, paddingHorizontal: 18, paddingVertical: 8,
-    fontSize: 14.5, color: C.text, minWidth: 0, textAlignVertical: 'center',
+    fontSize: 14, color: C.text, minWidth: 0, textAlignVertical: 'center', fontFamily: fontFamily.regular,
   },
   iconBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cameraFab: {
