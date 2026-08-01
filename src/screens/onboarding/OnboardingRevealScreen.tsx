@@ -6,7 +6,7 @@ import { calculateTDEE, calculateAge, estimateWeeksToGoal, TDEEInput } from '../
 import OnboardingScreen from '../../components/onboarding/OnboardingScreen';
 import ChatBubble from '../../components/onboarding/ChatBubble';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 import { posthog } from '../../utils/posthog';
 
@@ -141,7 +141,7 @@ export default function OnboardingRevealScreen() {
 
       {profile?.goal === 'maintain' && (
         <View style={styles.paceCard}>
-          <Text style={styles.paceText}>You're eating to maintain — no deficit needed.</Text>
+          <Text style={styles.paceText}>You're eating to maintain, no deficit needed.</Text>
         </View>
       )}
     </OnboardingScreen>
@@ -151,16 +151,16 @@ export default function OnboardingRevealScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bgPrimary },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  loadingText: { color: colors.textMuted, fontSize: typography.md },
+  loadingText: { color: colors.textMuted, fontSize: typography.md, fontFamily: fontFamily.regular },
   calorieCard: {
     backgroundColor: colors.bgCard,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.xl,
+    padding: spacing.lg,
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
+    gap: spacing.sm,
+    marginTop: spacing.md,
     shadowColor: colors.shadowWarm,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
@@ -168,38 +168,40 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   calorieNumber: {
-    fontSize: 64,
+    fontSize: 48,
     fontWeight: '800',
+    fontFamily: fontFamily.bold,
     color: colors.accent,
-    letterSpacing: -2,
+    letterSpacing: -1.5,
   },
   calorieUnit: {
-    fontSize: typography.md,
+    fontSize: typography.sm,
     color: colors.textMuted,
     fontWeight: '500',
-    marginTop: -spacing.md,
+    fontFamily: fontFamily.medium,
+    marginTop: -spacing.sm,
   },
   macroRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     width: '100%',
     justifyContent: 'space-around',
   },
   macroItem: { alignItems: 'center', gap: 2 },
-  macroValue: { fontSize: typography.xl, fontWeight: '700' },
-  macroLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: '500' },
-  macroDivider: { width: 1, height: 32, backgroundColor: colors.border },
+  macroValue: { fontSize: typography.lg, fontWeight: '700', fontFamily: fontFamily.bold },
+  macroLabel: { fontSize: typography.xs, color: colors.textMuted, fontWeight: '500', fontFamily: fontFamily.medium },
+  macroDivider: { width: 1, height: 28, backgroundColor: colors.border },
   paceCard: {
     backgroundColor: colors.bgSurface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderRadius: radius.md,
+    padding: spacing.sm + 4,
     borderWidth: 1,
     borderColor: colors.border,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
   },
-  paceText: { fontSize: typography.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  paceHighlight: { fontWeight: '700', color: colors.accent },
+  paceText: { fontSize: typography.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 18, fontFamily: fontFamily.regular },
+  paceHighlight: { fontWeight: '700', color: colors.accent, fontFamily: fontFamily.bold },
 });
