@@ -4,9 +4,7 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,13 +12,16 @@ import {
   ActivityIndicator,
   Linking,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
-import { fontWeight } from '../../theme/typography';
+import { fontWeight, fontFamily } from '../../theme/typography';
 import { PRIVACY_URL, TERMS_URL } from '../../constants/legal';
+import { useScreenChrome } from '../../hooks/useScreenChrome';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Signup'>;
@@ -38,6 +39,7 @@ function GoogleLogo() {
 }
 
 export default function SignupScreen({ navigation }: Props) {
+  useScreenChrome(colors.bgPrimary, 'dark');
   const { signUp, signInWithGoogle } = useAuthStore();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,14 +47,16 @@ export default function SignupScreen({ navigation }: Props) {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {
+    setErrorText(null);
     try {
       setGoogleLoading(true);
       await signInWithGoogle();
     } catch (error: any) {
       if (error?.message !== 'User cancelled') {
-        Alert.alert('Sign in failed', error?.message ?? 'Something went wrong. Please try again.');
+        setErrorText(error?.message ?? 'Sign in failed. Please try again.');
       }
     } finally {
       setGoogleLoading(false);
@@ -60,12 +64,13 @@ export default function SignupScreen({ navigation }: Props) {
   };
 
   const handleSignup = async () => {
+    setErrorText(null);
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please fill in all fields.');
+      setErrorText('Please fill in all fields.');
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Weak password', 'Password must be at least 8 characters.');
+      setErrorText('Password must be at least 8 characters.');
       return;
     }
 
@@ -73,7 +78,7 @@ export default function SignupScreen({ navigation }: Props) {
     try {
       await signUp(email.trim(), password, fullName.trim());
     } catch (err: any) {
-      Alert.alert('Sign up failed', err.message ?? 'Something went wrong.');
+      setErrorText(err.message ?? 'Sign up failed. Something went wrong.');
     } finally {
       setIsLoading(false);
     }
@@ -139,9 +144,15 @@ export default function SignupScreen({ navigation }: Props) {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(v => !v)}
               >
-                <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textMuted}
+                />
               </TouchableOpacity>
             </View>
+
+            {errorText ? <Text style={styles.inlineError}>{errorText}</Text> : null}
           </View>
 
           {/* Divider */}
@@ -230,12 +241,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
     color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
     color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
   },
   form: {
     gap: 12,
@@ -250,6 +263,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 14,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   passwordContainer: {
     height: 46,
@@ -265,6 +279,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   eyeButton: {
     paddingHorizontal: 14,
@@ -272,8 +287,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eyeIcon: {
-    fontSize: 16,
+  inlineError: {
+    fontSize: 13,
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+    marginTop: 8,
   },
   dividerRow: {
     flexDirection: 'row',
@@ -290,6 +308,7 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 13,
     color: colors.textMuted,
+    fontFamily: fontFamily.regular,
   },
   socialButtons: {
     gap: 12,
@@ -309,6 +328,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 16,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
     color: colors.textPrimary,
   },
   primaryButton: {
@@ -331,25 +351,30 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold,
     letterSpacing: 0.2,
   },
   switchText: {
     fontSize: 13,
     color: colors.textSecondary,
     textAlign: 'center',
+    fontFamily: fontFamily.regular,
   },
   switchLink: {
     color: colors.accent,
     fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold,
   },
   legal: {
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
     lineHeight: 19,
+    fontFamily: fontFamily.regular,
   },
   legalLink: {
     color: colors.accent,
     fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium,
   },
 });
