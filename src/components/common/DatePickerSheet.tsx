@@ -6,6 +6,8 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { homeColors as C } from '../../theme/homeColors'
 import { useFoodLogStore } from '../../store/foodLogStore'
+import { fontFamily } from '../../theme/typography'
+import { todayLocalDate } from '../../utils/localDate'
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -18,7 +20,7 @@ interface DatePickerSheetProps {
 // ── Date math helpers ─────────────────────────────────────────────────────────
 
 function todayStr(): string {
-  return new Date().toISOString().split('T')[0]
+  return todayLocalDate()
 }
 
 // Parse YYYY-MM-DD at noon local time to avoid UTC-midnight TZ rollback.
@@ -183,9 +185,14 @@ export function MonthGrid({ selectedDate, onSelectDate }: {
             >
               <View style={[
                 s.gridCellInner,
-                logged && s.loggedCell,
-                !selected && todayCell && s.todayCircle,
+                // Priority: selected > today > logged, and logged+today gets its
+                // own combined style instead of stacking two independent partial
+                // styles (which previously left a mismatched border/background
+                // combo on any day that was both logged and selected/today).
                 selected && s.selectedCircle,
+                !selected && todayCell && logged && s.todayLoggedCell,
+                !selected && todayCell && !logged && s.todayCircle,
+                !selected && !todayCell && logged && s.loggedCell,
               ]}>
                 <Text style={[
                   s.gridDayNum,
@@ -303,6 +310,7 @@ const s = StyleSheet.create({
   monthNavTitle: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
     letterSpacing: 0.1,
   },
@@ -320,6 +328,7 @@ const s = StyleSheet.create({
   dowText: {
     fontSize: 11,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.muted,
   },
 
@@ -348,6 +357,7 @@ const s = StyleSheet.create({
   gridDayNum: {
     fontSize: 13,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.text,
   },
 
@@ -375,17 +385,21 @@ const s = StyleSheet.create({
   pillText: {
     fontSize: 12,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.text2,
   },
   pillTextActive: {
     color: '#fff',
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
   },
 
-  // State styles
+  // State styles — combined variants exist so two partial styles never stack
+  // ambiguously (see the priority comment at the call site).
   loggedCell: { backgroundColor: C.accentSoft, borderColor: C.accentPressed },
   selectedCircle: { backgroundColor: C.accent },
   todayCircle: { borderWidth: 1, borderColor: C.border },
-  selectedText: { color: '#fff', fontWeight: '600' },
+  todayLoggedCell: { backgroundColor: C.accentSoft, borderWidth: 1, borderColor: C.accentPressed },
+  selectedText: { color: '#fff', fontWeight: '600', fontFamily: fontFamily.semibold },
   mutedText: { color: C.muted },
 })
