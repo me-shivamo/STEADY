@@ -4,16 +4,16 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   TextInput,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
-import { fontWeight } from '../../theme/typography';
+import { fontWeight, fontFamily } from '../../theme/typography';
 
 // Shown by RootNavigator (instead of the app) while authStore.passwordRecovery
 // is true — i.e. the user arrived via a password-reset email link and holds a
@@ -27,22 +27,26 @@ export default function SetNewPasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+  const [infoText, setInfoText] = useState<string | null>(null);
 
   const handleSave = async () => {
+    setErrorText(null);
+    setInfoText(null);
     if (password.length < 6) {
-      Alert.alert('Password too short', 'Use at least 6 characters.');
+      setErrorText('Use at least 6 characters.');
       return;
     }
     if (password !== confirm) {
-      Alert.alert("Passwords don't match", 'Both fields must be identical.');
+      setErrorText("Passwords don't match. Both fields must be identical.");
       return;
     }
     setIsLoading(true);
     try {
       await completePasswordReset(password);
-      Alert.alert('Password updated', 'You are signed in with your new password.');
+      setInfoText('Password updated. You are signed in with your new password.');
     } catch (err: any) {
-      Alert.alert('Could not update password', err.message ?? 'Please try again.');
+      setErrorText(err.message ?? 'Could not update password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +73,11 @@ export default function SetNewPasswordScreen() {
               returnKeyType="next"
             />
             <TouchableOpacity style={styles.eyeButton} onPress={() => setShowPassword(v => !v)}>
-              <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.textMuted}
+              />
             </TouchableOpacity>
           </View>
 
@@ -84,6 +92,9 @@ export default function SetNewPasswordScreen() {
             returnKeyType="done"
             onSubmitEditing={handleSave}
           />
+
+          {errorText ? <Text style={styles.inlineError}>{errorText}</Text> : null}
+          {infoText ? <Text style={styles.inlineInfo}>{infoText}</Text> : null}
 
           <TouchableOpacity
             style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
@@ -117,6 +128,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold,
     color: colors.textPrimary,
     marginBottom: 4,
   },
@@ -124,6 +136,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textSecondary,
     lineHeight: 22,
+    fontFamily: fontFamily.regular,
   },
   form: {
     paddingHorizontal: 24,
@@ -139,6 +152,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   passwordContainer: {
     height: 46,
@@ -154,6 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 15,
     color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
   },
   eyeButton: {
     paddingHorizontal: 14,
@@ -161,8 +176,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  eyeIcon: {
-    fontSize: 16,
+  inlineError: {
+    fontSize: 13,
+    color: colors.error,
+    fontFamily: fontFamily.medium,
+  },
+  inlineInfo: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: fontFamily.regular,
   },
   primaryButton: {
     height: 46,
@@ -184,6 +206,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold,
     letterSpacing: 0.2,
   },
   cancelText: {
@@ -191,5 +214,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     textAlign: 'center',
     marginTop: 14,
+    fontFamily: fontFamily.regular,
   },
 });
