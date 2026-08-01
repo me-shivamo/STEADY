@@ -65,7 +65,7 @@ export default function OnboardingActivityScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   list: {
-    gap: spacing.md,
-    marginTop: spacing.lg,
+    gap: spacing.sm,
+    marginTop: spacing.md,
   },
 });
