@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, View, Text, StyleSheet } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { fontFamily } from '../../theme/typography';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -76,12 +77,14 @@ const styles = StyleSheet.create({
   num: {
     fontSize: 20,
     fontWeight: '800',
+    fontFamily: fontFamily.bold,
     color: '#1D1D1F',
     lineHeight: 20,
   },
   label: {
     fontSize: 10,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: '#6E6E73',
     marginTop: 2,
   },

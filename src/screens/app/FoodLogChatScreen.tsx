@@ -16,6 +16,7 @@ import { useFoodLogStore, MealCard as MealCardType, todayDate } from '../../stor
 import MealCard from '../../components/nutrition/MealCard';
 import { supabase } from '../../api/supabase';
 import { posthog } from '../../utils/posthog';
+import { fontFamily } from '../../theme/typography';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -301,8 +302,8 @@ function WelcomeBubble() {
       </View>
       <View style={styles.aiBubble}>
         <Text style={styles.aiBubbleText}>
-          Hey! I'm your STEADY AI. Tell me what you ate — any meal, any time — and I'll log the calories and macros for you automatically.{'\n\n'}
-          Try: <Text style={{ fontWeight: '700' }}>"I had two eggs on toast with a coffee"</Text>
+          Hey! I'm your STEADY AI. Tell me what you ate, any meal, any time, and I'll log the calories and macros for you automatically.{'\n\n'}
+          Try: <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>"I had two eggs on toast with a coffee"</Text>
         </Text>
       </View>
     </View>
@@ -330,9 +331,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerAvatarText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  headerTitle: { fontSize: 16, fontWeight: '700', color: C.text },
-  headerSub: { fontSize: 12, color: C.muted, marginTop: 1 },
+  headerAvatarText: { color: '#fff', fontSize: 16, fontWeight: '800', fontFamily: fontFamily.bold },
+  headerTitle: { fontSize: 16, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text },
+  headerSub: { fontSize: 12, color: C.muted, marginTop: 1, fontFamily: fontFamily.regular },
 
   divider: { height: 1, backgroundColor: C.divider },
 
@@ -348,7 +349,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 20,
   },
-  loadingText: { fontSize: 13, color: C.muted },
+  loadingText: { fontSize: 13, color: C.muted, fontFamily: fontFamily.regular },
 
   // User bubble (right side)
   userRow: { alignItems: 'flex-end' },
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     maxWidth: '80%',
   },
-  userBubbleText: { color: '#fff', fontSize: 14, fontWeight: '500', lineHeight: 20 },
+  userBubbleText: { color: '#fff', fontSize: 14, fontWeight: '500', fontFamily: fontFamily.medium, lineHeight: 20 },
 
   // AI row (left side — avatar + content)
   aiBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     marginBottom: 2,
   },
-  aiAvatarText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  aiAvatarText: { color: '#fff', fontSize: 12, fontWeight: '800', fontFamily: fontFamily.bold },
 
   // AI speech bubble
   aiBubble: {
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  aiBubbleText: { fontSize: 14, color: C.text, lineHeight: 20 },
+  aiBubbleText: { fontSize: 14, color: C.text, lineHeight: 20, fontFamily: fontFamily.regular },
 
   // Thinking indicator
   thinkingBubble: {
@@ -408,12 +409,12 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  thinkingText: { fontSize: 13, color: C.muted, fontWeight: '500' },
+  thinkingText: { fontSize: 13, color: C.muted, fontWeight: '500', fontFamily: fontFamily.medium },
 
   // Meal card in chat
   mealCardRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   mealCardWrap: { flex: 1 },
-  loggedLabel: { fontSize: 11, color: C.accent, fontWeight: '700', marginBottom: 4, marginLeft: 2 },
+  loggedLabel: { fontSize: 11, color: C.accent, fontWeight: '700', fontFamily: fontFamily.bold, marginBottom: 4, marginLeft: 2 },
 
   // Error bubble
   errorBubble: {
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFD0D0',
   },
-  errorText: { fontSize: 13, color: C.error, lineHeight: 18 },
+  errorText: { fontSize: 13, color: C.error, lineHeight: 18, fontFamily: fontFamily.regular },
 
   // Input bar
   inputBar: {
@@ -450,6 +451,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: C.text,
     lineHeight: 18,
+    fontFamily: fontFamily.regular,
   },
   sendBtn: {
     width: 40,

@@ -5,7 +5,9 @@ import HomeScreen from '../screens/app/HomeScreen';
 import WeightScreen from '../screens/app/WeightScreen';
 import WaterScreen from '../screens/app/WaterScreen';
 import BodyMeasurementsScreen from '../screens/app/BodyMeasurementsScreen';
+import ProgressScreen from '../screens/app/ProgressScreen';
 import SettingsScreen from '../screens/app/SettingsScreen';
+import RemindersScreen from '../screens/app/RemindersScreen';
 import AdjustMacrosScreen from '../screens/app/AdjustMacrosScreen';
 
 // ── App stack — Home at the root, full-screen push screens on top ─────────────
@@ -23,7 +25,9 @@ export default function AppNavigator() {
       <Stack.Screen name="Weight"           component={WeightScreen} />
       <Stack.Screen name="Water"            component={WaterScreen} />
       <Stack.Screen name="BodyMeasurements" component={BodyMeasurementsScreen} />
+      <Stack.Screen name="Progress"         component={ProgressScreen} />
       <Stack.Screen name="Settings"         component={SettingsScreen} />
+      <Stack.Screen name="Reminders"        component={RemindersScreen} />
       <Stack.Screen name="AdjustMacros"     component={AdjustMacrosScreen} />
     </Stack.Navigator>
   );

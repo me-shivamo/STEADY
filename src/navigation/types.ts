@@ -24,7 +24,9 @@ export type AppStackParamList = {
   Weight: undefined;
   Water: undefined;
   BodyMeasurements: undefined;
+  Progress: undefined;
   Settings: undefined;
+  Reminders: undefined;
   AdjustMacros: {
     mealId: string;
     mealName: string;

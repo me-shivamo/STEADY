@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_pings: {
+        Row: {
+          count: number
+          id: number
+          updated_at: string
+        }
+        Insert: {
+          count?: number
+          id?: number
+          updated_at?: string
+        }
+        Update: {
+          count?: number
+          id?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       body_measurements: {
         Row: {
           arms_cm: number | null
@@ -152,6 +170,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "daily_summaries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_push_tokens: {
+        Row: {
+          created_at: string
+          expo_push_token: string
+          id: string
+          platform: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expo_push_token: string
+          id?: string
+          platform?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expo_push_token?: string
+          id?: string
+          platform?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_push_tokens_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -328,6 +381,206 @@ export type Database = {
         }
         Relationships: []
       }
+      group_activity_cheers: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_activity_cheers_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "group_activity_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_activity_cheers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_activity_events: {
+        Row: {
+          created_at: string
+          event_meta: Json
+          event_type: string
+          group_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_meta?: Json
+          event_type: string
+          group_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_meta?: Json
+          event_type?: string
+          group_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_activity_events_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_activity_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_daily_activity: {
+        Row: {
+          activity_date: string
+          did_log: boolean
+          group_id: string
+          id: string
+          meal_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_date: string
+          did_log?: boolean
+          group_id: string
+          id?: string
+          meal_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_date?: string
+          did_log?: boolean
+          group_id?: string
+          id?: string
+          meal_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_daily_activity_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_daily_activity_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          invite_code: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          invite_code?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meal_logs: {
         Row: {
           caption: string | null
@@ -369,6 +622,122 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          error_message: string | null
+          id: string
+          opened_at: string | null
+          reminder_type: string
+          sent_at: string
+          status: string
+          template_id: string | null
+          user_id: string
+        }
+        Insert: {
+          error_message?: string | null
+          id?: string
+          opened_at?: string | null
+          reminder_type: string
+          sent_at?: string
+          status: string
+          template_id?: string | null
+          user_id: string
+        }
+        Update: {
+          error_message?: string | null
+          id?: string
+          opened_at?: string | null
+          reminder_type?: string
+          sent_at?: string
+          status?: string
+          template_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          enabled: boolean
+          id: string
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          reminder_type: string
+          times: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminder_type: string
+          times?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          enabled?: boolean
+          id?: string
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          reminder_type?: string
+          times?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          is_ai_generated: boolean
+          reminder_type: string
+          variant_text: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          reminder_type: string
+          variant_text: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          is_ai_generated?: boolean
+          reminder_type?: string
+          variant_text?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           activity_level: string | null
@@ -386,10 +755,12 @@ export type Database = {
           goal_weight_kg: number | null
           height_cm: number | null
           id: string
+          is_admin: boolean
           onboarding_complete: boolean | null
           protein_goal_g: number | null
           sex: string | null
           subscription_tier: string | null
+          timezone: string | null
           units_system: string | null
           updated_at: string | null
           water_goal_ml: number | null
@@ -411,10 +782,12 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id: string
+          is_admin?: boolean
           onboarding_complete?: boolean | null
           protein_goal_g?: number | null
           sex?: string | null
           subscription_tier?: string | null
+          timezone?: string | null
           units_system?: string | null
           updated_at?: string | null
           water_goal_ml?: number | null
@@ -436,16 +809,53 @@ export type Database = {
           goal_weight_kg?: number | null
           height_cm?: number | null
           id?: string
+          is_admin?: boolean
           onboarding_complete?: boolean | null
           protein_goal_g?: number | null
           sex?: string | null
           subscription_tier?: string | null
+          timezone?: string | null
           units_system?: string | null
           updated_at?: string | null
           water_goal_ml?: number | null
           water_tracking_enabled?: boolean
         }
         Relationships: []
+      }
+      saved_entries: {
+        Row: {
+          created_at: string | null
+          entries: Json
+          id: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          entries: Json
+          id?: string
+          last_used_at?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          entries?: Json
+          id?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       streaks: {
         Row: {
@@ -633,6 +1043,117 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      compute_group_streak: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: number
+      }
+      create_group: {
+        Args: { p_category: string; p_name: string }
+        Returns: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      delete_group: { Args: { p_group_id: string }; Returns: undefined }
+      find_due_reminders: {
+        Args: { window_minutes: number }
+        Returns: {
+          local_date: string
+          local_time: string
+          reminder_type: string
+          user_id: string
+        }[]
+      }
+      get_group_activity_feed: {
+        Args: { p_before?: string; p_group_id: string; p_limit?: number }
+        Returns: {
+          avatar_url: string
+          cheer_count: number
+          cheered_by_me: boolean
+          created_at: string
+          event_meta: Json
+          event_type: string
+          full_name: string
+          id: string
+          user_id: string
+        }[]
+      }
+      get_group_activity_score: {
+        Args: { p_group_id: string }
+        Returns: {
+          logged_today_count: number
+          member_count: number
+          pct: number
+        }[]
+      }
+      get_group_leaderboard: {
+        Args: { p_group_id: string }
+        Returns: {
+          avatar_url: string
+          current_streak: number
+          full_name: string
+          logged_today: boolean
+          points: number
+          user_id: string
+        }[]
+      }
+      get_group_preview_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          category: string
+          group_id: string
+          member_avatars: string[]
+          member_count: number
+          name: string
+        }[]
+      }
+      increment_admin_ping: { Args: never; Returns: number }
+      is_group_admin: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_group_member: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      join_group_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          invite_code: string
+          name: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "groups"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      leave_group: { Args: { p_group_id: string }; Returns: undefined }
+      record_group_milestone: {
+        Args: { p_event_type: string; p_group_id: string; p_meta?: Json }
+        Returns: undefined
+      }
+      remove_member: {
+        Args: { p_group_id: string; p_user_id: string }
+        Returns: undefined
+      }
       reset_daily_usage_limits: { Args: never; Returns: undefined }
     }
     Enums: {
