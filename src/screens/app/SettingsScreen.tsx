@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +21,7 @@ import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/authStore';
 import { Tables } from '../../types/database';
 import { PRIVACY_URL, TERMS_URL } from '../../constants/legal';
+import { fontFamily } from '../../theme/typography';
 
 type Profile = Tables<'profiles'>;
 
@@ -140,12 +140,14 @@ export default function SettingsScreen() {
   const updateProfile = useAuthStore((s) => s.updateProfile);
   const deleteAccount = useAuthStore((s) => s.deleteAccount);
   const [saving, setSaving] = useState(false);
+  const [saveErrorText, setSaveErrorText] = useState<string | null>(null);
 
   // Delete-account confirmation modal. RN's Alert.prompt is iOS-only, so the
   // type-DELETE confirmation lives in a cross-platform Modal instead.
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [deleteErrorText, setDeleteErrorText] = useState<string | null>(null);
 
   const [name, setName]                 = useState('');
   const [sex, setSex]                   = useState('');
@@ -203,6 +205,7 @@ export default function SettingsScreen() {
 
   const handleSave = async () => {
     if (saving) return;
+    setSaveErrorText(null);
     setSaving(true);
     try {
       const updates: Partial<Profile> = {
@@ -222,7 +225,7 @@ export default function SettingsScreen() {
       await updateProfile(updates);
       navigation.goBack();
     } catch {
-      Alert.alert('Could not save', 'Please check your connection and try again.');
+      setSaveErrorText('Could not save. Please check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -230,11 +233,13 @@ export default function SettingsScreen() {
 
   const openDeleteModal = () => {
     setDeleteConfirmText('');
+    setDeleteErrorText(null);
     setShowDeleteModal(true);
   };
 
   const handleDeleteAccount = async () => {
     if (deleting) return;
+    setDeleteErrorText(null);
     setDeleting(true);
     try {
       await deleteAccount();
@@ -242,7 +247,7 @@ export default function SettingsScreen() {
       // unmounts the whole app stack and shows the welcome screen.
     } catch {
       setDeleting(false);
-      Alert.alert('Could not delete account', 'Please check your connection and try again.');
+      setDeleteErrorText('Could not delete account. Please check your connection and try again.');
     }
   };
 
@@ -267,6 +272,8 @@ export default function SettingsScreen() {
           }
         </TouchableOpacity>
       </View>
+
+      {saveErrorText ? <Text style={styles.inlineError}>{saveErrorText}</Text> : null}
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
@@ -378,7 +385,7 @@ export default function SettingsScreen() {
           <Pressable style={styles.modalPanel} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Delete your account?</Text>
             <Text style={styles.modalBody}>
-              This permanently erases your profile, meal logs, photos, weight and water history —
+              This permanently erases your profile, meal logs, photos, weight and water history,
               everything. It cannot be undone.
             </Text>
             <Text style={styles.modalHint}>Type DELETE to confirm</Text>
@@ -392,6 +399,7 @@ export default function SettingsScreen() {
               style={styles.modalInput}
               editable={!deleting}
             />
+            {deleteErrorText ? <Text style={styles.inlineError}>{deleteErrorText}</Text> : null}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
@@ -451,7 +459,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 17,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
+  },
+  inlineError: {
+    fontSize: 13,
+    color: C.error,
+    fontFamily: fontFamily.medium,
+    textAlign: 'center',
+    marginTop: 8,
+    marginHorizontal: 20,
   },
   saveBtn: {
     height: 34,
@@ -466,6 +483,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: '#fff',
   },
 
@@ -479,6 +497,7 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.muted,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -511,6 +530,7 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 15,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.text,
     flex: 1,
   },
@@ -531,6 +551,7 @@ const styles = StyleSheet.create({
   rowLabelStacked: {
     fontSize: 15,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.text,
   },
   rowRightStacked: {
@@ -552,6 +573,7 @@ const styles = StyleSheet.create({
   inlineInput: {
     fontSize: 15,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.text,
     textAlign: 'right',
     minWidth: 44,
@@ -561,6 +583,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: C.muted,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
   },
 
   // Segmented control
@@ -593,11 +616,13 @@ const styles = StyleSheet.create({
   segmentText: {
     fontSize: 12.5,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: C.muted,
   },
   segmentTextActive: {
     color: C.accent,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
   },
 
   // About links
@@ -611,6 +636,7 @@ const styles = StyleSheet.create({
   linkRowText: {
     fontSize: 15,
     fontWeight: '400',
+    fontFamily: fontFamily.regular,
     color: C.text,
   },
 
@@ -625,6 +651,7 @@ const styles = StyleSheet.create({
   dangerRowText: {
     fontSize: 15,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
     color: '#E53935',
   },
 
@@ -643,6 +670,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 17,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: C.text,
     marginBottom: 8,
   },
@@ -651,10 +679,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: C.muted,
     marginBottom: 16,
+    fontFamily: fontFamily.regular,
   },
   modalHint: {
     fontSize: 12,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.muted,
     letterSpacing: 0.4,
     textTransform: 'uppercase',
@@ -670,6 +700,7 @@ const styles = StyleSheet.create({
     color: C.text,
     backgroundColor: C.surface,
     marginBottom: 16,
+    fontFamily: fontFamily.regular,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -686,6 +717,7 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   modalDeleteBtn: {
@@ -700,6 +732,7 @@ const styles = StyleSheet.create({
   modalDeleteText: {
     fontSize: 15,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: '#fff',
   },
 });

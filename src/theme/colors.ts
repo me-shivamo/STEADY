@@ -22,6 +22,10 @@ export const colors = {
   carbsSoft: '#FEF3DF',
   fat: '#9B51E0',
   fatSoft: '#F3E9FC',
+  // Not tracked as logging macros — used only for the Welcome screen's
+  // illustrative nutrient callouts (vitamins/minerals aren't computed per meal).
+  vitamins: '#2FB67A',
+  minerals: '#E5734D',
 
   // Status
   success: '#2FB67A',
