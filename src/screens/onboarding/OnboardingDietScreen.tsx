@@ -1,24 +1,22 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { OnboardingNavProp } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import OnboardingScreen from '../../components/onboarding/OnboardingScreen';
 import ChatBubble from '../../components/onboarding/ChatBubble';
 import { Chip } from '../../components/onboarding/SelectableCard';
-import { spacing } from '../../theme/spacing';
+import { colors } from '../../theme/colors';
+import { typography, fontFamily } from '../../theme/typography';
+import { spacing, radius } from '../../theme/spacing';
 import { posthog } from '../../utils/posthog';
 
-const DIET_OPTIONS = [
-  'Vegetarian', 'Vegan', 'Pescatarian',
-  'Gluten-free', 'Dairy-free',
-  'Keto', 'Low-carb', 'Paleo',
-  'Halal', 'Kosher',
-];
+const DIET_OPTIONS = ['Veg', 'Non-veg', 'Keto', 'Low-carb'];
 
 type Props = { navigation: OnboardingNavProp };
 
 export default function OnboardingDietScreen({ navigation }: Props) {
   const [selected, setSelected] = useState<string[]>([]);
+  const [customText, setCustomText] = useState('');
   const [loading, setLoading] = useState(false);
   const { updateProfile } = useAuthStore();
 
@@ -28,11 +26,22 @@ export default function OnboardingDietScreen({ navigation }: Props) {
     );
   };
 
+  // Custom entries are comma-separated free text, merged in alongside the
+  // preset chips — e.g. "Veg" + "no peanuts, low sodium".
+  const buildRestrictions = () => {
+    const custom = customText
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return [...selected, ...custom];
+  };
+
   const handleContinue = async () => {
     setLoading(true);
     try {
-      await updateProfile({ dietary_restrictions: selected });
-      posthog.capture('onboarding_step_completed', { step: 'diet', restrictions: selected, count: selected.length });
+      const restrictions = buildRestrictions();
+      await updateProfile({ dietary_restrictions: restrictions });
+      posthog.capture('onboarding_step_completed', { step: 'diet', restrictions, count: restrictions.length });
       navigation.navigate('OnboardingReveal');
     } finally {
       setLoading(false);
@@ -50,10 +59,12 @@ export default function OnboardingDietScreen({ navigation }: Props) {
     }
   };
 
+  const totalCount = selected.length + customText.split(',').map(s => s.trim()).filter(Boolean).length;
+
   return (
     <OnboardingScreen
       step={5}
-      buttonLabel={selected.length > 0 ? `Continue (${selected.length} selected)` : 'Continue'}
+      buttonLabel={totalCount > 0 ? `Continue (${totalCount} selected)` : 'Continue'}
       onContinue={handleContinue}
       loading={loading}
       secondaryLabel="No restrictions"
@@ -61,7 +72,7 @@ export default function OnboardingDietScreen({ navigation }: Props) {
     >
       <ChatBubble
         message="Any foods I should know about?"
-        hint="Pick as many as apply. You can always change this later."
+        hint="Pick what applies, or add your own below. You can always change this later."
       />
 
       <View style={styles.chipsWrap}>
@@ -74,6 +85,18 @@ export default function OnboardingDietScreen({ navigation }: Props) {
           />
         ))}
       </View>
+
+      <View style={styles.customSection}>
+        <Text style={styles.customLabel}>Custom (comma-separated)</Text>
+        <TextInput
+          style={styles.customInput}
+          value={customText}
+          onChangeText={setCustomText}
+          placeholder="e.g. no peanuts, halal"
+          placeholderTextColor={colors.textMuted}
+          multiline
+        />
+      </View>
     </OnboardingScreen>
   );
 }
@@ -82,7 +105,28 @@ const styles = StyleSheet.create({
   chipsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+    gap: spacing.xs,
+    marginTop: spacing.md,
+  },
+  customSection: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  customLabel: {
+    fontSize: typography.xs,
+    color: colors.textMuted,
+    fontFamily: fontFamily.regular,
+  },
+  customInput: {
+    backgroundColor: colors.bgCard,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs + 2,
+    fontSize: typography.md,
+    color: colors.textPrimary,
+    fontFamily: fontFamily.regular,
+    minHeight: 44,
   },
 });
