@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 
 interface CardProps {
@@ -80,13 +80,13 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 54,
+    minHeight: 48,
     backgroundColor: colors.bgCard,
-    borderRadius: radius.lg,
+    borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: colors.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: 8,
     gap: spacing.sm,
   },
   cardSelected: {
@@ -94,20 +94,23 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accentSoft,
   },
   emoji: {
-    fontSize: typography.xl,
-    width: 28,
+    fontSize: typography.lg,
+    width: 24,
     textAlign: 'center',
+    fontFamily: fontFamily.regular,
   },
   textWrap: { flex: 1, gap: 2 },
   label: {
     fontSize: typography.md,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   labelSelected: { color: colors.accent },
   description: {
     fontSize: typography.xs,
     color: colors.textMuted,
+    fontFamily: fontFamily.regular,
   },
   descriptionSelected: { color: colors.accent, opacity: 0.8 },
   checkDot: {
@@ -120,12 +123,13 @@ const styles = StyleSheet.create({
     fontSize: typography.xl,
     color: colors.textMuted,
     lineHeight: 24,
+    fontFamily: fontFamily.regular,
   },
 
   // --- Chip ---
   chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm + 4,
+    paddingVertical: spacing.xs + 2,
     borderRadius: radius.full,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -138,6 +142,7 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: typography.sm,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: colors.textSecondary,
   },
   chipTextSelected: { color: colors.accent },

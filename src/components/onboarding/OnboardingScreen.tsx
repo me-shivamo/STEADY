@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
+import { useScreenChrome } from '../../hooks/useScreenChrome';
 
 interface Props {
   /** 1-based step number for the progress dots. */
@@ -47,6 +48,8 @@ export default function OnboardingScreen({
   onSecondary,
   scroll = true,
 }: Props) {
+  useScreenChrome(colors.bgPrimary, 'dark');
+
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
       {/* Progress dots */}
@@ -75,7 +78,11 @@ export default function OnboardingScreen({
           {children}
         </ScrollView>
       ) : (
-        <View style={[styles.body, styles.bodyContent]}>{children}</View>
+        // Non-scrolling screens (Stats) have tall content — centering (used by
+        // the scroll variant, whose content is short and needs vertical
+        // balance) pushes the top of a tall non-scrolling column off-screen
+        // instead, hiding the ChatBubble above the pickers. Stack from the top.
+        <View style={[styles.body, styles.bodyContent, styles.bodyContentTop]}>{children}</View>
       )}
 
       {/* Footer */}
@@ -114,7 +121,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   dot: { height: 8, borderRadius: radius.full },
   dotActive: { width: 22, backgroundColor: colors.accent },
@@ -123,17 +130,22 @@ const styles = StyleSheet.create({
 
   body: { flex: 1 },
   bodyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  bodyContentTop: {
+    justifyContent: 'flex-start',
   },
 
   footer: {
     paddingHorizontal: spacing.lg,
     paddingTop: 4,
-    paddingBottom: spacing.sm,
+    paddingBottom: spacing.xs,
   },
   button: {
-    height: 48,
+    height: 46,
     backgroundColor: colors.accent,
     borderRadius: radius.md,
     alignItems: 'center',
@@ -153,16 +165,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: typography.lg,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     letterSpacing: 0.1,
   },
   buttonTextDisabled: { color: '#8E8E93' },
   secondary: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   secondaryText: {
     fontSize: typography.sm,
     color: colors.textMuted,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
 });
