@@ -1,13 +1,14 @@
 import React, { useState, useCallback } from 'react'
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
+  TextInput, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AppStackParamList } from '../../navigation/types'
 import { useFoodLogStore, MacroOverride } from '../../store/foodLogStore'
+import { fontFamily } from '../../theme/typography'
 
 // ── Design tokens — mirrors MealCard.tsx exactly ─────────────────────────────
 const C = {
@@ -102,7 +103,7 @@ const fieldStyles = StyleSheet.create({
     width: 7, height: 7, borderRadius: 3.5,
   },
   label: {
-    fontSize: 10.5, fontWeight: '600', color: C.text2, textAlign: 'center',
+    fontSize: 10.5, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text2, textAlign: 'center',
   },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center',
@@ -111,11 +112,11 @@ const fieldStyles = StyleSheet.create({
     minWidth: 54, justifyContent: 'center',
   },
   input: {
-    fontSize: 14, fontWeight: '700', color: C.text,
+    fontSize: 14, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text,
     textAlign: 'center', minWidth: 32, padding: 0,
   },
   unit: {
-    fontSize: 10, color: C.muted, marginLeft: 1,
+    fontSize: 10, color: C.muted, marginLeft: 1, fontFamily: fontFamily.regular,
   },
 })
 
@@ -142,6 +143,7 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
   )
 
   const [isSavingAll, setIsSavingAll] = useState(false)
+  const [saveErrorText, setSaveErrorText] = useState<string | null>(null)
 
   // Update one field of one draft row — immutable map over the array.
   const updateDraft = useCallback(
@@ -176,6 +178,7 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
   // Save all entries at once.
   const handleSaveAll = async () => {
     setIsSavingAll(true)
+    setSaveErrorText(null)
     try {
       await Promise.all(
         drafts.map(d =>
@@ -192,7 +195,7 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
       // Give the user a moment to see the success state, then pop back
       setTimeout(() => navigation.goBack(), 700)
     } catch (err: any) {
-      Alert.alert('Could not save', err?.message ?? 'Please try again.')
+      setSaveErrorText(err?.message ?? 'Could not save. Please try again.')
     } finally {
       setIsSavingAll(false)
     }
@@ -342,6 +345,8 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
             }
           </TouchableOpacity>
 
+          {saveErrorText ? <Text style={styles.inlineError}>{saveErrorText}</Text> : null}
+
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -365,14 +370,21 @@ function TotalCol({ label, value, unit, color }: {
 const totalColStyles = StyleSheet.create({
   col: { flex: 1, alignItems: 'center', gap: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  val: { fontSize: 18, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
-  label: { fontSize: 11, fontWeight: '500', color: C.text2 },
+  val: { fontSize: 18, fontWeight: '800', fontFamily: fontFamily.bold, color: C.text, letterSpacing: -0.3 },
+  label: { fontSize: 11, fontWeight: '500', fontFamily: fontFamily.medium, color: C.text2 },
 })
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
   flex: { flex: 1 },
+  inlineError: {
+    fontSize: 13,
+    color: C.error,
+    fontFamily: fontFamily.medium,
+    textAlign: 'center',
+    marginTop: 8,
+  },
 
   // Header
   header: {
@@ -393,8 +405,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.07, shadowRadius: 4, elevation: 2,
   },
   headerCenter: { flex: 1, paddingHorizontal: 4 },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-  headerSub: { fontSize: 12.5, color: C.text2, fontWeight: '500', marginTop: 1 },
+  headerTitle: { fontSize: 17, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text, letterSpacing: -0.2 },
+  headerSub: { fontSize: 12.5, color: C.text2, fontWeight: '500', fontFamily: fontFamily.medium, marginTop: 1 },
   saveBtn: {
     paddingHorizontal: 18, height: 36, borderRadius: 10,
     backgroundColor: C.accent,
@@ -409,7 +421,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  saveBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  saveBtnText: { fontSize: 14, fontWeight: '700', fontFamily: fontFamily.bold, color: '#fff' },
 
   // Scroll
   scroll: { flex: 1 },
@@ -428,7 +440,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.09, shadowRadius: 10, elevation: 4,
   },
   totalsTitle: {
-    fontSize: 13, fontWeight: '700', color: C.text2, textTransform: 'uppercase',
+    fontSize: 13, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text2, textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   totalsRow: {
@@ -441,7 +453,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   infoText: {
-    flex: 1, fontSize: 12.5, color: C.muted, lineHeight: 18,
+    flex: 1, fontSize: 12.5, color: C.muted, lineHeight: 18, fontFamily: fontFamily.regular,
   },
 
   // Entry card
@@ -460,17 +472,17 @@ const styles = StyleSheet.create({
   },
   entryHeaderLeft: { flex: 1, gap: 2 },
   entryName: {
-    fontSize: 15, fontWeight: '600', color: C.text, letterSpacing: -0.1,
+    fontSize: 15, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.text, letterSpacing: -0.1,
   },
   entryQty: {
-    fontSize: 12.5, color: C.text2, fontWeight: '400',
+    fontSize: 12.5, color: C.text2, fontWeight: '400', fontFamily: fontFamily.regular,
   },
   savedBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: C.accentSoft, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
   },
-  savedBadgeText: { fontSize: 12, fontWeight: '600', color: C.accent },
+  savedBadgeText: { fontSize: 12, fontWeight: '600', fontFamily: fontFamily.semibold, color: C.accent },
   entryDivider: { height: 1, backgroundColor: C.surface, marginHorizontal: 0 },
 
   // 4-column macro field row
@@ -494,5 +506,5 @@ const styles = StyleSheet.create({
     backgroundColor: C.muted,
     shadowOpacity: 0, elevation: 0,
   },
-  bottomSaveBtnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  bottomSaveBtnText: { fontSize: 16, fontWeight: '700', fontFamily: fontFamily.bold, color: '#fff' },
 })

@@ -1,5 +1,21 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { resolveFoods, GRAM_HINTS_PROMPT, type ParsedFood } from '../_shared/macroResolver.ts'
+import { resolveFoods, normalizeName, GRAM_HINTS_PROMPT, type ParsedFood, type ResolvedFood, type MacroSource } from '../_shared/macroResolver.ts'
+import { logAiCall } from '../_shared/aiLogger.ts'
+
+// One entry as it existed before an edit — sent by the client so the AI (and
+// the rescale guard below) can tell "same food, new quantity" apart from
+// "genuinely different food" instead of re-deriving nutrition facts blind.
+interface PreviousEntry {
+  name: string
+  quantity_g: number
+  calories: number
+  protein_g: number
+  carbs_g: number
+  fat_g: number
+  fiber_g: number
+  food_item_id: string | null
+  macro_source: MacroSource | null
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -196,11 +212,19 @@ Deno.serve(async (req) => {
     // ── 2. Parse request ───────────────────────────────────────────────────────
     const body = await req.json()
     const text: string = body.text?.trim()
-    const meal_type: string = body.meal_type ?? inferMealType()
+    const meal_type: string = body.meal_type ?? inferMealType(body.logged_hour)
     const logged_date: string = body.logged_date ?? today()
     const editMealLogId: string | undefined = body.meal_log_id ?? undefined
+    const previousEntries: PreviousEntry[] = Array.isArray(body.previous_entries) ? body.previous_entries : []
 
     if (!text) return json({ error: 'text is required' }, 400)
+
+    // Captured now, before any DB writes — used to timestamp the user's chat
+    // bubble. Without this, saveChatTurn() (called at the very end, after the
+    // meal_log row already exists) would stamp the user's own message LATER
+    // than the meal it produced, so on reload the sort-by-created_at would
+    // place the meal card above the user's text instead of below it.
+    const requestStartedAt = new Date().toISOString()
 
     // ── 3. Load today's chat history ───────────────────────────────────────────
     const historyMessages = await loadChatHistory(supabase, user.id, logged_date)
@@ -211,9 +235,31 @@ Deno.serve(async (req) => {
     const messages: Array<Record<string, unknown>> = [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: `Current date: ${logged_date}. User's timezone context: messages are in local time.` },
-      ...historyMessages,
-      { role: 'user', content: text },
     ]
+
+    // On an edit, tell the model what the meal's foods currently are so it can
+    // tell "same food, new quantity" apart from "genuinely different food" —
+    // without this it re-derives nutrition facts from scratch on every edit,
+    // even a pure quantity change. This is belt-and-suspenders: the rescale
+    // guard after resolveFoods() enforces the same rule deterministically,
+    // so a model that ignores this instruction still can't drift the numbers.
+    if (editMealLogId && previousEntries.length > 0) {
+      const entryLines = previousEntries.map((e) =>
+        `- "${e.name}": ${e.quantity_g}g → ${e.calories} cal, ${e.protein_g}g protein, ${e.carbs_g}g carbs, ${e.fat_g}g fat` +
+        (e.macro_source === 'label' ? ' [from a nutrition label — these are exact printed values, not estimates]' : '')
+      ).join('\n')
+      messages.push({
+        role: 'system',
+        content: `This is an EDIT of an existing meal. Its current foods are:\n${entryLines}\n\n` +
+          `For each food in the edited text below: if it is the SAME food as one listed above (same identity, ` +
+          `possibly a different quantity), keep quantity_g accurate to the new text — do NOT change your ` +
+          `identification of what the food is. Only treat a food as new/different if its name or identity in the ` +
+          `edited text genuinely changed. The app recalculates macros from quantity_g after this step, so your ` +
+          `only job here is correct food identification and gram amounts, exactly as with a fresh log.`,
+      })
+    }
+
+    messages.push(...historyMessages, { role: 'user', content: text })
 
     // ── 5. Agent loop: Call 1 → execute tools → Call 2 (if needed) ───────────
     const { result: aiResult, waterLogged } = await runAgentLoop(supabase, user.id, messages)
@@ -221,7 +267,7 @@ Deno.serve(async (req) => {
     // ── 6. Route on intent ─────────────────────────────────────────────────────
     if (aiResult.intent === 'answer') {
       const reply = (aiResult.reply ?? '').trim() || "I'm not sure how to answer that — try rephrasing?"
-      await saveChatTurn(supabase, user.id, logged_date, text, reply, null)
+      await saveChatTurn(supabase, user.id, logged_date, text, reply, null, requestStartedAt)
       return json({ success: true, type: 'answer', reply, water_logged: waterLogged })
     }
 
@@ -232,13 +278,68 @@ Deno.serve(async (req) => {
       }, 422)
     }
 
-    // Resolve macros from real data (cache → USDA → one-time AI estimate).
-    // The parse above only identified foods + grams; numbers are computed here.
-    const { foods, totals } = await resolveFoods(supabase, aiResult.foods as ParsedFood[], {
-      openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
-      fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
-      userId: user.id,
+    // On an edit, deterministically rescale any food that's the same as one of
+    // the previous entries (by normalized name) — quantity_g × old_per100g,
+    // reusing the SAME food_item_id/macro_source rather than re-resolving.
+    // This is the enforcement layer for the system-prompt instruction above:
+    // even if the model ignores that instruction and re-derives nutrition
+    // facts on its own, this guard overrides its output for matched foods, so
+    // a pure quantity edit can never change the macro ratio. Foods with no
+    // match (genuinely new/changed identity) fall through to the normal
+    // resolveFoods() pipeline, exactly as a fresh log would.
+    const previousByName = new Map(previousEntries.map((e) => [normalizeName(e.name), e]))
+    const allParsed = aiResult.foods as ParsedFood[]
+    const rescaledIndices: number[] = []
+    const freshIndices: number[] = []
+    const rescaled: ResolvedFood[] = new Array(allParsed.length)
+
+    allParsed.forEach((f, i) => {
+      const prev = editMealLogId ? previousByName.get(normalizeName(f.name)) : undefined
+      // Only rescale when the food itself carries no fresher ground truth
+      // (e.g. a new label_macros from a re-scanned label) and the previous
+      // entry actually has a usable macro_source to trust.
+      if (prev && !f.label_macros && prev.food_item_id && prev.quantity_g > 0) {
+        const ratio = f.quantity_g / prev.quantity_g
+        const r1 = (n: number) => Math.round(n * ratio * 10) / 10
+        rescaled[i] = {
+          ...f,
+          calories: r1(prev.calories),
+          protein_g: r1(prev.protein_g),
+          carbs_g: r1(prev.carbs_g),
+          fat_g: r1(prev.fat_g),
+          fiber_g: r1(prev.fiber_g),
+          food_item_id: prev.food_item_id,
+          macro_source: prev.macro_source ?? 'user_created',
+        }
+        rescaledIndices.push(i)
+      } else {
+        freshIndices.push(i)
+      }
     })
+
+    // Resolve macros from real data (cache → USDA → one-time AI estimate) for
+    // anything not covered by the rescale above. The parse only identified
+    // foods + grams for these; numbers are computed here, same as a fresh log.
+    const freshResolved = freshIndices.length > 0
+      ? await resolveFoods(supabase, freshIndices.map((i) => allParsed[i]), {
+          openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
+          fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
+          userId: user.id,
+        })
+      : { foods: [] as ResolvedFood[], totals: null }
+
+    const foods: ResolvedFood[] = new Array(allParsed.length)
+    rescaledIndices.forEach((origIdx) => { foods[origIdx] = rescaled[origIdx] })
+    freshIndices.forEach((origIdx, j) => { foods[origIdx] = freshResolved.foods[j] })
+
+    const r1 = (n: number) => Math.round(n * 10) / 10
+    const totals = {
+      calories: r1(foods.reduce((s, f) => s + f.calories, 0)),
+      protein_g: r1(foods.reduce((s, f) => s + f.protein_g, 0)),
+      carbs_g: r1(foods.reduce((s, f) => s + f.carbs_g, 0)),
+      fat_g: r1(foods.reduce((s, f) => s + f.fat_g, 0)),
+      fiber_g: r1(foods.reduce((s, f) => s + f.fiber_g, 0)),
+    }
 
     // Get or create meal_log
     let mealLog: { id: string }
@@ -272,37 +373,33 @@ Deno.serve(async (req) => {
     }
 
     // Insert food entries. Each references the shared food_items cache row the
-    // resolver returned — no more one-off food_items rows per log.
-    const savedEntries = []
-    for (const food of foods) {
-      const { data: entry, error: entryErr } = await supabase
-        .from('food_entries')
-        .insert({
-          meal_log_id: mealLog.id,
-          user_id: user.id,
-          food_item_id: food.food_item_id,
-          food_name: food.name,
-          quantity_g: food.quantity_g,
-          quantity_label: food.quantity_description,
-          calories: food.calories,
-          protein_g: food.protein_g,
-          carbs_g: food.carbs_g,
-          fat_g: food.fat_g,
-          fiber_g: food.fiber_g ?? 0,
-          source: 'ai_text',
-          ai_confidence: food.confidence,
-          macro_source: food.macro_source,
-        })
-        .select()
-        .single()
-      if (entryErr) throw entryErr
-      savedEntries.push(entry)
-    }
+    // resolver returned — no more one-off food_items rows per log. A single
+    // batched insert instead of one round trip per food.
+    const { data: savedEntries, error: entriesErr } = await supabase
+      .from('food_entries')
+      .insert(foods.map((food) => ({
+        meal_log_id: mealLog.id,
+        user_id: user.id,
+        food_item_id: food.food_item_id,
+        food_name: food.name,
+        quantity_g: food.quantity_g,
+        quantity_label: food.quantity_description,
+        calories: food.calories,
+        protein_g: food.protein_g,
+        carbs_g: food.carbs_g,
+        fat_g: food.fat_g,
+        fiber_g: food.fiber_g ?? 0,
+        source: 'ai_text',
+        ai_confidence: food.confidence,
+        macro_source: food.macro_source,
+      })))
+      .select()
+    if (entriesErr) throw entriesErr
 
     // The coach_note is the AI's personalised insight about this specific meal.
     // It's saved as the assistant message so it appears in history and is readable.
     const coachNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
-    await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id)
+    await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id, requestStartedAt)
 
     return json({
       success: true,
@@ -329,7 +426,7 @@ Deno.serve(async (req) => {
 // Max 2 LLM calls. Simple messages (food log, simple Q&A) only use 1 call.
 // deno-lint-ignore no-explicit-any
 async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<{ result: Record<string, unknown>; waterLogged: boolean }> {
-  const call1 = await callOpenRouter(messages, TOOLS)
+  const call1 = await callOpenRouter(supabase, userId, messages, TOOLS)
 
   // No tool calls → AI responded directly (food log JSON or simple answer)
   if (!call1.tool_calls || call1.tool_calls.length === 0) {
@@ -365,36 +462,49 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
     ...toolResults,
   ]
 
-  const call2 = await callOpenRouter(messagesWithTools, TOOLS)
+  const call2 = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS)
   return { result: parseAIContent(call2.content ?? ''), waterLogged }
 }
 
 // ── OpenRouter call wrapper ───────────────────────────────────────────────────
-async function callOpenRouter(messages: Array<Record<string, unknown>>, tools: typeof TOOLS): Promise<Record<string, unknown>> {
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://steadyapp.io',
-      'X-Title': 'STEADY',
+// deno-lint-ignore no-explicit-any
+async function callOpenRouter(supabase: any, userId: string, messages: Array<Record<string, unknown>>, tools: typeof TOOLS): Promise<Record<string, unknown>> {
+  const model = 'openai/gpt-4o-mini'
+  const requestBody = { model, temperature: 0, messages, tools, tool_choice: 'auto' as const }
+
+  const { response: data } = await logAiCall(supabase, {
+    userId,
+    source: 'log-food-from-text',
+    model,
+    requestPayload: requestBody,
+    run: async () => {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://steadyapp.io',
+          'X-Title': 'STEADY',
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`OpenRouter: ${errText}`)
+      }
+
+      const json = await res.json()
+      return {
+        response: json,
+        promptTokens: json.usage?.prompt_tokens,
+        completionTokens: json.usage?.completion_tokens,
+      }
     },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      temperature: 0,
-      messages,
-      tools,
-      tool_choice: 'auto',
-    }),
   })
 
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`OpenRouter: ${errText}`)
-  }
-
-  const data = await res.json()
-  return data.choices[0].message
+  // deno-lint-ignore no-explicit-any
+  return (data as any).choices[0].message
 }
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
@@ -580,10 +690,13 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
 // chat_date stores the user's local date (passed from the app as logged_date) so
 // history queries can filter by user-facing date rather than UTC created_at,
 // correctly handling non-UTC timezones where created_at may fall on a different date.
+// `userSentAt` is the request-start timestamp, not "now" — the user's chat bubble
+// must sort BEFORE the meal_log row this same request may have already created
+// (see call site), or the feed reorders the food log card above the user's own
+// message on reload.
 // deno-lint-ignore no-explicit-any
-async function saveChatTurn(supabase: any, userId: string, date: string, userText: string, aiReply: string, mealLogId: string | null): Promise<void> {
+async function saveChatTurn(supabase: any, userId: string, date: string, userText: string, aiReply: string, mealLogId: string | null, userSentAt: string): Promise<void> {
   try {
-    const loggedAt = new Date().toISOString()
     await supabase.from('chat_messages').insert([
       {
         user_id: userId,
@@ -591,7 +704,7 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userTex
         content: userText,
         message_type: 'chat',
         chat_date: date,
-        created_at: loggedAt,
+        created_at: userSentAt,
       },
       {
         user_id: userId,
@@ -600,7 +713,7 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userTex
         message_type: mealLogId ? 'food_log_confirmation' : 'chat',
         meal_log_id: mealLogId,
         chat_date: date,
-        created_at: loggedAt,
+        created_at: userSentAt,
       },
     ])
   } catch (err) {
@@ -608,12 +721,21 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userTex
   }
 }
 
+// Fallback only — the client always sends its own local logged_date (see
+// foodLogStore.todayDate()). This has no notion of the user's timezone, so
+// it's only correct by coincidence; it exists purely so a malformed request
+// still gets *a* date rather than crashing.
 function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-function inferMealType(): string {
-  const hour = new Date().getUTCHours()
+// logged_hour is the user's own local hour (0-23), sent by the client
+// alongside logged_date. The server has no timezone of its own — guessing
+// from its own clock would mislabel meals for anyone outside UTC (e.g.
+// dinner in India is still UTC afternoon). Falls back to server UTC hour
+// only if the client omitted it entirely.
+function inferMealType(localHour?: number): string {
+  const hour = typeof localHour === 'number' ? localHour : new Date().getUTCHours()
   if (hour >= 5 && hour < 10) return 'breakfast'
   if (hour >= 10 && hour < 15) return 'lunch'
   if (hour >= 15 && hour < 18) return 'snack'

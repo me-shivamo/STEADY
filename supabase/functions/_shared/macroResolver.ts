@@ -13,12 +13,24 @@
 // resolves to identical macros, and repeat foods cost zero external calls.
 
 import { searchUsda, UsdaUnavailableError, type UsdaCandidate } from './usda.ts'
+import { logAiCall } from './aiLogger.ts'
 
 export interface ParsedFood {
   name: string
   quantity_description: string
   quantity_g: number
   confidence: number
+  // Present only when the photo was of a nutrition label — these are the
+  // label's own printed values, read verbatim by the vision model rather
+  // than resolved from USDA/cache. See resolveLabelFoods() below.
+  label_macros?: Partial<Per100gTotals>
+  // The gram weight label_macros is FOR, as printed on the label (e.g. 100 for
+  // "per 100g", or 40 for "1 serving (40g)"). quantity_g can differ from this
+  // when the user states their own portion (e.g. "I ate 90g of this") — the
+  // model reports the label's raw numbers unscaled, and resolveLabelFoods()
+  // does the quantity_g/label_serving_g scaling in code, deterministically,
+  // rather than trusting the model to do that arithmetic itself.
+  label_serving_g?: number
 }
 
 export interface Per100g {
@@ -29,7 +41,11 @@ export interface Per100g {
   fiber_g: number
 }
 
-export type MacroSource = 'usda' | 'indb' | 'ai_estimated' | 'user_created'
+// Same fields as Per100g, but these are already-scaled totals for the food's
+// stated quantity_g — not per-100g figures — hence the separate name.
+export type Per100gTotals = Per100g
+
+export type MacroSource = 'usda' | 'indb' | 'ai_estimated' | 'user_created' | 'label'
 
 export interface ResolvedFood extends ParsedFood {
   calories: number
@@ -186,7 +202,7 @@ export async function resolveFoods(
     )
 
     // 4. single match call for all misses
-    const matches = await matchCall(missFoods, perMissCandidates, opts.openRouterKey)
+    const matches = await matchCall(supabase, opts.userId, missFoods, perMissCandidates, opts.openRouterKey)
 
     for (let i = 0; i < missFoods.length; i++) {
       const norm = missNorms[i]
@@ -293,6 +309,76 @@ export async function resolveFoods(
   return { foods, totals }
 }
 
+// Resolves foods the vision model read straight off a nutrition label.
+// These skip cache/USDA/LLM-match entirely — the label's printed numbers are
+// ground truth. We still cache them into food_items (source: 'label') so a
+// repeat photo of the same product becomes a normal exact-cache hit next time.
+export async function resolveLabelFoods(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  parsed: ParsedFood[],
+): Promise<ResolvedFood[]> {
+  return Promise.all(parsed.map(async (p) => {
+    const label = p.label_macros!
+    // label_macros is the label's raw printed values FOR label_serving_g grams
+    // (e.g. "per 100g" or "1 serving (40g)") — not for quantity_g, which is
+    // whatever the user actually ate/is logging. Fall back to quantity_g when
+    // label_serving_g is missing (older client, or model omitted it) so this
+    // degrades to "assume the label's serving equals the logged amount"
+    // rather than dividing by zero or an undefined value.
+    const servingG = p.label_serving_g ?? p.quantity_g
+    const per100gScale = 100 / servingG
+    const per100g: Per100g = {
+      calories: (label.calories ?? 0) * per100gScale,
+      protein_g: (label.protein_g ?? 0) * per100gScale,
+      carbs_g: (label.carbs_g ?? 0) * per100gScale,
+      fat_g: (label.fat_g ?? 0) * per100gScale,
+      fiber_g: (label.fiber_g ?? 0) * per100gScale,
+    }
+    // Final totals for THIS log: label's raw values scaled from label_serving_g
+    // to quantity_g. This is the deterministic version of what we used to ask
+    // the model to compute itself — same pattern as the edit-entry rescale fix.
+    const qtyScale = p.quantity_g / servingG
+    const r1 = (n: number) => Math.round(n * qtyScale * 10) / 10
+
+    const { data, error } = await supabase
+      .from('food_items')
+      .upsert({
+        source: 'label',
+        name: p.name,
+        normalized_name: normalizeName(p.name),
+        calories_per_100g: per100g.calories,
+        protein_per_100g: per100g.protein_g,
+        carbs_per_100g: per100g.carbs_g,
+        fat_per_100g: per100g.fat_g,
+        fiber_per_100g: per100g.fiber_g,
+        calories: per100g.calories,
+        protein_g: per100g.protein_g,
+        carbs_g: per100g.carbs_g,
+        fat_g: per100g.fat_g,
+        fiber_g: per100g.fiber_g,
+        serving_size_g: 100,
+        serving_size_description: '100 g',
+        fdc_id: null,
+        created_by: null,
+      }, { onConflict: 'normalized_name' })
+      .select('id')
+      .single()
+    if (error) throw error
+
+    return {
+      ...p,
+      calories: r1(label.calories ?? 0),
+      protein_g: r1(label.protein_g ?? 0),
+      carbs_g: r1(label.carbs_g ?? 0),
+      fat_g: r1(label.fat_g ?? 0),
+      fiber_g: r1(label.fiber_g ?? 0),
+      food_item_id: data.id,
+      macro_source: 'label' as MacroSource,
+    }
+  }))
+}
+
 // deno-lint-ignore no-explicit-any
 function rowPer100g(row: any): Per100g {
   return {
@@ -312,7 +398,10 @@ interface MatchResult {
 // One gpt-4o-mini call matching ALL missed foods against their retrieved
 // candidates. Doubles as the AI fallback: when no candidate fits, the model
 // supplies est_per_100g in the same response — never a separate call.
+// deno-lint-ignore no-explicit-any
 async function matchCall(
+  supabase: any,
+  userId: string,
   foods: ParsedFood[],
   perFoodCandidates: Candidate[][],
   openRouterKey: string,
@@ -336,28 +425,45 @@ Return ONLY JSON:
 { "matches": [ { "food_index": 0, "candidate_index": 2 or null, "est_per_100g": null or { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0 } } ] }
 One entry per food, in order.`
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${openRouterKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://steadyapp.io',
-      'X-Title': 'STEADY-resolver',
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      temperature: 0,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`OpenRouter (match): ${await res.text()}`)
+  const requestBody = {
+    model: 'openai/gpt-4o-mini',
+    temperature: 0,
+    response_format: { type: 'json_object' },
+    messages: [{ role: 'user', content: prompt }],
   }
 
-  const data = await res.json()
-  const parsed = JSON.parse(data.choices[0].message.content)
+  const { response: data } = await logAiCall(supabase, {
+    userId,
+    source: 'macro-resolver',
+    model: requestBody.model,
+    requestPayload: requestBody,
+    run: async () => {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openRouterKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://steadyapp.io',
+          'X-Title': 'STEADY-resolver',
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!res.ok) {
+        throw new Error(`OpenRouter (match): ${await res.text()}`)
+      }
+
+      const json = await res.json()
+      return {
+        response: json,
+        promptTokens: json.usage?.prompt_tokens,
+        completionTokens: json.usage?.completion_tokens,
+      }
+    },
+  })
+
+  // deno-lint-ignore no-explicit-any
+  const parsed = JSON.parse((data as any).choices[0].message.content)
   const matches: MatchResult[] = foods.map((_, i) => {
     const m = (parsed.matches ?? [])[i] ?? {}
     const idx = typeof m.candidate_index === 'number' &&
