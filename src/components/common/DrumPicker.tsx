@@ -3,21 +3,23 @@ import {
   View,
   Text,
   Animated,
+  ScrollView,
   NativeSyntheticEvent,
   NativeScrollEvent,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { typography, fontFamily } from '../../theme/typography';
 
 const ITEM_HEIGHT = 44;
 const VISIBLE_ITEMS = 3;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
 // How many rows to keep mounted on each side of the centred one. With a ±8
 // window we mount ~17 <Text> nodes instead of all N (e.g. 221 for weight),
-// which is what kills the scroll jank. Generous enough that you can't flick
-// past the rendered edge before the window re-centres on momentum end.
+// which is what kills the scroll jank. The window re-centres continuously
+// during scroll (see the onScroll listener below), not just at momentum end,
+// so a fast fling can't outrun it and show blank rows.
 const WINDOW = 8;
 
 interface Props {
@@ -87,16 +89,54 @@ export default function DrumPicker({
   // selected offset so the fade is correct on first paint.
   const scrollY = useRef(new Animated.Value(selectedIndex * ITEM_HEIGHT)).current;
 
+  // Imperative ref to the underlying native ScrollView. Needed because the
+  // declarative `contentOffset` prop is only applied once, at the moment the
+  // native view is first measured — and inside a React Native `Modal` on
+  // Android, that view lives in a separate native window that can still be
+  // mid-layout when this component mounts, so `contentOffset` silently loses
+  // the race and the drum starts at the wrong (or a visually "stuck")
+  // position. Calling `scrollTo` from `onLayout` instead waits for
+  // confirmation that the native view has actually finished laying out
+  // before positioning it, which works reliably in both a Modal and a plain
+  // screen — unlike `contentOffset`, which only reliably works in the latter.
+  //
+  // Animated.ScrollView's ref can resolve to either the real ScrollView
+  // instance or a legacy `{ getNode(): ScrollView }` wrapper depending on RN's
+  // internals — unwrapping via `getNode` when present covers both shapes.
+  const scrollRef = useRef<ScrollView | Animated.LegacyRef<ScrollView>>(null);
+
+  const onLayout = useCallback(() => {
+    const node = scrollRef.current;
+    const scrollView = node && 'getNode' in node ? node.getNode() : node;
+    scrollView?.scrollTo({ y: selectedIndex * ITEM_HEIGHT, animated: false });
+  }, [selectedIndex]);
+
   // Which rows are currently mounted. Updated only when the wheel settles, so
   // this state change is rare and cheap — never per-frame.
   const [centreIndex, setCentreIndex] = useState(selectedIndex);
+
+  // Re-centres the mounted window as the raw offset moves, so a fast fling
+  // never outruns the ±WINDOW rows and shows blank space. Only calls
+  // setState when the window would actually need to shift (every
+  // ITEM_HEIGHT of travel), so this stays cheap even at scrollEventThrottle=16.
+  const recentreWindow = useCallback(
+    (offsetY: number) => {
+      const rawIndex = Math.round(offsetY / ITEM_HEIGHT);
+      const clampedIndex = Math.max(0, Math.min(values.length - 1, rawIndex));
+      setCentreIndex((prev) => (prev === clampedIndex ? prev : clampedIndex));
+    },
+    [values.length]
+  );
 
   const onScroll = useMemo(
     () =>
       Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
         useNativeDriver: true,
+        listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+          recentreWindow(e.nativeEvent.contentOffset.y);
+        },
       }),
-    [scrollY]
+    [scrollY, recentreWindow]
   );
 
   const handleScrollEnd = useCallback(
@@ -134,10 +174,12 @@ export default function DrumPicker({
       <View style={styles.selectionBand} pointerEvents="none" />
 
       <Animated.ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         contentOffset={{ x: 0, y: selectedIndex * ITEM_HEIGHT }}
+        onLayout={onLayout}
         onScroll={onScroll}
         onMomentumScrollEnd={handleScrollEnd}
         scrollEventThrottle={16}
@@ -185,6 +227,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 26,
     fontWeight: '700',
+    fontFamily: fontFamily.bold,
     color: colors.textPrimary,
   },
   selectionBand: {
@@ -208,5 +251,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sm,
     color: colors.textSecondary,
     fontWeight: '500',
+    fontFamily: fontFamily.medium,
   },
 });
