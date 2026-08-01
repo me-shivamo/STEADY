@@ -3,8 +3,14 @@
 // Component (or Unit/Component) are covered here. E2E/Manual rows (1.2.1, 1.2.3, 1.2.4,
 // 1.3.1, 1.3.4, 1.3.5-1.3.9 which live on other screens) are out of scope: E2E/Manual.
 // Note: 1.2.3/1.2.4 are nominally E2E in the spec, but both collapse to the same
-// generic "Login failed" alert path, which we exercise here as a Component-level check
-// on the alert text itself (no distinguishing logic exists to assert on otherwise).
+// generic "Login failed" message path, which we exercise here as a Component-level
+// check on the inline error text itself (no distinguishing logic exists to assert
+// on otherwise).
+//
+// Validation/error messages render as inline red text in the screen itself (not
+// OS Alert.alert popups — that was changed as part of the BUG_FIX.md pass to
+// remove native popup dialogs in favor of in-app inline errors), so these tests
+// assert on the rendered text via getByText rather than an Alert.alert spy.
 //
 // NOTE on async RNTL calls: in this environment's installed
 // @testing-library/react-native@14 + jest-expo/React 19 combo, `render()`,
@@ -51,41 +57,41 @@ describe('LoginScreen', () => {
   });
 
   // §1.2.2 — blank email
-  it('1.2.2 shows Missing fields alert when email is blank and does not call signIn', async () => {
+  it('1.2.2 shows inline error when email is blank and does not call signIn', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), '');
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Log In'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please enter your email and password.');
+    expect(getByText('Please enter your email and password.')).toBeTruthy();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
   // §1.2.2 — blank password
-  it('1.2.2 shows Missing fields alert when password is blank and does not call signIn', async () => {
+  it('1.2.2 shows inline error when password is blank and does not call signIn', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.changeText(getByPlaceholderText('Password'), '');
     await fireEvent.press(getByText('Log In'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please enter your email and password.');
+    expect(getByText('Please enter your email and password.')).toBeTruthy();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
   // §1.2.2 — both blank
-  it('1.2.2 shows Missing fields alert when both email and password are blank', async () => {
+  it('1.2.2 shows inline error when both email and password are blank', async () => {
     const { getByText } = await renderScreen();
 
     await fireEvent.press(getByText('Log In'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please enter your email and password.');
+    expect(getByText('Please enter your email and password.')).toBeTruthy();
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  // §1.2.3 — correct email, wrong password: generic "Login failed" alert with err.message
-  it('1.2.3 shows Login failed with the error message when signIn rejects (wrong password)', async () => {
+  // §1.2.3 — correct email, wrong password: generic "Login failed" inline error with err.message
+  it('1.2.3 shows the error message inline when signIn rejects (wrong password)', async () => {
     mockSignIn.mockRejectedValueOnce(new Error('Invalid login credentials'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -93,13 +99,11 @@ describe('LoginScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'wrongpassword');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Login failed', 'Invalid login credentials')
-    );
+    await waitFor(() => expect(getByText('Invalid login credentials')).toBeTruthy());
   });
 
-  // §1.2.4 — no such account: SAME generic alert, code does not distinguish (avoids account enumeration)
-  it('1.2.4 shows the same generic Login failed alert for a non-existent account (no enumeration)', async () => {
+  // §1.2.4 — no such account: SAME generic message, code does not distinguish (avoids account enumeration)
+  it('1.2.4 shows the same generic error for a non-existent account (no enumeration)', async () => {
     mockSignIn.mockRejectedValueOnce(new Error('Invalid login credentials'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -107,9 +111,7 @@ describe('LoginScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Login failed', 'Invalid login credentials')
-    );
+    await waitFor(() => expect(getByText('Invalid login credentials')).toBeTruthy());
   });
 
   // §1.2.4 (fallback) — rejected error with no message falls back to the generic copy
@@ -121,9 +123,7 @@ describe('LoginScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Login failed', 'Invalid email or password.')
-    );
+    await waitFor(() => expect(getByText('Invalid email or password.')).toBeTruthy());
   });
 
   // §1.2.5 — regression: email is trimmed, password is NOT — trailing spaces sent verbatim
@@ -140,21 +140,18 @@ describe('LoginScreen', () => {
     );
   });
 
-  // §1.3.2 — Forgot password with empty email: alert, no network call
-  it('1.3.2 shows Enter your email alert when Forgot password is tapped with email empty, no network call', async () => {
+  // §1.3.2 — Forgot password with empty email: inline error, no network call
+  it('1.3.2 shows an inline error when Forgot password is tapped with email empty, no network call', async () => {
     const { getByText } = await renderScreen();
 
     await fireEvent.press(getByText('Forgot password?'));
 
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Enter your email',
-      'Type your email address above first, then tap "Forgot password?" again.'
-    );
+    expect(getByText('Type your email address above first, then tap "Forgot password?" again.')).toBeTruthy();
     expect(mockRequestPasswordReset).not.toHaveBeenCalled();
   });
 
-  // §1.3.1 — success path: "Check your email" alert containing the email address
-  it('1.3.1 shows Check your email with a message containing the trimmed email on success', async () => {
+  // §1.3.1 — success path: inline confirmation text containing the email address
+  it('1.3.1 shows an inline confirmation containing the trimmed email on success', async () => {
     mockRequestPasswordReset.mockResolvedValueOnce(undefined);
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -162,36 +159,29 @@ describe('LoginScreen', () => {
     await fireEvent.press(getByText('Forgot password?'));
 
     await waitFor(() => expect(mockRequestPasswordReset).toHaveBeenCalledWith('test@example.com'));
-    expect(Alert.alert).toHaveBeenCalledWith(
-      'Check your email',
-      "If an account exists for test@example.com, we've sent it a password-reset link. Open the link on this phone to set a new password."
-    );
+    expect(getByText("If an account exists for test@example.com, we've sent it a password-reset link.")).toBeTruthy();
   });
 
-  // §1.3.1 (failure branch) — Could not send reset email alert with err.message
-  it('1.3.1 shows Could not send reset email with the error message when requestPasswordReset rejects', async () => {
+  // §1.3.1 (failure branch) — inline error with err.message when requestPasswordReset rejects
+  it('1.3.1 shows the error message inline when requestPasswordReset rejects', async () => {
     mockRequestPasswordReset.mockRejectedValueOnce(new Error('Rate limited'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.press(getByText('Forgot password?'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Could not send reset email', 'Rate limited')
-    );
+    await waitFor(() => expect(getByText('Rate limited')).toBeTruthy());
   });
 
   // §1.3.1 (failure branch fallback text)
-  it('1.3.1 falls back to "Please try again." when the reset rejection has no message', async () => {
+  it('1.3.1 falls back to "Could not send reset email. Please try again." when the reset rejection has no message', async () => {
     mockRequestPasswordReset.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.press(getByText('Forgot password?'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Could not send reset email', 'Please try again.')
-    );
+    await waitFor(() => expect(getByText('Could not send reset email. Please try again.')).toBeTruthy());
   });
 
   // §1.3.3 — rapid double-tap of Forgot password only sends one reset email (resetLoading guard)

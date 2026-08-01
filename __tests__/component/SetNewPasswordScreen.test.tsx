@@ -43,7 +43,7 @@ describe('SetNewPasswordScreen', () => {
   // §1.3.5 — password 6-7 chars is a DIFFERENT threshold than SignupScreen's 8-char
   // minimum (see 1.1.5). This screen's actual code requires >= 6, so 5 chars fails
   // and 6 chars passes local validation. We test the failing boundary here.
-  it("1.3.5 rejects a password under 6 characters with a 'Password too short' alert", async () => {
+  it("1.3.5 rejects a password under 6 characters with an inline error", async () => {
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
     await fireEvent.changeText(getByPlaceholderText('New password'), '12345'); // 5 chars
@@ -51,16 +51,16 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Password too short', 'Use at least 6 characters.');
+      expect(getByText('Use at least 6 characters.')).toBeTruthy();
     });
     expect(mockCompletePasswordReset).not.toHaveBeenCalled();
   });
 
   // §1.3.5 (boundary continued) — 6 chars is the exact minimum and must NOT trip
-  // the "too short" alert (it should proceed past that check, matching fields).
+  // the "too short" error (it should proceed past that check, matching fields).
   it('1.3.5 does not reject a password that is exactly 6 characters long', async () => {
     mockCompletePasswordReset.mockResolvedValueOnce(undefined);
-    const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
+    const { getByPlaceholderText, getByText, queryByText } = await render(<SetNewPasswordScreen />);
 
     await fireEvent.changeText(getByPlaceholderText('New password'), '123456'); // 6 chars
     await fireEvent.changeText(getByPlaceholderText('Confirm new password'), '123456');
@@ -69,11 +69,11 @@ describe('SetNewPasswordScreen', () => {
     await waitFor(() => {
       expect(mockCompletePasswordReset).toHaveBeenCalledWith('123456');
     });
-    expect(alertSpy).not.toHaveBeenCalledWith('Password too short', expect.anything());
+    expect(queryByText('Use at least 6 characters.')).toBeNull();
   });
 
   // §1.3.6 — password and confirm fields don't match
-  it("1.3.6 rejects mismatched password and confirm fields with a 'Passwords don't match' alert", async () => {
+  it("1.3.6 rejects mismatched password and confirm fields with an inline error", async () => {
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
     await fireEvent.changeText(getByPlaceholderText('New password'), 'password1');
@@ -81,13 +81,13 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith("Passwords don't match", 'Both fields must be identical.');
+      expect(getByText("Passwords don't match. Both fields must be identical.")).toBeTruthy();
     });
     expect(mockCompletePasswordReset).not.toHaveBeenCalled();
   });
 
   // §1.3.7 — successful save
-  it("1.3.7 calls completePasswordReset and shows a 'Password updated' alert on success", async () => {
+  it("1.3.7 calls completePasswordReset and shows an inline confirmation on success", async () => {
     mockCompletePasswordReset.mockResolvedValueOnce(undefined);
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
@@ -99,13 +99,13 @@ describe('SetNewPasswordScreen', () => {
       expect(mockCompletePasswordReset).toHaveBeenCalledWith('newSecret123');
     });
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Password updated', 'You are signed in with your new password.');
+      expect(getByText('Password updated. You are signed in with your new password.')).toBeTruthy();
     });
   });
 
   // §1.3.7 (failure path, same success scenario's error branch) — completePasswordReset
-  // rejects, so the screen must show the failure alert with the thrown message.
-  it("1.3.7 shows a 'Could not update password' alert with the error message on failure", async () => {
+  // rejects, so the screen must show the failure message inline with the thrown message.
+  it("1.3.7 shows the error message inline on failure", async () => {
     mockCompletePasswordReset.mockRejectedValueOnce(new Error('Session expired'));
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
@@ -114,12 +114,12 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Could not update password', 'Session expired');
+      expect(getByText('Session expired')).toBeTruthy();
     });
   });
 
   // §1.3.7 (failure fallback) — an error without a .message must fall back to generic text.
-  it("1.3.7 falls back to 'Please try again.' when the thrown error has no message", async () => {
+  it("1.3.7 falls back to the generic message when the thrown error has no message", async () => {
     mockCompletePasswordReset.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
@@ -128,7 +128,7 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Could not update password', 'Please try again.');
+      expect(getByText('Could not update password. Please try again.')).toBeTruthy();
     });
   });
 

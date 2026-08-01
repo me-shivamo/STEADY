@@ -76,11 +76,18 @@ describe('waterStore', () => {
       expect(entries).toHaveLength(2);
       expect(entries).toEqual([first, second]);
 
-      // Confirm it's a plain insert, never an upsert, on both calls.
+      // Confirm it's a plain insert, never an upsert, on both calls. logged_date
+      // is sent explicitly as the device's local today (see utils/localDate.ts)
+      // rather than left to the column's CURRENT_DATE default, which resolves
+      // in the database's UTC session timezone, not the user's own.
       const firstBuilder = mockSupabase.from.mock.results[0].value;
       const secondBuilder = mockSupabase.from.mock.results[1].value;
-      expect(firstBuilder.insert).toHaveBeenCalledWith({ user_id: USER_ID, amount_ml: 250 });
-      expect(secondBuilder.insert).toHaveBeenCalledWith({ user_id: USER_ID, amount_ml: 500 });
+      expect(firstBuilder.insert).toHaveBeenCalledWith({
+        user_id: USER_ID, amount_ml: 250, logged_date: expect.any(String),
+      });
+      expect(secondBuilder.insert).toHaveBeenCalledWith({
+        user_id: USER_ID, amount_ml: 500, logged_date: expect.any(String),
+      });
       expect(firstBuilder.upsert).not.toHaveBeenCalled();
       expect(secondBuilder.upsert).not.toHaveBeenCalled();
 

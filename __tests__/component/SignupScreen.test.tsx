@@ -45,7 +45,7 @@ describe('SignupScreen', () => {
   });
 
   // §1.1.2 — blank full name
-  it('1.1.2 shows Missing fields alert when full name is blank and does not call signUp', async () => {
+  it('1.1.2 shows an inline error when full name is blank and does not call signUp', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), '');
@@ -53,12 +53,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.3 — blank email
-  it('1.1.3 shows Missing fields alert when email is blank and does not call signUp', async () => {
+  it('1.1.3 shows an inline error when email is blank and does not call signUp', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
@@ -66,12 +66,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.4 — blank password
-  it('1.1.4 shows Missing fields alert when password is blank and does not call signUp', async () => {
+  it('1.1.4 shows an inline error when password is blank and does not call signUp', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
@@ -79,12 +79,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), '');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.7 — all fields whitespace-only
-  it('1.1.7 shows Missing fields alert when all fields are whitespace-only ("   ")', async () => {
+  it('1.1.7 shows an inline error when all fields are whitespace-only ("   ")', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), '   ');
@@ -92,12 +92,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), '   ');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.7 — whitespace-only name specifically, valid-looking rest
-  it('1.1.7 shows Missing fields alert when only full name is whitespace-only', async () => {
+  it('1.1.7 shows an inline error when only full name is whitespace-only', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), '   ');
@@ -105,12 +105,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.7 — whitespace-only email specifically
-  it('1.1.7 shows Missing fields alert when only email is whitespace-only', async () => {
+  it('1.1.7 shows an inline error when only email is whitespace-only', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
@@ -118,12 +118,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.7 — whitespace-only password specifically
-  it('1.1.7 shows Missing fields alert when only password is whitespace-only', async () => {
+  it('1.1.7 shows an inline error when only password is whitespace-only', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
@@ -131,12 +131,12 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), '   ');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Missing fields', 'Please fill in all fields.');
+    expect(getByText('Please fill in all fields.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.5 — password exactly 7 characters fails the weak-password boundary
-  it('1.1.5 shows Weak password alert for a 7-character password and does not call signUp', async () => {
+  it('1.1.5 shows an inline error for a 7-character password and does not call signUp', async () => {
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
@@ -144,14 +144,14 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), '1234567');
     await fireEvent.press(getByText('Create Account'));
 
-    expect(Alert.alert).toHaveBeenCalledWith('Weak password', 'Password must be at least 8 characters.');
+    expect(getByText('Password must be at least 8 characters.')).toBeTruthy();
     expect(mockSignUp).not.toHaveBeenCalled();
   });
 
   // §1.1.6 — password exactly 8 characters passes local validation, proceeds to signUp()
   it('1.1.6 an 8-character password passes local validation and calls signUp', async () => {
     mockSignUp.mockResolvedValueOnce(undefined);
-    const { getByPlaceholderText, getByText } = await renderScreen();
+    const { getByPlaceholderText, getByText, queryByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Full name'), 'Jane Doe');
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
@@ -159,12 +159,12 @@ describe('SignupScreen', () => {
     await fireEvent.press(getByText('Create Account'));
 
     await waitFor(() => expect(mockSignUp).toHaveBeenCalledWith('test@example.com', '12345678', 'Jane Doe'));
-    expect(Alert.alert).not.toHaveBeenCalledWith('Weak password', expect.anything());
-    expect(Alert.alert).not.toHaveBeenCalledWith('Missing fields', expect.anything());
+    expect(queryByText('Password must be at least 8 characters.')).toBeNull();
+    expect(queryByText('Please fill in all fields.')).toBeNull();
   });
 
-  // §1.1.8 / 1.1.9 — signUp() rejects (duplicate email / network failure) surfaces "Sign up failed"
-  it('1.1.8 shows Sign up failed with the error message when signUp rejects (e.g. duplicate email)', async () => {
+  // §1.1.8 / 1.1.9 — signUp() rejects (duplicate email / network failure) surfaces the inline error
+  it('1.1.8 shows the error message inline when signUp rejects (e.g. duplicate email)', async () => {
     mockSignUp.mockRejectedValueOnce(new Error('User already registered'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -173,13 +173,11 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Sign up failed', 'User already registered')
-    );
+    await waitFor(() => expect(getByText('User already registered')).toBeTruthy());
   });
 
   // §1.1.9 — network failure surfaces the generic fallback when the rejected error has no message
-  it('1.1.9 shows Sign up failed with the generic fallback when the rejected error has no message', async () => {
+  it('1.1.9 shows the generic fallback inline when the rejected error has no message', async () => {
     mockSignUp.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -188,32 +186,28 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Sign up failed', 'Something went wrong.')
-    );
+    await waitFor(() => expect(getByText('Sign up failed. Something went wrong.')).toBeTruthy());
   });
 
-  // §1.1.10 — Google cancel suppression: no alert when error.message === 'User cancelled'
-  it('1.1.10 shows no alert when Google sign-in is cancelled by the user', async () => {
+  // §1.1.10 — Google cancel suppression: no inline error when error.message === 'User cancelled'
+  it('1.1.10 shows no inline error when Google sign-in is cancelled by the user', async () => {
     mockSignInWithGoogle.mockRejectedValueOnce(new Error('User cancelled'));
-    const { getByText } = await renderScreen();
+    const { getByText, queryByText } = await renderScreen();
 
     await fireEvent.press(getByText('Continue with Google'));
 
     await waitFor(() => expect(mockSignInWithGoogle).toHaveBeenCalledTimes(1));
-    expect(Alert.alert).not.toHaveBeenCalled();
+    expect(queryByText('User cancelled')).toBeNull();
   });
 
-  // §1.1.10 (companion) — a genuine Google failure (not cancellation) DOES show an alert
-  it('1.1.10 shows Sign in failed for a genuine Google sign-in error (not cancellation)', async () => {
+  // §1.1.10 (companion) — a genuine Google failure (not cancellation) DOES show an inline error
+  it('1.1.10 shows the error inline for a genuine Google sign-in error (not cancellation)', async () => {
     mockSignInWithGoogle.mockRejectedValueOnce(new Error('Network error'));
     const { getByText } = await renderScreen();
 
     await fireEvent.press(getByText('Continue with Google'));
 
-    await waitFor(() =>
-      expect(Alert.alert).toHaveBeenCalledWith('Sign in failed', 'Network error')
-    );
+    await waitFor(() => expect(getByText('Network error')).toBeTruthy());
   });
 
   // §1.1.13 — double-tap Create Account: button disabled while isLoading, second press must not fire signUp twice

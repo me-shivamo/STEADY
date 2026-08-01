@@ -146,17 +146,14 @@ describe('SettingsScreen', () => {
   // ── §9.1 — save flow (failure path; success path is silent, no alert) ───
 
   describe('9.1 save profile', () => {
-    it('9.1 shows "Could not save" / "Please check your connection and try again." when updateProfile rejects', async () => {
+    it('9.1 shows an inline error when updateProfile rejects', async () => {
       mockUpdateProfile.mockRejectedValueOnce(new Error('network down'));
       const { getByText } = await render(<SettingsScreen />);
 
       await fireEvent.press(getByText('Save'));
 
       await waitFor(() =>
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'Could not save',
-          'Please check your connection and try again.'
-        )
+        expect(getByText('Could not save. Please check your connection and try again.')).toBeTruthy()
       );
       // Failure must not navigate back.
       expect(mockGoBack).not.toHaveBeenCalled();
@@ -266,7 +263,7 @@ describe('SettingsScreen', () => {
   // ── Extra edge coverage: delete-failure alert path ───────────────────────
 
   describe('delete-account failure path', () => {
-    it("shows 'Could not delete account' / 'Please check your connection and try again.' when deleteAccount rejects", async () => {
+    it('shows an inline error when deleteAccount rejects', async () => {
       mockDeleteAccount.mockRejectedValueOnce(new Error('network down'));
       const { getByText, getByPlaceholderText } = await render(<SettingsScreen />);
 
@@ -276,10 +273,7 @@ describe('SettingsScreen', () => {
       await fireEvent.press(getByText('Delete forever'));
 
       await waitFor(() =>
-        expect(Alert.alert).toHaveBeenCalledWith(
-          'Could not delete account',
-          'Please check your connection and try again.'
-        )
+        expect(getByText('Could not delete account. Please check your connection and try again.')).toBeTruthy()
       );
     });
   });
