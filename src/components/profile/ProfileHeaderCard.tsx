@@ -5,6 +5,7 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/authStore';
 import { useStreak } from '../../hooks/useStreak';
+import { fontFamily } from '../../theme/typography';
 
 /**
  * Profile drawer header: avatar + name + "{goal} · {kcal}/day" subtitle + streak.
@@ -94,6 +95,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 22,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.accent,
   },
   info: {
@@ -102,6 +104,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 17,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   subtitle: {
@@ -109,6 +112,7 @@ const styles = StyleSheet.create({
     color: C.text2,
     marginTop: 2,
     marginBottom: 6,
+    fontFamily: fontFamily.regular,
   },
   streakRow: {
     flexDirection: 'row',
@@ -127,6 +131,7 @@ const styles = StyleSheet.create({
   streakText: {
     fontSize: 11.5,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.accent,
   },
 });

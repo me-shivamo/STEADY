@@ -4,6 +4,8 @@ import { homeColors as C } from '../../theme/homeColors';
 import { colors } from '../../theme/colors';
 import { supabase } from '../../api/supabase';
 import { useAuthStore } from '../../store/authStore';
+import { fontFamily } from '../../theme/typography';
+import { toLocalDateString } from '../../utils/localDate';
 
 interface Stats {
   avgCal: string;
@@ -28,7 +30,7 @@ function useLast7DaysStats(): Stats {
       for (let i = 6; i >= 0; i--) {
         const d = new Date(today);
         d.setDate(today.getDate() - i);
-        dates.push(d.toISOString().split('T')[0]);
+        dates.push(toLocalDateString(d));
       }
       const from = dates[0];
       const to = dates[dates.length - 1];
@@ -112,11 +114,13 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 16,
     fontWeight: '600',
+    fontFamily: fontFamily.semibold,
     color: C.text,
   },
   label: {
     fontSize: 11,
     color: C.text2,
     marginTop: 2,
+    fontFamily: fontFamily.regular,
   },
 });
