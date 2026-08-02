@@ -6,6 +6,8 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
@@ -70,19 +72,44 @@ export default function OnboardingScreen({
       </View>
 
       {scroll ? (
-        <ScrollView
+        // Wrapped in KeyboardAvoidingView so a text input low in the content
+        // doesn't end up hidden under the keyboard, for any future scrolling
+        // onboarding screen that adds one (Target Weight — the screen that
+        // originally motivated this — has since moved to scroll={false}
+        // instead, see OnboardingTargetWeightScreen.tsx). Note: this app runs
+        // on Expo Go, which ships its own fixed, pre-built AndroidManifest.xml
+        // — the project's own android/app/src/main/AndroidManifest.xml (with
+        // windowSoftInputMode="adjustResize") only takes effect in a real
+        // native build (expo run:android / EAS / a dev client), never in Expo
+        // Go itself. So on this app's actual runtime, Android gets NO
+        // OS-level resize at all, and 'height' here is the only thing
+        // pushing content up when the keyboard opens.
+        <KeyboardAvoidingView
           style={styles.body}
-          contentContainerStyle={styles.bodyContent}
-          showsVerticalScrollIndicator={false}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          {children}
-        </ScrollView>
+          <ScrollView
+            contentContainerStyle={styles.bodyContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </ScrollView>
+        </KeyboardAvoidingView>
       ) : (
-        // Non-scrolling screens (Stats) have tall content — centering (used by
-        // the scroll variant, whose content is short and needs vertical
-        // balance) pushes the top of a tall non-scrolling column off-screen
-        // instead, hiding the ChatBubble above the pickers. Stack from the top.
-        <View style={[styles.body, styles.bodyContent, styles.bodyContentTop]}>{children}</View>
+        // Non-scrolling screens (Stats) can't use a ScrollView — the drum
+        // pickers are scroll views themselves and would fight a vertical
+        // parent. Centring the column here needs care: plain
+        // `justifyContent: 'center'` overflows *symmetrically*, so a column
+        // taller than the screen loses its top — which is how the ChatBubble
+        // got pushed off-screen before. Auto margins centre without that risk:
+        // they only ever absorb *positive* free space, so they split the slack
+        // evenly when it exists and collapse to 0 the moment it doesn't,
+        // leaving the column top-aligned instead of clipped. The realistic way
+        // this screen runs out of room is a large accessibility text size.
+        <View style={[styles.body, styles.bodyContent, styles.bodyContentTop]}>
+          <View style={styles.centredBlock}>{children}</View>
+        </View>
       )}
 
       {/* Footer */}
@@ -136,7 +163,16 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   bodyContentTop: {
+    // flex-start, not center — `centredBlock`'s auto margins do the centring,
+    // and they need this to stay the fallback when free space hits zero.
     justifyContent: 'flex-start',
+    // Guarantees a gap under the progress dots in that fallback case, so an
+    // overflowing column still doesn't read as glued to the top of the screen.
+    paddingTop: spacing.md,
+  },
+  centredBlock: {
+    marginTop: 'auto',
+    marginBottom: 'auto',
   },
 
   footer: {

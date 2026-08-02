@@ -71,6 +71,7 @@ export default function OnboardingDietScreen({ navigation }: Props) {
       onSecondary={handleNoRestrictions}
     >
       <ChatBubble
+        animated
         message="Any foods I should know about?"
         hint="Pick what applies, or add your own below. You can always change this later."
       />
@@ -92,7 +93,7 @@ export default function OnboardingDietScreen({ navigation }: Props) {
           style={styles.customInput}
           value={customText}
           onChangeText={setCustomText}
-          placeholder="e.g. no peanuts, halal"
+          placeholder="e.g. no peanuts, dairy-free"
           placeholderTextColor={colors.textMuted}
           multiline
         />

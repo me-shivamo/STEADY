@@ -45,7 +45,7 @@ export default function OnboardingActivityScreen({ navigation }: Props) {
       disabled={!selected}
       loading={loading}
     >
-      <ChatBubble message="How active are you on a typical day?" />
+      <ChatBubble animated message="How active are you on a typical day?" />
 
       <View style={styles.list}>
         {ACTIVITY_OPTIONS.map((opt) => (

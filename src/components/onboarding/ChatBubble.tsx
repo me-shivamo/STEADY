@@ -40,7 +40,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   bubble: {
-    flex: 1,
+    // No `flex: 1` here. `row` is a default (column) flex container despite the
+    // name, so flex:1 meant "grow/shrink *vertically*, from a base height of 0"
+    // — not "fill the width". On the Stats screen, whose column is a fixed
+    // height and overflows, this was the only node in the tree with a non-zero
+    // flexShrink, so it absorbed the whole overflow and collapsed to its
+    // padding, hiding the message. Width already fills via the default
+    // alignItems: 'stretch'; height should just be content + padding.
     backgroundColor: colors.bgSurface,
     borderRadius: 18,
     borderTopLeftRadius: 4,
