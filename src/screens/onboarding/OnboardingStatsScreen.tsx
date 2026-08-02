@@ -10,9 +10,25 @@ import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 import { posthog } from '../../utils/posthog';
 
+/** What gets persisted to `profiles.units_system` and read by the rest of the app. */
 type UnitSystem = 'metric' | 'imperial';
 
+/** The two stat-entry combos this screen offers. Not a clean metric/imperial split. */
+type Pairing = 'ftin_kg' | 'cm_lbs';
+
 const KG_TO_LBS = 2.20462;
+const CM_PER_INCH = 2.54;
+const INCHES_PER_FOOT = 12;
+
+// 170 → 5'7". Rounds to whole inches *first* and then splits, so the inches
+// part is always 0–11 and can never land on a nonsensical 12. The old
+// `(cm / 30.48).toFixed(1)` printed decimal feet instead — "5.6 ft" looks like
+// 5 ft 6 in but actually means 5 ft 6.9 in, and could only ever show .0–.9,
+// so it never covered all twelve inches in a foot.
+function formatFeetInches(cm: number): string {
+  const totalInches = Math.round(cm / CM_PER_INCH);
+  return `${Math.floor(totalInches / INCHES_PER_FOOT)}'${totalInches % INCHES_PER_FOOT}"`;
+}
 
 const AGES = Array.from({ length: 91 }, (_, i) => i + 10);       // 10–100
 const FEET = Array.from({ length: 6 }, (_, i) => i + 3);          // 3–8 ft
@@ -31,7 +47,7 @@ const DEFAULT_WEIGHT_LBS_IDX = 88; // ~154 lbs (≈70 kg)
 type Props = { navigation: OnboardingNavProp };
 
 export default function OnboardingStatsScreen({ navigation }: Props) {
-  const [units, setUnits] = useState<UnitSystem>('metric');
+  const [pairing, setPairing] = useState<Pairing>('ftin_kg');
   const [ageIdx, setAgeIdx] = useState(DEFAULT_AGE_IDX);
   const [feetIdx, setFeetIdx] = useState(DEFAULT_FEET_IDX);
   const [inchesIdx, setInchesIdx] = useState(DEFAULT_INCHES_IDX);
@@ -42,22 +58,28 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
   const { updateProfile } = useAuthStore();
 
   const age = AGES[ageIdx];
-  // `units` now picks a *height* system (ft/in vs cm) — weight is paired the
-  // opposite way round (kg goes with ft/in, lbs goes with cm), matching how
-  // people actually think about their stats: "kg + ft/in" and "cm + lbs" are
-  // the two combos users asked for, not the traditional metric/imperial split.
-  const isImperialHeight = units === 'imperial';
-  const isImperialWeight = !isImperialHeight;
+  const usesFeetInches = pairing === 'ftin_kg';
+  const usesLbs = pairing === 'cm_lbs';
+
+  // The screen offers *pairings* (ft/in with kg, cm with lbs) rather than the
+  // traditional metric/imperial split, because "ft/in + kg" is how most people
+  // here actually quote their stats. But `units_system` is a single flag, and
+  // every other screen that reads it — WeightScreen, ProgressScreen,
+  // HomeScreen, WaterScreen, Settings, and the very next onboarding step —
+  // uses it to choose kg vs lbs. So it has to follow the *weight* unit picked
+  // here. It used to follow the height unit, which meant choosing "kg" on this
+  // screen showed you lbs on the target-weight screen one tap later.
+  const unitsSystem: UnitSystem = usesLbs ? 'imperial' : 'metric';
 
   // Height is always stored/computed in cm regardless of which drum the user
-  // is looking at — imperial shows ft+in, metric shows a single cm drum.
-  const heightCm = isImperialHeight
-    ? Math.round(FEET[feetIdx] * 30.48 + INCHES[inchesIdx] * 2.54)
+  // is looking at — ft/in shows two wheels, cm shows a single one.
+  const heightCm = usesFeetInches
+    ? Math.round((FEET[feetIdx] * INCHES_PER_FOOT + INCHES[inchesIdx]) * CM_PER_INCH)
     : CM_HEIGHTS[cmIdx];
 
   // Weight is always stored in kg — the lbs drum is just a display/input
   // convenience, converted at the boundary.
-  const weightKg = isImperialWeight
+  const weightKg = usesLbs
     ? Math.round((WEIGHTS_LBS[weightLbsIdx] / KG_TO_LBS) * 10) / 10
     : WEIGHTS_KG[weightKgIdx];
 
@@ -70,9 +92,9 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
         date_of_birth: dateOfBirth,
         height_cm: heightCm,
         current_weight_kg: weightKg,
-        units_system: units,
+        units_system: unitsSystem,
       });
-      posthog.capture('onboarding_step_completed', { step: 'stats', units });
+      posthog.capture('onboarding_step_completed', { step: 'stats', units: unitsSystem, pairing });
       navigation.navigate('OnboardingTargetWeight');
     } finally {
       setLoading(false);
@@ -87,19 +109,22 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
       loading={loading}
       scroll={false}
     >
-      <ChatBubble message="Got it! To calculate your calorie target I'll need a few quick details." />
+      <ChatBubble animated message="Got it! To calculate your calorie target I'll need a few quick details." />
 
-      {/* Metric / Imperial toggle */}
+      {/* Unit pairing toggle. Both labels read height-then-weight, in that
+          order — they used to be listed in opposite orders ("cm · lbs" vs
+          "kg · ft/in"), which made the pair look arbitrary. The default
+          (ft/in · kg) sits first so the selected pill starts on the left. */}
       <View style={styles.unitToggle}>
-        {(['metric', 'imperial'] as UnitSystem[]).map((u) => (
+        {(['ftin_kg', 'cm_lbs'] as Pairing[]).map((p) => (
           <TouchableOpacity
-            key={u}
-            style={[styles.unitOption, units === u && styles.unitOptionActive]}
-            onPress={() => setUnits(u)}
+            key={p}
+            style={[styles.unitOption, pairing === p && styles.unitOptionActive]}
+            onPress={() => setPairing(p)}
             activeOpacity={0.8}
           >
-            <Text style={[styles.unitOptionText, units === u && styles.unitOptionTextActive]}>
-              {u === 'metric' ? 'cm · lbs' : 'kg · ft/in'}
+            <Text style={[styles.unitOptionText, pairing === p && styles.unitOptionTextActive]}>
+              {p === 'ftin_kg' ? 'ft/in · kg' : 'cm · lbs'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -114,7 +139,7 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
           </View>
           <View style={styles.pickerCard}>
             <Text style={styles.pickerLabel}>Weight</Text>
-            {isImperialWeight ? (
+            {usesLbs ? (
               <DrumPicker values={WEIGHTS_LBS} selectedIndex={weightLbsIdx} onIndexChange={setWeightLbsIdx} label="lbs" />
             ) : (
               <DrumPicker values={WEIGHTS_KG} selectedIndex={weightKgIdx} onIndexChange={setWeightKgIdx} label="kg" />
@@ -127,10 +152,10 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
           <View style={styles.heightHeader}>
             <Text style={styles.pickerLabel}>Height</Text>
             <Text style={styles.heightCm}>
-              {isImperialHeight ? `${heightCm} cm` : `${(heightCm / 30.48).toFixed(1)} ft`}
+              {usesFeetInches ? `${heightCm} cm` : formatFeetInches(heightCm)}
             </Text>
           </View>
-          {isImperialHeight ? (
+          {usesFeetInches ? (
             <View style={styles.heightWheels}>
               <View style={styles.heightWheel}>
                 <DrumPicker values={FEET} selectedIndex={feetIdx} onIndexChange={setFeetIdx} label="ft" />
@@ -181,7 +206,11 @@ const styles = StyleSheet.create({
     color: colors.accent,
   },
   pickersArea: {
-    flex: 1,
+    // Deliberately not `flex: 1`. Growing to fill meant this block absorbed
+    // every spare pixel on the screen, so the cards stayed pinned under the
+    // chat bubble and all the slack piled up as dead space below the height
+    // card. Sizing to content instead hands that slack back to the parent,
+    // which is what lets the whole column be centred.
     gap: spacing.sm,
     marginTop: spacing.md,
   },

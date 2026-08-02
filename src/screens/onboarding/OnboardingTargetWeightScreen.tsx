@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { OnboardingNavProp } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
 import DrumPicker from '../../components/common/DrumPicker';
@@ -47,6 +47,7 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
   const [customMonths, setCustomMonths] = useState('');
   const [loading, setLoading] = useState(false);
   const { updateProfile } = useAuthStore();
+  const customMonthsInputRef = useRef<TextInput>(null);
 
   const goalWeightKg = isImperial
     ? Math.round((WEIGHTS_LBS[weightLbsIdx] / KG_TO_LBS) * 10) / 10
@@ -91,8 +92,9 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
       loading={loading}
       secondaryLabel="Not sure yet, skip"
       onSecondary={handleSkip}
+      scroll={false}
     >
-      <ChatBubble message="What's your target weight, and when do you want to reach it?" />
+      <ChatBubble animated message="What's your target weight, and when do you want to reach it?" />
 
       <View style={styles.pickerCard}>
         <Text style={styles.pickerLabel}>Target weight</Text>
@@ -117,8 +119,12 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
         </View>
         <View style={styles.customRow}>
           <Text style={styles.customLabel}>Or a custom timeline</Text>
-          <View style={styles.customInputWrap}>
+          <Pressable
+            style={styles.customInputWrap}
+            onPress={() => customMonthsInputRef.current?.focus()}
+          >
             <TextInput
+              ref={customMonthsInputRef}
               style={styles.customInput}
               value={customMonths}
               onChangeText={setCustomMonths}
@@ -128,7 +134,7 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
               maxLength={3}
             />
             <Text style={styles.customInputSuffix}>months</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
     </OnboardingScreen>
