@@ -24,9 +24,9 @@ import { Tables } from '../../src/types/database';
 
 // `expo-asset` (a transitive dep of expo-font, pulled in via @expo/vector-icons)
 // is not present in node_modules in this environment. SettingsScreen only uses
-// Ionicons for decorative glyphs (back chevron, trash icon, external-link
-// icon) that no test here asserts on, so a lightweight stub avoids the
-// missing-module resolution error without touching any src/ file.
+// Ionicons for decorative glyphs that no test here asserts on, so a
+// lightweight stub avoids the missing-module resolution error without touching
+// any src/ file.
 jest.mock('@expo/vector-icons', () => {
   const ReactLib = require('react');
   const { Text } = require('react-native');
@@ -37,8 +37,10 @@ jest.mock('@expo/vector-icons', () => {
 type Profile = Tables<'profiles'>;
 
 const mockGoBack = jest.fn();
+const mockDispatch = jest.fn();
 const mockUpdateProfile = jest.fn();
 const mockDeleteAccount = jest.fn();
+const mockAddWeightEntry = jest.fn();
 
 let mockProfile: Partial<Profile> | null;
 
@@ -51,15 +53,30 @@ jest.mock('../../src/store/authStore', () => ({
     }),
 }));
 
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: mockGoBack }),
+// The screen now routes a changed weight through weightStore.addEntry() so it
+// lands in weight_logs, not just the profile column.
+jest.mock('../../src/store/weightStore', () => ({
+  useWeightStore: (selector: (s: any) => any) => selector({ addEntry: mockAddWeightEntry }),
 }));
 
-// Base fixture profile used across most tests.
+// `beforeRemove` powers the unsaved-changes guard, so the navigation mock has
+// to be a real (if inert) event emitter.
+jest.mock('@react-navigation/native', () => ({
+  useNavigation: () => ({
+    goBack: mockGoBack,
+    dispatch: mockDispatch,
+    addListener: () => jest.fn(),
+  }),
+}));
+
+// Base fixture profile used across most tests. date_of_birth is present so the
+// TDEE recalculation has every input it needs (it is skipped without an age).
 function baseProfile(overrides: Partial<Profile> = {}): Partial<Profile> {
   return {
+    id: 'user-1',
     full_name: 'Ada Lovelace',
     sex: 'female',
+    date_of_birth: '1996-01-01',
     height_cm: 170,
     current_weight_kg: 65,
     goal_weight_kg: 60,
@@ -79,6 +96,7 @@ describe('SettingsScreen', () => {
     jest.clearAllMocks();
     mockUpdateProfile.mockResolvedValue(undefined);
     mockDeleteAccount.mockResolvedValue(undefined);
+    mockAddWeightEntry.mockResolvedValue(undefined);
     mockProfile = baseProfile();
     jest.spyOn(Alert, 'alert').mockImplementation(() => {});
   });
@@ -148,8 +166,11 @@ describe('SettingsScreen', () => {
   describe('9.1 save profile', () => {
     it('9.1 shows an inline error when updateProfile rejects', async () => {
       mockUpdateProfile.mockRejectedValueOnce(new Error('network down'));
-      const { getByText } = await render(<SettingsScreen />);
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
 
+      // Save is disabled until something actually changes, so make an edit
+      // that doesn't feed the TDEE formula (no recalculation prompt).
+      await fireEvent.changeText(getByDisplayValue('Ada Lovelace'), 'Grace Hopper');
       await fireEvent.press(getByText('Save'));
 
       await waitFor(() =>
@@ -172,6 +193,12 @@ describe('SettingsScreen', () => {
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalledTimes(1));
     });
+
+    it('9.1 leaves Save disabled while nothing has been edited', async () => {
+      const { getByText } = await render(<SettingsScreen />);
+      await fireEvent.press(getByText('Save'));
+      expect(mockUpdateProfile).not.toHaveBeenCalled();
+    });
   });
 
   // ── §9.2 — draft discarded without Save ──────────────────────────────────
@@ -183,9 +210,6 @@ describe('SettingsScreen', () => {
       const nameInput = getByDisplayValue('Ada Lovelace');
       await fireEvent.changeText(nameInput, 'Unsaved Name');
 
-      // Simulate "navigating away" — nothing in the component triggers a
-      // commit except the Save button, so simply never pressing it and
-      // letting the screen unmount is the discard path.
       expect(mockUpdateProfile).not.toHaveBeenCalled();
     });
 
@@ -203,29 +227,49 @@ describe('SettingsScreen', () => {
   // ── §9.3 — units round-trip ───────────────────────────────────────────
 
   describe('9.3 metric <-> imperial round-trip', () => {
-    it('9.3 converts height/weight to imperial and back to the original metric values (within rounding)', async () => {
-      // 170cm -> 67in (round(170/2.54)=66.9->67), 65kg -> 143lbs (round(65/0.453592)=143.3->143)
+    it('9.3 converts height/weight to imperial and back to the original metric values', async () => {
       const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
 
-      // Starts in metric: original stored values displayed as-is.
+      // Starts in metric: stored values displayed as-is.
       expect(getByDisplayValue('170')).toBeTruthy(); // height cm
       expect(getByDisplayValue('65')).toBeTruthy(); // current weight kg
 
-      // Toggle to Imperial.
-      await fireEvent.press(getByText('Imperial'));
+      await fireEvent.press(getByText('lb, in'));
 
-      // 170 / 2.54 = 66.9 -> rounds to 67
-      expect(getByDisplayValue('67')).toBeTruthy();
-      // 65 / 0.453592 = 143.3 -> rounds to 143
-      expect(getByDisplayValue('143')).toBeTruthy();
+      expect(getByDisplayValue('67')).toBeTruthy(); // 170 / 2.54 = 66.9 -> 67
+      expect(getByDisplayValue('143')).toBeTruthy(); // 65 * 2.20462 = 143.3 -> 143
 
-      // Toggle back to Metric — raw stored cm/kg strings are untouched by
-      // the round-trip since conversion is display-only (toDisplayHeight/
-      // toDisplayWeight), so we get the exact original values back.
-      await fireEvent.press(getByText('Metric'));
+      // Untouched fields re-format from the stored kg/cm rather than from the
+      // rounded imperial text, so the original values come back exactly.
+      await fireEvent.press(getByText('kg, cm'));
 
       expect(getByDisplayValue('170')).toBeTruthy();
       expect(getByDisplayValue('65')).toBeTruthy();
+    });
+
+    it('9.3 treats a value typed in imperial as imperial (regression: double conversion)', async () => {
+      // The old screen displayed cm→in but wrote the typed inches straight back
+      // into the cm state, so every keystroke got divided by 2.54 again.
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.press(getByText('lb, in'));
+      const heightInput = getByDisplayValue('67');
+      await fireEvent.changeText(heightInput, '70');
+
+      // The field must still read 70 — not 70/2.54 = 28.
+      expect(getByDisplayValue('70')).toBeTruthy();
+
+      await fireEvent.press(getByText('Save'));
+
+      // Height feeds the TDEE formula, so the preview sheet comes first.
+      await waitFor(() => expect(getByText('Update your daily targets?')).toBeTruthy());
+      await fireEvent.press(getByText('Keep mine'));
+
+      // 70 inches = 177.8cm -> 178
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      expect(mockUpdateProfile).toHaveBeenCalledWith(
+        expect.objectContaining({ height_cm: 178, units_system: 'imperial' })
+      );
     });
   });
 
@@ -257,6 +301,146 @@ describe('SettingsScreen', () => {
       await fireEvent.press(getByText('Delete account'));
       await waitFor(() => expect(getByPlaceholderText('DELETE')).toBeTruthy());
       expect(getByText('Delete your account?')).toBeTruthy();
+    });
+  });
+
+  // ── The whole value pill is editable, not just the digits ────────────────
+
+  // Note on scope: RNTL 14 ships no focus matcher (no toHaveFocus/toBeFocused),
+  // and a host TextInput element exposes no instance to spy `focus` on — so the
+  // runtime "did the caret land in the field" step isn't assertable here and is
+  // left to manual/device checking. What IS assertable, and is the exact thing
+  // that regressed, is the prop that lets the tap reach the pill at all: a
+  // <Text> that becomes its own touch responder swallows the press before the
+  // wrapping Pressable's onPress ever runs.
+  describe('value fields are tappable across their whole pill', () => {
+    it('marks every unit label non-interactive so taps fall through to the field', async () => {
+      const { getByText, getAllByText } = await render(<SettingsScreen />);
+
+      // Units that appear exactly once, both inside a field.
+      for (const unit of ['cm', 'yrs']) {
+        expect(getByText(unit).props.pointerEvents).toBe('none');
+      }
+
+      // 'kg' renders twice (current weight + goal weight) and 'g' three times
+      // (protein/carbs/fat) — every one of those is a field unit, so all of
+      // them must be inert.
+      for (const unit of ['kg', 'g']) {
+        for (const node of getAllByText(unit)) {
+          expect(node.props.pointerEvents).toBe('none');
+        }
+      }
+
+      // 'kcal' is the one that appears in two different roles: the plan card's
+      // read-only caption and the Calories field's unit. Only the field's copy
+      // is expected to be inert — the caption isn't inside a tappable pill.
+      expect(getAllByText('kcal').filter((n) => n.props.pointerEvents === 'none')).toHaveLength(1);
+    });
+  });
+
+  // ── Targets recalculate when the stats behind them change ────────────────
+
+  describe('daily targets follow the stats', () => {
+    it('offers recalculated targets when a TDEE input changes, and writes them on confirm', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      // Drop from 65kg to 58kg — a real change to the TDEE inputs.
+      await fireEvent.changeText(getByDisplayValue('65'), '58');
+      await fireEvent.press(getByText('Save'));
+
+      // Save is intercepted by the preview sheet instead of writing straight away.
+      await waitFor(() => expect(getByText('Update your daily targets?')).toBeTruthy());
+      expect(mockUpdateProfile).not.toHaveBeenCalled();
+
+      await fireEvent.press(getByText('Update targets'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      const updates = mockUpdateProfile.mock.calls[0][0];
+      expect(updates.current_weight_kg).toBe(58);
+      // The stale 1800 kcal target must not survive a 7kg change.
+      expect(updates.calorie_goal).not.toBe(1800);
+      expect(updates.calorie_goal).toBeGreaterThan(0);
+    });
+
+    it('keeps the existing targets when the user chooses "Keep mine"', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.changeText(getByDisplayValue('65'), '58');
+      await fireEvent.press(getByText('Save'));
+      await waitFor(() => expect(getByText('Update your daily targets?')).toBeTruthy());
+      await fireEvent.press(getByText('Keep mine'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      const updates = mockUpdateProfile.mock.calls[0][0];
+      expect(updates.current_weight_kg).toBe(58);
+      expect(updates.calorie_goal).toBe(1800);
+    });
+
+    it('never prompts when the user typed a target by hand — a manual number wins', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.changeText(getByDisplayValue('65'), '58');
+      await fireEvent.changeText(getByDisplayValue('1800'), '1650');
+      await fireEvent.press(getByText('Save'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      expect(mockUpdateProfile.mock.calls[0][0].calorie_goal).toBe(1650);
+    });
+  });
+
+  // ── A weight edited here must reach the weight history too ───────────────
+
+  describe('two-way weight sync', () => {
+    it('logs a changed weight to weight_logs as well as the profile', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.changeText(getByDisplayValue('65'), '58');
+      await fireEvent.press(getByText('Save'));
+      await waitFor(() => expect(getByText('Update your daily targets?')).toBeTruthy());
+      await fireEvent.press(getByText('Update targets'));
+
+      await waitFor(() => expect(mockAddWeightEntry).toHaveBeenCalledWith(58));
+    });
+
+    it('does not log a weigh-in when the weight was not touched', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.changeText(getByDisplayValue('Ada Lovelace'), 'Grace Hopper');
+      await fireEvent.press(getByText('Save'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      expect(mockAddWeightEntry).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Age is editable and maps back onto date_of_birth ─────────────────────
+
+  describe('age editing', () => {
+    it('writes a date_of_birth that reads back as the entered age', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+      const { calculateAge } = require('../../src/utils/tdee');
+
+      const shownAge = calculateAge('1996-01-01');
+      await fireEvent.changeText(getByDisplayValue(String(shownAge)), '41');
+      await fireEvent.press(getByText('Save'));
+
+      // Age feeds the TDEE formula, so the preview sheet appears first.
+      await waitFor(() => expect(getByText('Update your daily targets?')).toBeTruthy());
+      await fireEvent.press(getByText('Keep mine'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      const dob = mockUpdateProfile.mock.calls[0][0].date_of_birth;
+      expect(calculateAge(dob)).toBe(41);
+    });
+
+    it('leaves date_of_birth untouched when the age field is not edited', async () => {
+      const { getByText, getByDisplayValue } = await render(<SettingsScreen />);
+
+      await fireEvent.changeText(getByDisplayValue('Ada Lovelace'), 'Grace Hopper');
+      await fireEvent.press(getByText('Save'));
+
+      await waitFor(() => expect(mockUpdateProfile).toHaveBeenCalledTimes(1));
+      expect(mockUpdateProfile.mock.calls[0][0]).not.toHaveProperty('date_of_birth');
     });
   });
 
