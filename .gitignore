@@ -39,4 +39,4 @@ yarn-error.log*
 scripts/eval/results.json
 scripts/eval/results-v2.json
 scripts/eval/results-dataset-*.json
-scripts/eval/.eval-session.json
+scripts/eval/.eval-session*.json
