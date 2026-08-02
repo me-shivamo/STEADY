@@ -1,0 +1,14 @@
+[
+  { "id": "e01", "type": "negative", "text": "bro I'm not eating too much today, today was very hectick", "category": "venting", "note": "Shivam's example. Mentions eating but names no food, and says LESS eating. Must not phantom-log." },
+  { "id": "e02", "type": "negative", "text": "i am so stressed today honestly", "category": "venting", "note": "pure emotion, no food at all" },
+  { "id": "e03", "type": "negative", "text": "feeling really guilty about what i ate earlier", "category": "venting", "note": "references eating in the past, names nothing — must not log" },
+  { "id": "e04", "type": "negative", "text": "thinking about ordering a pizza tonight", "category": "future-intent", "note": "has NOT eaten it — logging this would be a phantom meal" },
+  { "id": "e05", "type": "negative", "text": "i'll have dinner later", "category": "future-intent", "note": "future tense, nothing consumed yet" },
+  { "id": "e06", "type": "negative", "text": "aaj maine kuch nahi khaya", "category": "hinglish", "note": "Hindi: 'I ate nothing today'. Must not log." },
+  { "id": "e07", "type": "negative", "text": "asdfgh", "category": "gibberish", "note": "nonsense input, should degrade gracefully not crash or invent food" },
+  { "id": "e08", "type": "negative", "text": "my phone battery is dying", "category": "off-topic", "note": "entirely unrelated to food" },
+  { "id": "e09", "type": "negative", "text": "should i stop eating rice to lose weight?", "category": "question", "note": "names a food but is a question, not a log" },
+  { "id": "e10", "type": "log", "text": "had a rough day honestly, ended up eating a whole packet of chips and some ice cream", "category": "venting-with-food", "expected": { "calories": [350, 900] }, "note": "emotional framing BUT real food eaten — SHOULD log despite the venting wrapper" },
+  { "id": "e11", "type": "log", "text": "bro today was hectic, only managed 2 boiled eggs all morning", "category": "venting-with-food", "expected": { "calories": [120, 190], "protein_g": [10, 16] }, "note": "same shape as Shivam's example but DOES name food — should log just the eggs" },
+  { "id": "e12", "type": "log", "text": "aaj maine 2 roti aur dal khaya", "category": "hinglish", "expected": { "calories": [230, 480] }, "note": "Hindi: '2 rotis and dal' — should log despite the language" }
+]

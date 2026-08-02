@@ -27,7 +27,7 @@
   { "id": "b06", "type": "log", "text": "footlong turkey sub from subway", "category": "branded", "expected": { "calories": [450, 680], "protein_g": [24, 42] } },
   { "id": "b07", "type": "log", "text": "2 slices of dominos medium margherita", "category": "branded", "expected": { "calories": [330, 530] } },
   { "id": "b08", "type": "log", "text": "starbucks tall cappuccino", "category": "branded", "expected": { "calories": [50, 145] } },
-  { "id": "b09", "type": "log", "text": "a can of red bull", "category": "branded", "expected": { "calories": [95, 135] } },
+  { "id": "b09", "type": "log", "text": "a can of red bull", "category": "branded", "expected": { "calories": [95, 175] }, "note": "band widened after verification: 'a can' is ambiguous between the 250ml (~110 kcal) and 355ml/12oz (~160 kcal) can. The original [95,135] assumed 250ml and marked a correct 355ml reading as a failure." },
   { "id": "b10", "type": "log", "text": "a snickers bar", "category": "branded", "expected": { "calories": [200, 290] } },
   { "id": "b11", "type": "log", "text": "a packet of maggi noodles", "category": "branded", "expected": { "calories": [260, 430] } },
   { "id": "b12", "type": "log", "text": "a small bag of lays chips", "category": "branded", "expected": { "calories": [120, 230] } },
