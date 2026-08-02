@@ -430,14 +430,41 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
   ]
 
   const call2 = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS)
-  return { result: parseAIContent(call2.content ?? ''), waterLogged }
+  const call2Content = (call2.content as string | null) ?? ''
+
+  // Call 2 can itself come back asking for MORE tools instead of answering, in
+  // which case content is null. We used to hand that empty string straight to
+  // parseAIContent, which fell through to "Something went wrong. Try again." —
+  // so the user lost their message entirely at what is really just the loop
+  // running out of turns. Observed live on Hinglish logs like "maine ek plate
+  // biryani khayi". One more call with tool_choice 'none' forces the model to
+  // produce an actual answer from what it already has, turning a dead end into
+  // a usable response.
+  if (call2Content.trim()) {
+    return { result: parseAIContent(call2Content), waterLogged }
+  }
+
+  // Re-ask with the SAME message list call 2 saw — deliberately not appending
+  // call 2's unanswered tool_calls, because the API requires every assistant
+  // tool_call to be followed by matching tool-result messages and we have none
+  // (that request is exactly what we're declining to run). Adding them produced
+  // a 400. tool_choice 'none' removes the option to ask again, so the model has
+  // to answer from the tool results already in the conversation.
+  const finalCall = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS, 'none')
+  return { result: parseAIContent((finalCall.content as string | null) ?? ''), waterLogged }
 }
 
 // ── OpenRouter call wrapper ───────────────────────────────────────────────────
 // deno-lint-ignore no-explicit-any
-async function callOpenRouter(supabase: any, userId: string, messages: Array<Record<string, unknown>>, tools: typeof TOOLS): Promise<Record<string, unknown>> {
+async function callOpenRouter(
+  supabase: any,
+  userId: string,
+  messages: Array<Record<string, unknown>>,
+  tools: typeof TOOLS,
+  toolChoice: 'auto' | 'none' = 'auto',
+): Promise<Record<string, unknown>> {
   const model = 'openai/gpt-4o-mini'
-  const requestBody = { model, temperature: 0, messages, tools, tool_choice: 'auto' as const }
+  const requestBody = { model, temperature: 0, messages, tools, tool_choice: toolChoice }
 
   const { response: data } = await logAiCall(supabase, {
     userId,
