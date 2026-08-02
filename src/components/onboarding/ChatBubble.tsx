@@ -53,9 +53,9 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   bubbleText: {
-    fontSize: typography.sm,
+    fontSize: typography.md,
     color: colors.textPrimary,
-    lineHeight: 19,
+    lineHeight: 21,
     fontWeight: '500',
     fontFamily: fontFamily.medium,
   },

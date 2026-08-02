@@ -83,33 +83,68 @@ function MacroCol({ label, current, goal, dotColor }: {
 // `{name}` is replaced with the user's first name when we have one, or the
 // whole clause is dropped for a name-less variant when we don't (see
 // buildGreetings below) — every entry here must read naturally either way.
-const GREETING_TEMPLATES = [
-  "Hey{name}! Tell me what you ate and I'll log the calories and macros automatically.",
-  "Hi there{name}! Just describe your meal and I'll handle the calorie and macro math.",
-  "Welcome{name}! Tell me what you're eating, in plain English, and I'll log it for you.",
-  "Good to see you{name}! Type or snap a photo of your meal, and I'll take it from there.",
-  "Hey{name}, ready when you are. Tell me what's on your plate and I'll do the math.",
-  "Hi{name}! I'm STEADY. Describe a meal, or send a photo, and I'll log it for you.",
-  "Let's get started{name}! Just tell me what you ate, and I'll track the rest.",
-  "Hey{name}, glad you're here! Describe your food and I'll handle the calories and macros.",
-  "Welcome back{name}! Tell me what you're eating and I'll keep your log up to date.",
-  "Hi{name}, no need to overthink it. Just tell me what you ate, however you'd normally say it.",
+// Shown to brand-new accounts (profile created today) — no "welcome back" /
+// "missed you" framing, since there's no history to be back to yet.
+const FIRST_TIME_GREETINGS = [
+  "Hey{name} 👋 I'm STEADY, your slightly sarcastic food tracker. Tell me what you ate and I'll do the boring math.",
+  "Well well{name} 🕵️ a brand-new log, completely empty. Let's put something on it. Tell me what you had.",
+  "Welcome aboard{name} ✨ your log is a blank canvas. Describe a meal or send a pic to get it started.",
+  "Hi{name} 🤖 first time here. Describe a meal, in plain English, and I'll handle the calorie and macro math.",
+  "Hey{name}, ready when you are 🍽️ your plate's a mystery to me so far. Spill the details.",
+  "Let's get this show on the road{name} 🎬 nothing's logged yet and the suspense is killing me.",
+  "Hi{name} 🧾 no need to overthink it, just tell me what you ate, typos and all. I've seen worse.",
+  "Good to see a new face{name} 👀 tell me what's on your plate and I'll take it from here.",
 ];
 
-// Builds the final greeting pool: if we have a first name, "{name}" becomes
-// ", Shivam"; otherwise it's dropped entirely so the sentence still reads
-// naturally without one (e.g. "Hey! Tell me..." vs "Hey, Shivam! Tell me...").
-function buildGreetings(firstName: string | null): string[] {
+// Shown to accounts that have been around a while — safe to reference
+// history, streaks, and the fact that today's log is currently empty.
+const RETURNING_GREETINGS = [
+  "Welcome back{name} 🔄 your log missed you. Mostly it just missed having any data in it.",
+  "Hey{name}, glad you're here 😌 now less glad that your food log is a ghost town today. Let's fix that.",
+  "Good to see you{name} 👀 zero calories logged so far today. Either you're fasting or procrastinating, tell me which.",
+  "Hi again{name} 🕵️ today's log is suspiciously empty. I promise I won't judge... much. Tell me what you had.",
+  "Back for more{name} ✨ today's a clean slate so far. Fix that?",
+  "Hey{name} 👋 today's plate is looking suspiciously empty. Tell me what you ate and I'll do the boring math.",
+  "Hi{name} 🤖 today's a blank page in your log so far. Describe a meal or send a pic, I'll take it from here.",
+  "Hey{name}, ready for round two 🍽️ today's still a mystery to me. Spill the details.",
+];
+
+// Fills in a greeting pool's "{name}" placeholder: if we have a first name it
+// becomes ", Shivam"; otherwise it's dropped entirely so the sentence still
+// reads naturally without one (e.g. "Hey! Tell me..." vs "Hey, Shivam! Tell me...").
+function buildGreetings(templates: string[], firstName: string | null): string[] {
   const suffix = firstName ? `, ${firstName}` : '';
-  return GREETING_TEMPLATES.map(t => t.replace('{name}', suffix));
+  return templates.map(t => t.replace('{name}', suffix));
 }
 
+// Example prompts shown under the greeting so first-time users know the
+// expected input shape. Kept strictly vegetarian across all variants.
+const TRY_EXAMPLES = [
+  'Try: "40g paneer with 80g moong sprouts, one tomato, and half an onion"',
+  'Try: "150g curd rice with a spoon of pickle"',
+  'Try: "2 rotis, 100g paneer bhurji, and a cucumber salad"',
+  'Try: "30g peanut butter on toast with one banana"',
+  'Try: "200g veg pulao with 100g raita"',
+  'Try: "1 bagel with 30g cream cheese"',
+  'Try: "1 cup dal, 150g rice, and a glass of buttermilk"',
+  'Try: "150g Greek yogurt with 30g granola and a spoon of honey"',
+];
+
 // ── WelcomeBubble — shown on today when no meals logged ───────────────────────
-function WelcomeBubble({ firstName }: { firstName: string | null }) {
+function WelcomeBubble({ firstName, isFirstTime }: { firstName: string | null; isFirstTime: boolean }) {
+  // Picked once per mount. Kept as two separate strings (rather than one
+  // joined block) because TypewriterText splits on plain spaces — a literal
+  // "\n" inside its input gets swallowed by the word-join during typing and
+  // only reappears once fully revealed, which reflowed the two lines into a
+  // ragged single line mid-animation. Rendering the example as a plain,
+  // always-visible bold <Text> avoids feeding it through that split at all.
   const [greeting] = useState(() => {
-    const pool = buildGreetings(firstName);
-    return pool[Math.floor(Math.random() * pool.length)];
+    const pool = isFirstTime ? FIRST_TIME_GREETINGS : RETURNING_GREETINGS;
+    return buildGreetings(pool, firstName)[Math.floor(Math.random() * pool.length)];
   });
+  const [example] = useState(() =>
+    TRY_EXAMPLES[Math.floor(Math.random() * TRY_EXAMPLES.length)]
+  );
   const [introDone, setIntroDone] = useState(false);
 
   return (
@@ -117,8 +152,8 @@ function WelcomeBubble({ firstName }: { firstName: string | null }) {
       <View style={styles.aiBubble}>
         <TypewriterText text={greeting} onDone={() => setIntroDone(true)} style={styles.aiBubbleText} />
         {introDone && (
-          <Text style={styles.aiBubbleText}>
-            {'\n\n'}Try: <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>"I had two eggs on toast with a coffee"</Text>
+          <Text style={[styles.aiBubbleText, { fontWeight: '700', fontFamily: fontFamily.bold }]}>
+            {'\n'}{example}
           </Text>
         )}
       </View>
@@ -132,8 +167,8 @@ function EmptyHistoryBubble({ date }: { date: string }) {
     <View style={styles.aiBubbleRow}>
       <View style={styles.aiBubble}>
         <Text style={styles.aiBubbleText}>
-          Nothing was logged on <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>{date}</Text>.
-          {'\n\n'}You can still ask me questions about your nutrition goals.
+          🕳️ <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>{date}</Text> is a total blank, not one bite on record.
+          {'\n'}Ask me about your goals instead, I'm still around 💬
         </Text>
       </View>
     </View>
@@ -509,8 +544,15 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Right side: streak chip */}
+        {/* Right side: groups shortcut + streak chip */}
         <View style={styles.topRight}>
+          <TouchableOpacity
+            style={styles.groupsBtn}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('GroupsIntro')}
+          >
+            <Ionicons name="people-outline" size={20} color={C.text} />
+          </TouchableOpacity>
           <View style={styles.streakChip}>
             <Text style={styles.streakText}>🔥 {streak} days</Text>
           </View>
@@ -636,7 +678,10 @@ export default function HomeScreen() {
 
             {shownMessages.length === 0 && !isFetchingDate && !isLoadingChat && (
               isViewingToday
-                ? <WelcomeBubble firstName={profile?.full_name?.trim().split(' ')[0] || null} />
+                ? <WelcomeBubble
+                    firstName={profile?.full_name?.trim().split(' ')[0] || null}
+                    isFirstTime={!!profile?.created_at && toLocalDateString(new Date(profile.created_at)) === todayDate()}
+                  />
                 : <EmptyHistoryBubble date={dateLabel} />
             )}
 
@@ -828,6 +873,11 @@ const styles = StyleSheet.create({
   dateLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   datePrimary: { fontSize: 17.5, fontWeight: '700', fontFamily: fontFamily.bold, color: C.text, letterSpacing: -0.2, lineHeight: 22 },
   topRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  groupsBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: C.surface,
+  },
   streakChip: {
     flexDirection: 'row', alignItems: 'center',
     height: 32, paddingHorizontal: 12, borderRadius: 20,
