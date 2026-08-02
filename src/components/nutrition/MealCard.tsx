@@ -57,6 +57,22 @@ function cleanQty(s: string): string {
   return s.replace(/[()]/g, '').trim()
 }
 
+// Shows the user's own wording AND the gram weight the macros were computed from.
+// Previously we showed one OR the other, so a count-style label ("1 masala dosa")
+// hid the grams entirely — and grams are the number most likely to be wrong AND
+// the only one worth correcting, since every macro is derived from it. A user who
+// can't see "200 g" has no way to notice it should have been 85 g.
+// Labels that already state a weight ("small bowl ~60g") are left alone rather
+// than repeated back as "small bowl ~60g · 60 g".
+function displayQty(label: string | null | undefined, grams: number): string {
+  const gramText = formatQty(grams)
+  if (!label) return gramText
+  const clean = cleanQty(label)
+  if (!clean) return gramText
+  const alreadyStatesWeight = /\d\s*(g|kg|gram|grams|ml|l|litre|liter)\b/i.test(clean)
+  return alreadyStatesWeight ? clean : `${clean} · ${gramText}`
+}
+
 // ── LogCard — gray input line · per-food rows · total grid · footer ───────────
 // Build a human-readable summary of AI-parsed foods, e.g.
 // "Bread (2 slices), Tomato (42 g), Egg (2 large)"
@@ -214,7 +230,7 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
             <Text style={styles.foodName} numberOfLines={2}>
               {titleCase(e.food_name)}{' '}
               <Text style={styles.foodQty}>
-                ({cleanQty(e.quantity_label ?? formatQty(e.quantity_g))})
+                ({displayQty(e.quantity_label, e.quantity_g)})
               </Text>
             </Text>
             <View style={styles.macroRow}>
