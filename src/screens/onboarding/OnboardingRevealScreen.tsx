@@ -2,20 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
-import { calculateTDEE, calculateAge, estimateWeeksToGoal, TDEEInput } from '../../utils/tdee';
+import { calculateTDEE, calculateAge, TDEEInput } from '../../utils/tdee';
 import OnboardingScreen from '../../components/onboarding/OnboardingScreen';
 import ChatBubble from '../../components/onboarding/ChatBubble';
 import { colors } from '../../theme/colors';
 import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
 import { posthog } from '../../utils/posthog';
-
-const GOAL_ADJUSTMENTS: Record<string, number> = {
-  lose_weight: -500,
-  gain_weight: 300,
-  maintain: 0,
-  build_muscle: 200,
-};
 
 export default function OnboardingRevealScreen() {
   const { profile, updateProfile } = useAuthStore();
@@ -41,15 +34,10 @@ export default function OnboardingRevealScreen() {
       sex: (profile.sex as TDEEInput['sex']) ?? 'other',
       activity_level: profile.activity_level as TDEEInput['activity_level'],
       goal: profile.goal as TDEEInput['goal'],
+      goal_weight_kg: profile.goal_weight_kg,
+      deadline_date: profile.deadline_date,
     };
     return calculateTDEE(input);
-  })();
-
-  const weeksToGoal = (() => {
-    if (!result || !profile?.current_weight_kg || !profile?.goal_weight_kg) return null;
-    const adj = GOAL_ADJUSTMENTS[profile.goal ?? 'maintain'] ?? 0;
-    if (adj === 0) return null;
-    return estimateWeeksToGoal(profile.current_weight_kg, profile.goal_weight_kg, adj);
   })();
 
   useEffect(() => {
@@ -106,7 +94,7 @@ export default function OnboardingRevealScreen() {
       onContinue={handleStart}
       loading={loading}
     >
-      <ChatBubble message="Here's your personalised daily plan:" />
+      <ChatBubble animated message="Here's your personalised daily plan:" />
 
       <View style={styles.calorieCard}>
         <Text style={styles.calorieNumber}>{displayCalories.toLocaleString()}</Text>
@@ -130,18 +118,24 @@ export default function OnboardingRevealScreen() {
         </View>
       </View>
 
-      {weeksToGoal !== null && (
-        <View style={styles.paceCard}>
-          <Text style={styles.paceText}>
-            At this pace you'll reach your goal in{' '}
-            <Text style={styles.paceHighlight}>~{weeksToGoal} weeks</Text>
-          </Text>
-        </View>
-      )}
-
       {profile?.goal === 'maintain' && (
         <View style={styles.paceCard}>
           <Text style={styles.paceText}>You're eating to maintain, no deficit needed.</Text>
+        </View>
+      )}
+
+      {result.deadlinePace && (
+        <View style={styles.paceCard}>
+          <Text style={styles.paceText}>
+            Your deadline would need{' '}
+            <Text style={styles.paceHighlight}>{result.deadlinePace.requiredCalorieGoal.toLocaleString()} kcal/day</Text>
+            {' '}— that's beyond what's safe, so we've capped your plan at{' '}
+            <Text style={styles.paceHighlight}>{result.calorieGoal.toLocaleString()} kcal/day</Text>
+            {result.deadlinePace.safeWeeksToGoal != null && (
+              <> instead (~{result.deadlinePace.safeWeeksToGoal} weeks to goal)</>
+            )}
+            .
+          </Text>
         </View>
       )}
     </OnboardingScreen>

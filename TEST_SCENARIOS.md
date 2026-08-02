@@ -86,10 +86,17 @@ This is pure, dependency-free logic — the highest-value unit-test target in th
 | 2.1.2 | Typical adult female, sedentary, maintain | Positive | Unit | Female BMR formula, ×1.2, +0 adjustment, 25/50/25 split |
 | 2.1.3 | `sex: 'other'` | Edge | Unit | BMR = **average** of the male and female formulas (not a third formula) — this is an easy regression to silently break |
 | 2.1.4 | Every `activity_level` value (5 total) | Positive | Unit | Multiplier table: sedentary 1.2 / lightly_active 1.375 / moderately_active 1.55 / very_active 1.725 / super_active 1.9 |
-| 2.1.5 | Every `goal` value (4 total) | Positive | Unit | Adjustment table: lose_weight −500 / gain_weight +300 / maintain 0 / build_muscle +200, each with its own macro split |
+| 2.1.5 | Every `goal` value (4 total), no `goal_weight_kg`/`deadline_date` supplied | Positive | Unit | Falls back to the fixed adjustment table: lose_weight −500 / gain_weight +300 / maintain 0 / build_muscle +200; protein is g/kg-bodyweight (not % of calories, see 2.1.9), remaining calories split carbs/fat per goal |
 | 2.1.6 | Very low BMR input (e.g. very low weight/height/high age) pushed through `lose_weight` | Edge | Unit | `calorieGoal` must floor at **1200** (`Math.max(1200, ...)`) — verify the floor actually engages, not just documents intent |
-| 2.1.7 | Macro grams sum sanity check | Edge | Unit | `proteinG*4 + carbsG*4 + fatG*9` should reconcile to ~`calorieGoal` (±rounding) for every goal — catches a wrong calories-per-gram constant |
+| 2.1.7 | Macro grams sum sanity check | Edge | Unit | `proteinG*4 + carbsG*4 + fatG*9` should reconcile to within ~6 kcal of `calorieGoal` for every goal (wider tolerance than the old 3 kcal bound — g/kg protein adds a rounding step the old %-of-calories split didn't have) — catches a wrong calories-per-gram constant |
 | 2.1.8 | Negative or zero weight/height (malformed profile data) | Negative | Unit | Function has no input guards — confirm what actually comes out (likely `NaN` or a nonsensical number) so we know whether a guard needs adding upstream |
+| 2.1.9 | Protein target across a spread of bodyweights (e.g. 50kg / 80kg / 100kg), same goal | Positive | Unit | Protein is `round(PROTEIN_G_PER_KG[goal] * weight_kg)` — must scale linearly with weight, unlike the old percentage-of-calories formula which drifted outside the evidence-based 1.6–2.2 g/kg range at the weight extremes (this was the actual bug fixed here) |
+| 2.1.10 | `goal_weight_kg` + `deadline_date` supplied, deadline **within** the safe pace (e.g. gain_weight, deadline far enough out that required kcal/day ≤ 500) | Positive | Unit | `dailyAdjustment` = the deadline-derived value (not the fixed table default); `deadlinePace` is `null` since nothing needs capping — this is the "your 3-month goal is realistic" case |
+| 2.1.11 | `goal_weight_kg` + `deadline_date` supplied, deadline demands **more** than the safe cap (e.g. gain_weight, goal weight reachable only via >500 kcal/day surplus in the time given — the exact "I want to gain 5kg in 1 month" scenario from 2.3.3/`TESTING.md`) | Edge | Unit | `calorieGoal` uses the **capped, safe** surplus (500 kcal/day for gain); `deadlinePace` is non-null and contains `requiredCalorieGoal` (the honest, uncapped number the deadline would need) and `safeWeeksToGoal` (how long the capped pace will actually take) — the app must never silently comply with an unsafe deadline |
+| 2.1.12 | `lose_weight` with an aggressive deadline | Edge | Unit | Deficit caps at 1% of the user's **own** bodyweight per week (ACSM's fastest-safe bound), converted to kcal/day and scaled per-user — not a single flat kcal number shared by everyone regardless of weight |
+| 2.1.13 | `lose_weight` goal with `goal_weight_kg` >= current weight (direction mismatch — e.g. user picked "lose weight" but set a heavier target) | Negative | Unit | Falls back to the fixed adjustment table rather than computing a nonsensical (wrong-signed) deadline pace |
+| 2.1.14 | `deadline_date` in the past or equal to today | Negative | Unit | Falls back to the fixed adjustment table rather than dividing by zero/negative days |
+| 2.1.15 | `build_muscle` goal WITH `goal_weight_kg`/`deadline_date` set | Positive | Unit | Uses the same deadline-aware calculation as `gain_weight` (500 kcal/day surplus cap) — deadline-awareness is keyed on "is the data present," not on which goal type, so build_muscle isn't special-cased out even though it's less commonly paired with a target weight. Without a deadline, build_muscle still keeps its own distinct fixed default (+200, not gain_weight's +300). |
 
 ### 2.2 `calculateAge()`
 
@@ -100,14 +107,18 @@ This is pure, dependency-free logic — the highest-value unit-test target in th
 | 2.2.3 | Birthday is today | Edge | Unit | Exact boundary of the `monthDiff === 0 && today.getDate() < dob.getDate()` check |
 | 2.2.4 | Date of birth is in the future (bad data) | Negative | Unit | Confirm behavior is at least non-crashing (likely negative age) |
 
-### 2.3 `estimateWeeksToGoal()` — source of the known "~37 weeks" bug in `TESTING.md`
+### 2.3 `estimateWeeksToGoal()` — the low-level weeks-from-a-fixed-adjustment helper
+
+This is the pure math helper (weight delta + a daily kcal adjustment → weeks), used internally by `computeGoalAdjustment()` (§2.1.10–2.1.14) to compute `deadlinePace.safeWeeksToGoal` and the top-level `weeksToGoal`. These scenarios test the helper in isolation with a hand-supplied `dailyAdjustment` — see §2.1 for the deadline-aware logic that decides what adjustment to actually pass it.
+
+**History**: 2.3.3 below was originally written as a "known bug, locked in" regression test — see the `TESTING.md` report ("I choose to gain the weight... in one month?"). The underlying issue (no `deadline_date` input existed anywhere in `calculateTDEE`) is now fixed via `computeGoalAdjustment()`'s deadline-aware pace + safety cap (§2.1.10–2.1.14). 2.3.3 itself still passes unchanged — it was always correct math for a *fixed* +300 kcal/day input, which is still exactly what this helper does when called directly.
 
 | # | Scenario | Type | Layer | Expected behavior |
 |---|---|---|---|---|
 | 2.3.1 | `maintain` goal (`dailyAdjustment === 0`) | Positive | Unit | Returns `null` — UI shows "no deficit needed" message instead of a pace card |
 | 2.3.2 | Current weight already within 0.5kg of goal weight | Edge | Unit | Returns `null` ("already at goal") even with a non-zero adjustment |
-| 2.3.3 | **Regression case**: 65kg → 75kg goal, `gain_weight` (+300 kcal/day) | Edge | Unit | Currently returns **37 weeks** (`10kg × 7700 ÷ 300 ÷ 7`) — this is mathematically correct given a fixed +300/day surplus, but it's the exact input from the `TESTING.md` bug report ("I choose to gain the weight... in one month?"). The bug isn't the math — it's that `TDEEInput` has **no user-settable timeframe/deadline** at all, so any large weight delta with the fixed goal-adjustment table produces a number the user never asked for. Lock in today's output with a test so a future fix (e.g. adding a `deadline_date` input) is a deliberate, visible change, not a silent one. |
-| 2.3.4 | Large deficit goal (e.g. 100kg → 60kg, `lose_weight`) | Edge | Unit | Confirms the same fixed-adjustment behavior on the other direction — sanity check before any deadline-aware rework |
+| 2.3.3 | 65kg → 75kg goal, fixed +300 kcal/day adjustment | Edge | Unit | Returns **37 weeks** (`10kg × 7700 ÷ 300 ÷ 7`) — correct math for a fixed +300/day surplus; the app-level fix for "how do I pick the right adjustment for a real deadline" lives in §2.1.10–2.1.14, not here |
+| 2.3.4 | Large deficit goal (e.g. 100kg → 60kg, `lose_weight`) | Edge | Unit | Confirms the same fixed-adjustment behavior on the other direction |
 | 2.3.5 | `dailyAdjustment` edge value very close to 0 but not exactly 0 (shouldn't occur given the current table, but guards against future goal types) | Edge | Unit | Should return a very large (not infinite/NaN) week count, not divide-by-zero |
 
 ### 2.4 Onboarding flow (screens)

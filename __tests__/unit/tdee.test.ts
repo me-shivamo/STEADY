@@ -2,11 +2,11 @@
 // Traces TEST_SCENARIOS.md §2.1–2.3. Scenario IDs are referenced in test
 // names so a failure can be looked up directly in that document.
 
-import { calculateAge, calculateTDEE, estimateWeeksToGoal, TDEEInput } from '../../src/utils/tdee';
+import { calculateAge, calculateTDEE, estimateWeeksToGoal, roundToNearest10, TDEEInput } from '../../src/utils/tdee';
 
 describe('calculateTDEE', () => {
   // §2.1.1 — typical adult male, moderately active, lose_weight
-  it('2.1.1 computes BMR (male formula) x activity multiplier, minus 500, with a 30/40/30 split', () => {
+  it('2.1.1 computes BMR (male formula) x activity multiplier, minus 500, with g/kg protein + a 55/45 carb/fat split of the rest', () => {
     const input: TDEEInput = {
       weight_kg: 80,
       height_cm: 180,
@@ -18,19 +18,24 @@ describe('calculateTDEE', () => {
 
     // Mifflin-St Jeor (male): 10*80 + 6.25*180 - 5*30 + 5 = 800 + 1125 - 150 + 5 = 1780
     // TDEE: round(1780 * 1.55) = round(2759) = 2759
-    // calorieGoal: max(1200, round(2759 - 500)) = 2259
+    // Precise calorieGoal (pre-display-rounding): max(1200, round(2759 - 500)) = 2259
+    // protein: round(2.0 g/kg * 80) = 160g -> 640 kcal
+    // remaining: 2259 - 640 = 1619, split 55% carbs / 45% fat
+    // Final returned values are then rounded to the nearest 10 for display
+    // (e.g. 2259 -> 2260) — see roundToNearest10 in tdee.ts.
     const result = calculateTDEE(input);
 
-    expect(result.tdee).toBe(2759);
-    expect(result.calorieGoal).toBe(2259);
-    // 30% protein, 40% carbs, 30% fat
-    expect(result.proteinG).toBe(Math.round((2259 * 0.3) / 4));
-    expect(result.carbsG).toBe(Math.round((2259 * 0.4) / 4));
-    expect(result.fatG).toBe(Math.round((2259 * 0.3) / 9));
+    expect(result.tdee).toBe(2759); // tdee itself is NOT display-rounded
+    expect(result.calorieGoal).toBe(roundToNearest10(2259));
+    const proteinG = Math.round(2.0 * 80);
+    const remaining = 2259 - proteinG * 4;
+    expect(result.proteinG).toBe(roundToNearest10(proteinG));
+    expect(result.carbsG).toBe(roundToNearest10(Math.round((remaining * 0.55) / 4)));
+    expect(result.fatG).toBe(roundToNearest10(Math.round((remaining * 0.45) / 9)));
   });
 
   // §2.1.2 — typical adult female, sedentary, maintain
-  it('2.1.2 computes BMR (female formula) x sedentary multiplier, +0 adjustment, 25/50/25 split', () => {
+  it('2.1.2 computes BMR (female formula) x sedentary multiplier, +0 adjustment, g/kg protein + 65/35 carb/fat split of the rest', () => {
     const input: TDEEInput = {
       weight_kg: 65,
       height_cm: 165,
@@ -42,14 +47,17 @@ describe('calculateTDEE', () => {
 
     // BMR (female): 10*65 + 6.25*165 - 5*28 - 161 = 650 + 1031.25 - 140 - 161 = 1380.25
     // TDEE: round(1380.25 * 1.2) = round(1656.3) = 1656
-    // calorieGoal: max(1200, round(1656 + 0)) = 1656
+    // Precise calorieGoal: max(1200, round(1656 + 0)) = 1656
+    // protein: round(1.6 g/kg * 65) = 104g -> 416 kcal; remaining 1240, 65/35 carb/fat
     const result = calculateTDEE(input);
 
     expect(result.tdee).toBe(1656);
-    expect(result.calorieGoal).toBe(1656);
-    expect(result.proteinG).toBe(Math.round((1656 * 0.25) / 4));
-    expect(result.carbsG).toBe(Math.round((1656 * 0.5) / 4));
-    expect(result.fatG).toBe(Math.round((1656 * 0.25) / 9));
+    expect(result.calorieGoal).toBe(roundToNearest10(1656));
+    const proteinG = Math.round(1.6 * 65);
+    const remaining = 1656 - proteinG * 4;
+    expect(result.proteinG).toBe(roundToNearest10(proteinG));
+    expect(result.carbsG).toBe(roundToNearest10(Math.round((remaining * 0.65) / 4)));
+    expect(result.fatG).toBe(roundToNearest10(Math.round((remaining * 0.35) / 9)));
   });
 
   // §2.1.3 — sex: 'other' must average the male/female formulas, not use a third formula
@@ -96,15 +104,16 @@ describe('calculateTDEE', () => {
     expect(result.tdee).toBe(Math.round(bmr * multiplier));
   });
 
-  // §2.1.5 — every goal's calorie adjustment AND macro split
+  // §2.1.5 — every goal's calorie adjustment, g/kg protein target, and carb/fat split of the rest
   it.each([
-    ['lose_weight', -500, [0.3, 0.4, 0.3]],
-    ['gain_weight', 300, [0.25, 0.5, 0.25]],
-    ['maintain', 0, [0.25, 0.5, 0.25]],
-    ['build_muscle', 200, [0.35, 0.4, 0.25]],
-  ] as const)('2.1.5 applies the %s adjustment (%s kcal) with its own macro split', (goal, adjustment, splits) => {
+    ['lose_weight', -500, 2.0, [0.55, 0.45]],
+    ['gain_weight', 300, 1.8, [0.65, 0.35]],
+    ['maintain', 0, 1.6, [0.65, 0.35]],
+    ['build_muscle', 200, 2.0, [0.60, 0.40]],
+  ] as const)('2.1.5 applies the %s adjustment (%s kcal) with %s g/kg protein and its own carb/fat split of the rest', (goal, adjustment, proteinPerKg, carbFatSplit) => {
+    const weightKg = 75;
     const input: TDEEInput = {
-      weight_kg: 75,
+      weight_kg: weightKg,
       height_cm: 175,
       age: 30,
       sex: 'male',
@@ -115,11 +124,13 @@ describe('calculateTDEE', () => {
     const result = calculateTDEE(input);
     const expectedGoal = Math.max(1200, result.tdee + adjustment);
 
-    expect(result.calorieGoal).toBe(expectedGoal);
-    const [p, c, f] = splits;
-    expect(result.proteinG).toBe(Math.round((expectedGoal * p) / 4));
-    expect(result.carbsG).toBe(Math.round((expectedGoal * c) / 4));
-    expect(result.fatG).toBe(Math.round((expectedGoal * f) / 9));
+    expect(result.calorieGoal).toBe(roundToNearest10(expectedGoal));
+    const [carbPct, fatPct] = carbFatSplit;
+    const proteinG = Math.round(proteinPerKg * weightKg);
+    const remaining = expectedGoal - proteinG * 4;
+    expect(result.proteinG).toBe(roundToNearest10(proteinG));
+    expect(result.carbsG).toBe(roundToNearest10(Math.round((remaining * carbPct) / 4)));
+    expect(result.fatG).toBe(roundToNearest10(Math.round((remaining * fatPct) / 9)));
   });
 
   // §2.1.6 — the 1200 kcal floor must actually engage, not just exist as a comment
@@ -157,8 +168,18 @@ describe('calculateTDEE', () => {
       });
 
       const reconstructed = result.proteinG * 4 + result.carbsG * 4 + result.fatG * 9;
-      // 3 independent Math.round() calls means up to ~3 kcal of combined rounding drift
-      expect(Math.abs(reconstructed - result.calorieGoal)).toBeLessThanOrEqual(3);
+      // All 4 returned numbers (proteinG, carbsG, fatG, calorieGoal) are now
+      // independently rounded to the nearest 10 for display (roundToNearest10
+      // in tdee.ts) on top of the underlying gram-level Math.round() calls —
+      // so this is checking "does display rounding stay in a sane ballpark,"
+      // not tdee.ts's true calculation precision (which reconciles far more
+      // tightly — see the ~6 kcal bound this replaced). Worst-case bound:
+      // protein/carbs each ±5g*4=20, fat ±5g*9=45, calorieGoal itself ±5,
+      // for a theoretical max around 90; 60 gives real headroom above what's
+      // actually observed (up to ~50 across these 4 goals) while still
+      // catching a genuinely wrong calories-per-gram constant (that would
+      // blow way past this).
+      expect(Math.abs(reconstructed - result.calorieGoal)).toBeLessThanOrEqual(60);
     }
   );
 
@@ -179,6 +200,157 @@ describe('calculateTDEE', () => {
     // input validation is added later, this test is forced to change deliberately.
     expect(Number.isNaN(result.calorieGoal)).toBe(false);
     expect(result.calorieGoal).toBe(1200); // floor engages since raw tdee is deeply negative
+  });
+
+  // §2.1.9 — protein must scale with bodyweight (the bug the g/kg rewrite fixed:
+  // the old percentage-of-calories split drifted outside 1.6-2.2 g/kg at the
+  // weight extremes even though it looked reasonable for an "average" build)
+  it.each([50, 80, 100])('2.1.9 protein for gain_weight scales linearly with bodyweight (%skg)', (weightKg) => {
+    const result = calculateTDEE({
+      weight_kg: weightKg,
+      height_cm: 175,
+      age: 30,
+      sex: 'male',
+      activity_level: 'moderately_active',
+      goal: 'gain_weight',
+    });
+    expect(result.proteinG).toBe(roundToNearest10(Math.round(1.8 * weightKg)));
+    // The display-rounded value can drift slightly outside the strict
+    // 1.6-2.2 g/kg research band at small weights (e.g. 50kg: precise 90g ->
+    // displayed 90g is fine, but a case landing near a 10g boundary could
+    // tip just outside) — widen the check by the rounding's own ±5 margin
+    // rather than asserting the cosmetic number itself sits in-band.
+    const gPerKg = result.proteinG / weightKg;
+    expect(gPerKg).toBeGreaterThanOrEqual(1.6 - 5 / weightKg);
+    expect(gPerKg).toBeLessThanOrEqual(2.2 + 5 / weightKg);
+  });
+
+  // §2.1.10-2.1.14 — deadline-aware pace (computeGoalAdjustment)
+  // Shared profile: 65kg, 177.8cm (5'10"), 24yo male, moderately active.
+  const DEADLINE_PROFILE = {
+    weight_kg: 65,
+    height_cm: 177.8,
+    age: 24,
+    sex: 'male' as const,
+    activity_level: 'moderately_active' as const,
+  };
+
+  function isoDaysFromNow(days: number): string {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  it('2.1.10 a realistic deadline (within the safe cap) uses the deadline-derived adjustment, no capping note', () => {
+    // 65kg -> 70kg (5kg) over 120 days: 5*7700/120 ≈ 321 kcal/day surplus,
+    // comfortably under the 500 kcal/day safe cap.
+    const result = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'gain_weight',
+      goal_weight_kg: 70,
+      deadline_date: isoDaysFromNow(120),
+    });
+
+    const tdee = result.tdee;
+    const expectedAdjustment = (5 * 7700) / 120;
+    expect(result.calorieGoal).toBe(roundToNearest10(Math.max(1200, Math.round(tdee + expectedAdjustment))));
+    expect(result.deadlinePace).toBeNull();
+    expect(result.weeksToGoal).not.toBeNull();
+  });
+
+  it('2.1.11 [REGRESSION] "gain 5kg in 1 month" caps the surplus at 500 kcal/day and surfaces the honest deadline-required number', () => {
+    // This is the exact TESTING.md bug scenario ("I choose to gain the
+    // weight... in one month?"), now handled instead of silently producing
+    // whatever the fixed +300 table happened to give.
+    const result = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'gain_weight',
+      goal_weight_kg: 70,
+      deadline_date: isoDaysFromNow(30),
+    });
+
+    // Actual plan is capped at +500 kcal/day, NOT the ~1242 kcal/day the
+    // 1-month deadline would mathematically require.
+    expect(result.calorieGoal).toBe(roundToNearest10(Math.max(1200, Math.round(result.tdee + 500))));
+
+    // The uncapped truth is surfaced separately, not hidden.
+    expect(result.deadlinePace).not.toBeNull();
+    const requiredMagnitude = (5 * 7700) / 30;
+    // requiredDailyAdjustment is NOT display-rounded (it's an internal-ish
+    // diagnostic value, not something shown standalone in the UI) — only
+    // requiredCalorieGoal, the number actually rendered, gets rounded.
+    expect(result.deadlinePace!.requiredDailyAdjustment).toBeCloseTo(requiredMagnitude, 1);
+    expect(result.deadlinePace!.requiredCalorieGoal).toBe(roundToNearest10(Math.round(result.tdee + requiredMagnitude)));
+    expect(result.deadlinePace!.requiredCalorieGoal).toBeGreaterThan(result.calorieGoal);
+    expect(result.deadlinePace!.safeWeeksToGoal).not.toBeNull();
+  });
+
+  it('2.1.12 loss deficit is capped at 1% of bodyweight/week, scaled per-user (not a flat kcal number)', () => {
+    // 65kg -> 55kg (10kg loss) in 30 days would need an extreme deficit;
+    // confirm the actual plan never exceeds the 1%-bodyweight/week cap
+    // (0.65kg/week for a 65kg person -> 715 kcal/day).
+    const result = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'lose_weight',
+      goal_weight_kg: 55,
+      deadline_date: isoDaysFromNow(30),
+    });
+
+    const safeCapKcal = (65 * 0.01 * 7700) / 7; // ≈ 715
+    const actualDeficit = result.tdee - result.calorieGoal;
+    expect(actualDeficit).toBeLessThanOrEqual(Math.round(safeCapKcal) + 1); // +1 rounding slack
+    expect(result.deadlinePace).not.toBeNull();
+  });
+
+  it('2.1.13 direction mismatch (lose_weight but goal_weight_kg >= current) falls back to the fixed table', () => {
+    const result = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'lose_weight',
+      goal_weight_kg: 70, // heavier than current 65kg — wrong direction for "lose"
+      deadline_date: isoDaysFromNow(60),
+    });
+
+    expect(result.calorieGoal).toBe(roundToNearest10(Math.max(1200, Math.round(result.tdee - 500))));
+    expect(result.deadlinePace).toBeNull();
+  });
+
+  it('2.1.14 a deadline in the past falls back to the fixed table instead of dividing by a non-positive day count', () => {
+    const result = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'gain_weight',
+      goal_weight_kg: 70,
+      deadline_date: isoDaysFromNow(-10),
+    });
+
+    expect(result.calorieGoal).toBe(roundToNearest10(Math.max(1200, Math.round(result.tdee + 300))));
+    expect(result.deadlinePace).toBeNull();
+    expect(Number.isNaN(result.calorieGoal)).toBe(false);
+  });
+
+  it('2.1.15 build_muscle WITH goal_weight_kg/deadline_date uses the same deadline-aware logic as gain_weight (not special-cased out)', () => {
+    const buildMuscleResult = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'build_muscle',
+      goal_weight_kg: 70,
+      deadline_date: isoDaysFromNow(30),
+    });
+    const gainWeightResult = calculateTDEE({
+      ...DEADLINE_PROFILE,
+      goal: 'gain_weight',
+      goal_weight_kg: 70,
+      deadline_date: isoDaysFromNow(30),
+    });
+
+    // Both goals hit the same 500 kcal/day safe cap under an identical
+    // aggressive deadline — deadline-awareness is keyed on data presence,
+    // not on which of these two goal types was picked.
+    expect(buildMuscleResult.calorieGoal).toBe(gainWeightResult.calorieGoal);
+    expect(buildMuscleResult.deadlinePace).not.toBeNull();
+
+    // Without a deadline, build_muscle keeps its own distinct fixed
+    // adjustment (+200) rather than gain_weight's (+300).
+    const buildMuscleNoDeadline = calculateTDEE({ ...DEADLINE_PROFILE, goal: 'build_muscle' });
+    expect(buildMuscleNoDeadline.calorieGoal).toBe(roundToNearest10(Math.max(1200, Math.round(buildMuscleNoDeadline.tdee + 200))));
   });
 });
 
