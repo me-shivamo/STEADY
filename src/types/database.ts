@@ -672,6 +672,7 @@ export type Database = {
       }
       notification_preferences: {
         Row: {
+          config: Json
           enabled: boolean
           id: string
           quiet_hours_end: string | null
@@ -682,6 +683,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          config?: Json
           enabled?: boolean
           id?: string
           quiet_hours_end?: string | null
@@ -692,6 +694,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          config?: Json
           enabled?: boolean
           id?: string
           quiet_hours_end?: string | null

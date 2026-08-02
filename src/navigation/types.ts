@@ -27,6 +27,7 @@ export type AppStackParamList = {
   Progress: undefined;
   Settings: undefined;
   Reminders: undefined;
+  ReminderDetail: { type: import('../store/reminderStore').ReminderType };
   AdjustMacros: {
     mealId: string;
     mealName: string;
@@ -41,6 +42,11 @@ export type AppStackParamList = {
       fat_g: number;
     }>;
   };
+  GroupsIntro: undefined;
+  GroupCreate: undefined;
+  GroupInvite: { groupId: string };
+  GroupJoin: undefined;
+  GroupHome: { groupId?: string };
 };
 
 // ─── Navigation prop type helpers ────────────────────────────────────────────
