@@ -6,6 +6,13 @@ import { fontFamily } from '../../theme/typography';
 import GroupAvatar from './GroupAvatar';
 import type { ActivityFeedItem as ActivityFeedItemData } from '../../store/groupStore';
 
+// A filled heart reads as "liked" almost universally because it's red —
+// tinting it the app's indigo accent (used for cheerBtnActive's background
+// below) makes it look selected/highlighted rather than actually loved.
+// This is the one deliberate departure from STEADY's accent color in the
+// whole Groups feature, scoped to just this icon + count.
+const CHEER_RED = '#E5484D';
+
 const EVENT_COPY: Record<ActivityFeedItemData['event_type'], { text: string; emoji: string }> = {
   logged_meal: { text: 'logged a meal', emoji: '🍽️' },
   streak_milestone: { text: 'hit a streak milestone', emoji: '🔥' },
@@ -50,9 +57,9 @@ export default function ActivityFeedItem({ item, onToggleCheer }: ActivityFeedIt
         <Ionicons
           name={item.cheered_by_me ? 'heart' : 'heart-outline'}
           size={16}
-          color={item.cheered_by_me ? C.accent : C.text2}
+          color={item.cheered_by_me ? CHEER_RED : C.text2}
         />
-        <Text style={[styles.cheerCount, item.cheered_by_me && { color: C.accent }]}>{item.cheer_count}</Text>
+        <Text style={[styles.cheerCount, item.cheered_by_me && { color: CHEER_RED }]}>{item.cheer_count}</Text>
       </TouchableOpacity>
     </View>
   );

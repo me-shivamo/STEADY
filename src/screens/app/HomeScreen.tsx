@@ -45,7 +45,7 @@ type ChatMsg =
   | { id: string; type: 'error';     text: string };
 
 // Formats an ISO timestamp as a short local time (e.g. "12:30 PM") for display
-// under chat bubbles. Falls back to an empty string for messages sent before
+// inside chat bubbles. Falls back to an empty string for messages sent before
 // this field existed, so old rows just render without a time rather than crashing.
 function formatBubbleTime(iso?: string): string {
   if (!iso) return '';
@@ -54,8 +54,50 @@ function formatBubbleTime(iso?: string): string {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 
+// Builds the invisible width-reserver that makes WhatsApp-style bubble
+// timestamps work. RN has no "float this right inside a paragraph", so the
+// timestamp is rendered twice:
+//
+//   1. This spacer — a transparent copy of the time appended to the message
+//      text. It draws nothing but still occupies width, so the text layout
+//      engine keeps exactly enough room for the real time at the end of the
+//      last line. When the last line is too full, the spacer wraps instead,
+//      creating the empty final line WhatsApp shows on long messages.
+//   2. The real time, absolutely positioned at the bubble's bottom-right, so
+//      it lands right-aligned whether the spacer stayed on the last line or
+//      wrapped to a new one.
+//
+// The spaces are non-breaking so the reserved block can never itself be split
+// across two lines, which would put the real time over the message text.
+function timeSpacer(time: string): string {
+  const NBSP = '\u00A0';
+  return NBSP.repeat(3) + time.replace(/ /g, NBSP);
+}
+
 let _id = 0;
 const uid = () => String(++_id);
+
+// Applies a freshly-fetched history thread to the feed WITHOUT discarding
+// anything the user added while that fetch was in flight.
+//
+// loadAndMergeHistory awaits two network round trips before it can build
+// `merged`, and handleSend can push a user bubble + a "thinking" bubble into
+// `messages` during that gap. A plain setMessages(merged) overwrote them, and
+// because replace() is a .map() over the list, the later
+// replace(thinkingId, card) then matched nothing and silently did nothing —
+// so a meal logged in those first few hundred ms never appeared in Log +
+// Coach at all (it still reached Food log and the totals, which read the
+// store directly). Anything `prev` has that the fetched thread doesn't is by
+// definition newer than everything in it, so it belongs on the end.
+//
+// In the normal case `prev` is empty — the initial state, or cleared by the
+// selectedDate effect — so this returns `next` unchanged.
+function mergeKeepingOptimistic(prev: ChatMsg[], next: ChatMsg[]): ChatMsg[] {
+  if (prev.length === 0) return next;
+  const nextIds = new Set(next.map(m => m.id));
+  const optimistic = prev.filter(m => !nextIds.has(m.id));
+  return optimistic.length === 0 ? next : [...next, ...optimistic];
+}
 
 // ── MacroCol — one column of the 3-column macro grid ─────────────────────────
 function MacroCol({ label, current, goal, dotColor }: {
@@ -202,7 +244,7 @@ export default function HomeScreen() {
     meals, totals, fetchEntriesForDate, logMealFromText, logMealFromPhoto, isLogging,
     isFetchingDate, selectedDate, setSelectedDate,
   } = useFoodLogStore();
-  const { profile } = useAuthStore();
+  const { profile, updateProfile } = useAuthStore();
   const logSavedEntry = useSavedEntriesStore(s => s.logSavedEntry);
 
   // Keep a ref to selectedDate so the PanResponder closure (created once)
@@ -276,11 +318,21 @@ export default function HomeScreen() {
     setMessages(prev => {
       let timeChanged = false;
       const updated = prev
-        // Remove cards for deleted meals, update cards for edited meals
-        .filter(msg => msg.type !== 'meal_card' || mealsById.has(msg.id))
+        // Remove cards for deleted meals, update cards for edited meals.
+        //
+        // Match on msg.meal.id — NOT msg.id. A message's id is only its React
+        // key: cards restored by loadAndMergeHistory happen to use the meal id,
+        // but a card created live by handleSend inherits the throwaway uid of
+        // the "thinking" bubble it replaced ("7"). Looking up msg.id therefore
+        // missed every just-logged card, and this filter read that miss as
+        // "the meal was deleted" and dropped the card out of the chat feed the
+        // next time the store changed (e.g. right after Adjust Macros saved).
+        // msg.meal.id is the meal_log id on every card, whatever path made it.
+        .filter(msg => msg.type !== 'meal_card' || mealsById.has(msg.meal.id))
         .map(msg => {
-          if (msg.type !== 'meal_card' || !mealsById.has(msg.id)) return msg;
-          const nextMeal = mealsById.get(msg.id)!;
+          if (msg.type !== 'meal_card') return msg;
+          const nextMeal = mealsById.get(msg.meal.id);
+          if (!nextMeal) return msg;
           if (nextMeal.created_at !== msg.meal.created_at) timeChanged = true;
           return { ...msg, meal: nextMeal };
         });
@@ -348,11 +400,14 @@ export default function HomeScreen() {
         .sort((a, b) => a.ts.localeCompare(b.ts))
         .map(e => e.msg);
 
-      setMessages(merged);
+      setMessages(prev => mergeKeepingOptimistic(prev, merged));
       initialSeedDone.current = true;
     } catch {
       // Non-fatal: fall back to showing meals only
-      setMessages(currentMeals.map(meal => ({ id: meal.id, type: 'meal_card' as const, meal })));
+      setMessages(prev => mergeKeepingOptimistic(
+        prev,
+        currentMeals.map(meal => ({ id: meal.id, type: 'meal_card' as const, meal })),
+      ));
       initialSeedDone.current = true;
     } finally {
       setIsLoadingChat(false);
@@ -441,7 +496,10 @@ export default function HomeScreen() {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
       try {
         const result = await logMealFromPhoto(photoToSend.base64, 'image/jpeg', caption || undefined);
-        replace(thinkingId, { id: thinkingId, type: 'meal_card', meal: result.meal });
+        // Key the card by the meal id (not the thinking bubble's uid) so it
+        // matches how loadAndMergeHistory builds restored cards — one id
+        // scheme for meal cards, whichever path created them.
+        replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
       } catch (err: any) {
         replace(thinkingId, {
           id: thinkingId, type: 'error',
@@ -475,7 +533,8 @@ export default function HomeScreen() {
         }
       } else {
         if (isViewingToday) {
-          replace(thinkingId, { id: thinkingId, type: 'meal_card', meal: result.meal });
+          // Same as the photo flow: key by meal id, not the thinking uid.
+          replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
         } else {
           const kcal = Math.round(result.meal.entries.reduce((s, e) => s + e.calories, 0));
           replace(thinkingId, {
@@ -502,6 +561,26 @@ export default function HomeScreen() {
   const proteinGoal = profile?.protein_goal_g  ?? 150;
   const carbGoal    = profile?.carb_goal_g     ?? 200;
   const fatGoal     = profile?.fat_goal_g      ?? 60;
+
+  // Tapping the setup card sends the user back into onboarding to actually
+  // finish it. RootNavigator swaps its ENTIRE tree — Onboarding vs. App —
+  // based purely on profile.onboarding_complete (see RootNavigator.tsx), and
+  // the two stacks are siblings, not nested, so there's no navigate() call
+  // that can jump from here directly into OnboardingNavigator. Flipping this
+  // one flag is the actual mechanism: RootNavigator re-renders, decides
+  // showOnboarding is now true, and mounts OnboardingNavigator on its own,
+  // starting at step 1 — same declarative pattern OnboardingRevealScreen
+  // already uses to LEAVE onboarding (sets it true), just run in reverse.
+  // Completing the flow for real this time sets it back to true and swaps
+  // back to AppNavigator → Home automatically, no extra "return" code needed.
+  const handleResumeOnboarding = async () => {
+    try {
+      await updateProfile({ onboarding_complete: false });
+    } catch {
+      // Swallow: updateProfile already surfaces its own errors upstream via
+      // its own error handling; if it fails, the user just stays on Home.
+    }
+  };
   // Real streak from daily_summaries; meals.length retriggers it so the chip
   // ticks over right after the first log of the day.
   const streak      = useStreak(meals.length) ?? 0;
@@ -608,7 +687,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={[styles.summaryCard, styles.setupCard]}
             activeOpacity={0.85}
-            onPress={() => navigation.navigate('Settings')}
+            onPress={handleResumeOnboarding}
           >
             <View style={styles.setupIconWrap}>
               <Ionicons name="flag-outline" size={20} color={C.accent} />
@@ -687,14 +766,20 @@ export default function HomeScreen() {
 
             {shownMessages.map(msg => {
               if (msg.type === 'user') {
+                // Hidden spacer reserves the room, absolute time fills it —
+                // see timeSpacer() for why the timestamp is rendered twice.
+                const time = formatBubbleTime(msg.sentAt);
                 return (
                   <View key={msg.id} style={styles.userRow}>
                     <View style={styles.userBubble}>
-                      <Text style={styles.userBubbleText}>{msg.text}</Text>
+                      <Text style={styles.userBubbleText}>
+                        {msg.text}
+                        {!!time && <Text style={styles.timeSpacerOnAccent}>{timeSpacer(time)}</Text>}
+                      </Text>
+                      {!!time && (
+                        <Text style={[styles.bubbleTime, styles.bubbleTimeOnAccent]}>{time}</Text>
+                      )}
                     </View>
-                    {!!formatBubbleTime(msg.sentAt) && (
-                      <Text style={styles.bubbleTimeRight}>{formatBubbleTime(msg.sentAt)}</Text>
-                    )}
                   </View>
                 );
               }
@@ -737,14 +822,18 @@ export default function HomeScreen() {
                 );
               }
               if (msg.type === 'answer') {
+                const time = formatBubbleTime(msg.sentAt);
                 return (
                   <View key={msg.id} style={styles.aiRow}>
                     <View style={styles.aiBubble}>
-                      <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                      <Text style={styles.aiBubbleText}>
+                        {msg.text}
+                        {!!time && <Text style={styles.timeSpacerOnSurface}>{timeSpacer(time)}</Text>}
+                      </Text>
+                      {!!time && (
+                        <Text style={[styles.bubbleTime, styles.bubbleTimeMuted]}>{time}</Text>
+                      )}
                     </View>
-                    {!!formatBubbleTime(msg.sentAt) && (
-                      <Text style={styles.bubbleTimeLeft}>{formatBubbleTime(msg.sentAt)}</Text>
-                    )}
                   </View>
                 );
               }
@@ -990,7 +1079,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
   userBubbleText: { color: '#FFFFFF', fontSize: 14, fontWeight: '400', fontFamily: fontFamily.regular, lineHeight: 21 },
-  bubbleTimeRight: { fontSize: 9, color: C.muted, fontFamily: fontFamily.regular, paddingHorizontal: 2 },
+  // Invisible width-reserver appended to the message text — see timeSpacer().
+  //
+  // Two rules for these. First, fontSize MUST match bubbleTime, or the room the
+  // spacer holds isn't the room the real timestamp needs and the two drift
+  // apart. Second, the colour is the BUBBLE'S OWN BACKGROUND, not 'transparent'
+  // — we shipped 'transparent' first and Android drew the spacer anyway, so the
+  // timestamp appeared twice, once at the text baseline and once at its pinned
+  // position. Painting the glyphs in the background colour makes them invisible
+  // no matter how the platform treats alpha, so these two values must stay in
+  // sync with userBubble/aiBubble's backgroundColor.
+  timeSpacerOnAccent:  { fontSize: 10, color: C.accent },
+  timeSpacerOnSurface: { fontSize: 10, color: C.surface },
+  // The visible timestamp, pinned to the bubble's bottom-right so it's always
+  // right-aligned — whether the spacer kept it on the last line of text or
+  // pushed it onto a line of its own.
+  //
+  // `right: 14` matches the bubbles' paddingHorizontal. `bottom: 8` is 2px
+  // below the content box (paddingVertical is 10), which is what drops the
+  // time slightly under the text baseline instead of sitting flush on it —
+  // the bottom-aligned look WhatsApp has. Nudge this to taste.
+  bubbleTime: {
+    position: 'absolute', right: 14, bottom: 8,
+    fontSize: 10, fontFamily: fontFamily.regular,
+  },
+  bubbleTimeOnAccent: { color: 'rgba(255,255,255,0.65)' },
 
   // AI row
   aiBubbleRow: { flexDirection: 'row' },
@@ -1000,7 +1113,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
   aiBubbleText: { fontSize: 14, color: C.text, lineHeight: 21, fontFamily: fontFamily.regular },
-  bubbleTimeLeft: { fontSize: 9, color: C.muted, fontFamily: fontFamily.regular, paddingHorizontal: 2 },
+  bubbleTimeMuted: { color: C.muted },
   thinkingBubble: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: C.card, borderRadius: 16, borderBottomLeftRadius: 4,

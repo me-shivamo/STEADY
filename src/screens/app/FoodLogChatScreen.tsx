@@ -303,7 +303,7 @@ function WelcomeBubble() {
       <View style={styles.aiBubble}>
         <Text style={styles.aiBubbleText}>
           Hey! I'm your STEADY AI. Tell me what you ate, any meal, any time, and I'll log the calories and macros for you automatically.{'\n\n'}
-          Try: <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>"I had two eggs on toast with a coffee"</Text>
+          Try: <Text style={{ fontWeight: '700', fontFamily: fontFamily.bold }}>"I had a bowl of oatmeal with a coffee"</Text>
         </Text>
       </View>
     </View>
