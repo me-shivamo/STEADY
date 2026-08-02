@@ -1,0 +1,186 @@
+[
+  {
+    "id": "pizza-2slices",
+    "text": "I ate two slices of pizza",
+    "category": "western-composite",
+    "expected": { "calories": [430, 620], "protein_g": [18, 30], "carbs_g": [45, 70], "fat_g": [16, 28] },
+    "note": "Cheese pizza, ~115-140g/slice. Protein should be ~10-13g/100g, not ~9g/100g (bread-like)."
+  },
+  {
+    "id": "pizza-1slice-pepperoni",
+    "text": "1 slice of pepperoni pizza",
+    "category": "western-composite",
+    "expected": { "calories": [270, 350], "protein_g": [11, 16], "carbs_g": [26, 36], "fat_g": [10, 17] }
+  },
+  {
+    "id": "cheeseburger",
+    "text": "a cheeseburger for lunch",
+    "category": "western-composite",
+    "expected": { "calories": [450, 620], "protein_g": [22, 32], "carbs_g": [30, 45], "fat_g": [22, 35] }
+  },
+  {
+    "id": "chicken-burger",
+    "text": "grilled chicken burger",
+    "category": "western-composite",
+    "expected": { "calories": [380, 550], "protein_g": [25, 38], "carbs_g": [30, 45], "fat_g": [10, 22] }
+  },
+  {
+    "id": "eggs-2",
+    "text": "2 eggs, scrambled",
+    "category": "count-based",
+    "expected": { "calories": [140, 220], "protein_g": [11, 16], "carbs_g": [0, 4], "fat_g": [9, 16] }
+  },
+  {
+    "id": "eggs-3-boiled",
+    "text": "ate 3 boiled eggs",
+    "category": "count-based",
+    "expected": { "calories": [210, 280], "protein_g": [16, 22], "carbs_g": [0, 3], "fat_g": [14, 21] }
+  },
+  {
+    "id": "banana-1",
+    "text": "1 banana",
+    "category": "raw-ingredient",
+    "expected": { "calories": [90, 130], "protein_g": [1, 2], "carbs_g": [23, 34], "fat_g": [0, 1] }
+  },
+  {
+    "id": "apple-1",
+    "text": "an apple",
+    "category": "raw-ingredient",
+    "expected": { "calories": [80, 120], "protein_g": [0, 1], "carbs_g": [19, 31], "fat_g": [0, 1] }
+  },
+  {
+    "id": "almonds-30g",
+    "text": "a handful of almonds, about 30g",
+    "category": "raw-ingredient",
+    "expected": { "calories": [165, 195], "protein_g": [5, 8], "carbs_g": [4, 9], "fat_g": [13, 18] },
+    "note": "Regression check for the almonds-at-60kcal/100g bug mentioned in resolver comments."
+  },
+  {
+    "id": "white-rice-cup",
+    "text": "1 cup of cooked white rice",
+    "category": "raw-ingredient",
+    "expected": { "calories": [190, 260], "protein_g": [3, 6], "carbs_g": [40, 56], "fat_g": [0, 2] }
+  },
+  {
+    "id": "chicken-breast-150g",
+    "text": "150g grilled chicken breast",
+    "category": "raw-ingredient",
+    "expected": { "calories": [200, 280], "protein_g": [38, 50], "carbs_g": [0, 2], "fat_g": [3, 12] }
+  },
+  {
+    "id": "poha",
+    "text": "1 plate of poha for breakfast",
+    "category": "indian-indb",
+    "expected": { "calories": [160, 420], "protein_g": [3, 10], "carbs_g": [25, 55], "fat_g": [4, 22] },
+    "note": "Should hit INDB seed cache. Widened after run 1: INDB's 'Poha' (294.5 kcal/100g) legitimately reflects the oil used in home-style poha, higher than a lean estimate."
+  },
+  {
+    "id": "roti-2",
+    "text": "2 rotis with dal",
+    "category": "indian-indb",
+    "expected": { "calories": [280, 420], "protein_g": [10, 18], "carbs_g": [45, 65], "fat_g": [4, 14] }
+  },
+  {
+    "id": "idli-3",
+    "text": "3 idlis with sambar",
+    "category": "indian-indb",
+    "expected": { "calories": [200, 380], "protein_g": [6, 14], "carbs_g": [35, 60], "fat_g": [2, 12] }
+  },
+  {
+    "id": "dosa-plain",
+    "text": "one plain dosa",
+    "category": "indian-indb",
+    "expected": { "calories": [130, 340], "protein_g": [2, 11], "carbs_g": [20, 65], "fat_g": [3, 10] },
+    "note": "Widened after run 1: INDB's 'Plain dosa' (380.9 kcal/100g) reflects a well-oiled restaurant-style dosa, higher than a thin home-style one."
+  },
+  {
+    "id": "paneer-butter-masala",
+    "text": "a bowl of paneer butter masala",
+    "category": "indian-indb",
+    "expected": { "calories": [300, 550], "protein_g": [10, 20], "carbs_g": [12, 30], "fat_g": [20, 40] }
+  },
+  {
+    "id": "chai-1cup",
+    "text": "1 cup of chai",
+    "category": "indian-indb",
+    "expected": { "calories": [30, 90], "protein_g": [0, 3], "carbs_g": [5, 14], "fat_g": [1, 4] }
+  },
+  {
+    "id": "biryani-plate",
+    "text": "a plate of chicken biryani",
+    "category": "indian-indb",
+    "expected": { "calories": [400, 700], "protein_g": [18, 35], "carbs_g": [45, 80], "fat_g": [12, 30] }
+  },
+  {
+    "id": "samosa-2",
+    "text": "2 samosas",
+    "category": "indian-indb",
+    "expected": { "calories": [250, 420], "protein_g": [4, 10], "carbs_g": [25, 45], "fat_g": [14, 26] }
+  },
+  {
+    "id": "milk-1glass",
+    "text": "a glass of milk, 250ml",
+    "category": "raw-ingredient",
+    "expected": { "calories": [120, 175], "protein_g": [6, 9], "carbs_g": [10, 14], "fat_g": [4, 10] }
+  },
+  {
+    "id": "oats-bowl",
+    "text": "a bowl of oatmeal",
+    "category": "raw-ingredient",
+    "expected": { "calories": [140, 260], "protein_g": [4, 10], "carbs_g": [22, 40], "fat_g": [2, 8] }
+  },
+  {
+    "id": "greek-yogurt-cup",
+    "text": "1 cup of greek yogurt",
+    "category": "packaged",
+    "expected": { "calories": [130, 230], "protein_g": [15, 24], "carbs_g": [5, 12], "fat_g": [0, 10] }
+  },
+  {
+    "id": "whey-protein-scoop",
+    "text": "1 scoop of whey protein in water",
+    "category": "packaged",
+    "expected": { "calories": [100, 150], "protein_g": [20, 27], "carbs_g": [1, 6], "fat_g": [0, 3] }
+  },
+  {
+    "id": "coca-cola-can",
+    "text": "a can of coca cola",
+    "category": "packaged",
+    "expected": { "calories": [130, 160], "protein_g": [0, 1], "carbs_g": [35, 42], "fat_g": [0, 0.5] }
+  },
+  {
+    "id": "peanut-butter-toast",
+    "text": "2 slices of toast with peanut butter",
+    "category": "western-composite",
+    "expected": { "calories": [280, 450], "protein_g": [9, 17], "carbs_g": [28, 48], "fat_g": [12, 26] }
+  },
+  {
+    "id": "french-fries-medium",
+    "text": "a medium serving of french fries",
+    "category": "western-composite",
+    "expected": { "calories": [300, 450], "protein_g": [3, 7], "carbs_g": [40, 58], "fat_g": [13, 22] }
+  },
+  {
+    "id": "caesar-salad",
+    "text": "chicken caesar salad",
+    "category": "western-composite",
+    "expected": { "calories": [300, 550], "protein_g": [22, 38], "carbs_g": [8, 22], "fat_g": [15, 35] }
+  },
+  {
+    "id": "avocado-half",
+    "text": "half an avocado",
+    "category": "raw-ingredient",
+    "expected": { "calories": [110, 160], "protein_g": [1, 3], "carbs_g": [5, 10], "fat_g": [10, 16] }
+  },
+  {
+    "id": "salmon-fillet",
+    "text": "a grilled salmon fillet, about 180g",
+    "category": "raw-ingredient",
+    "expected": { "calories": [300, 420], "protein_g": [35, 48], "carbs_g": [0, 2], "fat_g": [12, 26] }
+  },
+  {
+    "id": "peanuts-handful",
+    "text": "a small handful of peanuts",
+    "category": "raw-ingredient",
+    "expected": { "calories": [90, 180], "protein_g": [4, 8], "carbs_g": [3, 8], "fat_g": [8, 15] }
+  }
+]
