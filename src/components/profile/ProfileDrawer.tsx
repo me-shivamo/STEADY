@@ -40,7 +40,7 @@ type MenuItem = {
   action: 'comingSoon' | 'signOut' | 'navigate' | 'premium' | 'pingAdmin' | 'helpSupport';
   // Only param-less routes belong in the menu — navigate(name) with no params
   // is only type-safe for routes whose params are undefined.
-  screen?: 'Weight' | 'Water' | 'BodyMeasurements' | 'Progress' | 'Settings' | 'Reminders';
+  screen?: 'Weight' | 'Water' | 'BodyMeasurements' | 'Progress' | 'Settings' | 'Reminders' | 'GroupsIntro';
 };
 
 const MENU: MenuItem[] = [
@@ -50,7 +50,7 @@ const MENU: MenuItem[] = [
   { icon: 'body-outline',      label: 'Body Measurements', action: 'navigate', screen: 'BodyMeasurements' },
   { icon: 'restaurant-outline', label: 'My Foods', action: 'pingAdmin' },
   { icon: 'notifications-outline', label: 'Reminders',   action: 'navigate', screen: 'Reminders' },
-  { icon: 'people-outline',    label: 'Groups',          action: 'comingSoon' },
+  { icon: 'people-outline',    label: 'Groups',          action: 'navigate', screen: 'GroupsIntro' },
   { icon: 'gift-outline',      label: 'Refer a Friend',  action: 'comingSoon' },
   { icon: 'settings-outline',  label: 'Settings',        action: 'navigate', screen: 'Settings' },
   { icon: 'help-circle-outline', label: 'Help & Support', action: 'helpSupport' },
