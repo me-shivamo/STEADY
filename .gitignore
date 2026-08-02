@@ -34,3 +34,9 @@ yarn-error.log*
 # Maestro E2E test artifacts (see .maestro/README or pass
 # --test-output-dir .maestro/screenshots to `maestro test`)
 .maestro/screenshots/
+
+# Eval run output (contains real AI request/response payloads)
+scripts/eval/results.json
+scripts/eval/results-v2.json
+scripts/eval/results-dataset-*.json
+scripts/eval/.eval-session.json
