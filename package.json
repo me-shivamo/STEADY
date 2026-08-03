@@ -77,7 +77,8 @@
     ],
     "moduleNameMapper": {
       "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock",
-      "^.*/utils/posthog$": "<rootDir>/test-utils/posthogMock.ts"
+      "^.*/utils/posthog$": "<rootDir>/test-utils/posthogMock.ts",
+      "^\\./posthog$": "<rootDir>/test-utils/posthogMock.ts"
     },
     "testPathIgnorePatterns": [
       "/node_modules/",
