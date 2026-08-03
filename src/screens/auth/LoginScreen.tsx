@@ -16,6 +16,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
+import { track } from '../../utils/analytics';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 import { fontWeight, fontFamily } from '../../theme/typography';
@@ -70,6 +71,10 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handleGoogleSignIn = async () => {
     setErrorText(null);
+    // The tap, not the outcome. Paired with `sign_in`, the gap between them is
+    // the OAuth drop-off — people who open the Google sheet and back out —
+    // which is invisible if only successful sign-ins are counted.
+    track('auth_method_tapped', { method: 'google', screen: 'login' });
     try {
       setGoogleLoading(true);
       await signInWithGoogle();

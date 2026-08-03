@@ -8,7 +8,7 @@ import { supabase } from '../api/supabase';
 import { Tables } from '../types/database';
 import { useFoodLogStore } from './foodLogStore';
 import { useGroupStore } from './groupStore';
-import { posthog } from '../utils/posthog';
+import { track, identifyUser, resetUser, errorReason } from '../utils/analytics';
 
 // The generated DB types export the generic `Tables<>` helper, not a named
 // `Profile` type — derive it here (same pattern foodLogStore uses for its rows).
@@ -73,19 +73,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         data: { full_name: fullName },
       },
     });
-    if (error) throw error;
+    if (error) {
+      track('auth_failed', { action: 'sign_up', method: 'email', reason: errorReason(error) });
+      throw error;
+    }
     if (data.user) {
-      posthog.identify(data.user.id, { email, name: fullName });
-      posthog.capture('sign_up', { method: 'email' });
+      // Identify with the Supabase UUID only. The email and full name we have
+      // right here are deliberately NOT passed: PostHog is a third party, and
+      // an email address next to a stream of health behaviour is exactly the
+      // pairing our privacy policy shouldn't have to defend. The UUID is
+      // useless to anyone without database access.
+      identifyUser(data.user.id, { signup_method: 'email' });
+      track('sign_up', { method: 'email' });
     }
   },
 
   signIn: async (email, password) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      track('auth_failed', { action: 'sign_in', method: 'email', reason: errorReason(error) });
+      throw error;
+    }
     if (data.user) {
-      posthog.identify(data.user.id, { email });
-      posthog.capture('sign_in', { method: 'email' });
+      identifyUser(data.user.id);
+      track('sign_in', { method: 'email' });
     }
   },
 
@@ -124,10 +135,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       access_token: accessToken,
       refresh_token: refreshToken,
     });
-    if (sessionError) throw sessionError;
+    if (sessionError) {
+      track('auth_failed', { action: 'sign_in', method: 'google', reason: errorReason(sessionError) });
+      throw sessionError;
+    }
     if (sessionData.user) {
-      posthog.identify(sessionData.user.id, { email: sessionData.user.email ?? null });
-      posthog.capture('sign_in', { method: 'google' });
+      identifyUser(sessionData.user.id);
+      track('sign_in', { method: 'google' });
     }
   },
 
@@ -151,16 +165,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       provider: 'apple',
       token: credential.identityToken,
     });
-    if (error) throw error;
+    if (error) {
+      track('auth_failed', { action: 'sign_in', method: 'apple', reason: errorReason(error) });
+      throw error;
+    }
     if (data.user) {
-      posthog.identify(data.user.id, { email: data.user.email ?? null });
-      posthog.capture('sign_in', { method: 'apple' });
+      identifyUser(data.user.id);
+      track('sign_in', { method: 'apple' });
     }
   },
 
   signOut: async () => {
-    posthog.capture('sign_out');
-    posthog.reset();
+    // Order matters: capture the event while the identity is still attached,
+    // then reset. Reversed, sign_out would land on a fresh anonymous person.
+    track('sign_out', {});
+    resetUser();
     // Local-first sign-out: clear in-memory state synchronously so the UI swaps
     // to the welcome screen instantly (RootNavigator re-renders the moment
     // `session` becomes null). No awaited network call sits on the UI path, so
@@ -191,11 +210,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // app. functions.invoke() attaches this session's token automatically; the
     // server verifies it and deletes exactly that user (photos + cascade).
     const { data, error } = await supabase.functions.invoke('delete-account');
-    if (error) throw new Error(error.message);
-    if (!data?.success) throw new Error(data?.error ?? 'Account deletion failed');
+    if (error) {
+      track('account_deletion_failed', { reason: errorReason(error) });
+      throw new Error(error.message);
+    }
+    if (!data?.success) {
+      track('account_deletion_failed', { reason: errorReason(data?.error) });
+      throw new Error(data?.error ?? 'Account deletion failed');
+    }
 
-    posthog.capture('account_deleted');
-    posthog.reset();
+    track('account_deleted', {});
+    resetUser();
 
     // Same local teardown as signOut. The server already destroyed the session,
     // so the background token revoke below is best-effort cleanup of the stored
@@ -212,7 +237,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // allow-listed in Supabase Auth → URL Configuration → Redirect URLs.
     const redirectTo = AuthSession.makeRedirectUri({ scheme: 'steady', path: 'reset-password' });
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-    if (error) throw error;
+    if (error) {
+      track('auth_failed', { action: 'password_reset_request', method: 'email', reason: errorReason(error) });
+      throw error;
+    }
+    track('password_reset_requested', {});
   },
 
   handleAuthDeepLink: async (url) => {
@@ -250,7 +279,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   completePasswordReset: async (newPassword) => {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) throw error;
+    if (error) {
+      track('auth_failed', { action: 'password_reset_complete', method: 'email', reason: errorReason(error) });
+      throw error;
+    }
+    track('password_reset_completed', {});
     set({ passwordRecovery: false });
   },
 
@@ -295,5 +328,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     if (error) throw error;
     set({ profile: data });
+
+    // Only the column NAMES are captured — the values include weight, height
+    // and date of birth, none of which belong on a third-party server.
+    // Timezone-only writes are skipped: fetchProfile syncs the device timezone
+    // on every launch, so tracking those would bury real profile edits under
+    // background noise that means nothing to the product.
+    const fields = Object.keys(updates);
+    const isTimezoneSyncOnly = fields.length === 1 && fields[0] === 'timezone';
+    if (fields.length > 0 && !isTimezoneSyncOnly) {
+      track('profile_updated', { fields, field_count: fields.length });
+    }
+
+    // Keep the person profile's segmentation traits current whenever the
+    // underlying profile changes, so cohorts like "users cutting weight"
+    // don't go stale after someone switches goals mid-journey.
+    const userId = session.user.id;
+    if (data) {
+      identifyUser(userId, {
+        goal_type: data.goal,
+        activity_level: data.activity_level,
+        units_system: data.units_system,
+        diet_restriction_count: data.dietary_restrictions?.length ?? 0,
+        has_target_weight: data.goal_weight_kg != null,
+      });
+    }
   },
 }));

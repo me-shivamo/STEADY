@@ -17,6 +17,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
+import { track } from '../../utils/analytics';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 import { fontWeight, fontFamily } from '../../theme/typography';
@@ -51,6 +52,7 @@ export default function SignupScreen({ navigation }: Props) {
 
   const handleGoogleSignIn = async () => {
     setErrorText(null);
+    track('auth_method_tapped', { method: 'google', screen: 'signup' });
     try {
       setGoogleLoading(true);
       await signInWithGoogle();
