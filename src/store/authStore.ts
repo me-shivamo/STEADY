@@ -1,10 +1,15 @@
 import { create } from 'zustand';
-import { Session } from '@supabase/supabase-js';
+import { Session, User } from '@supabase/supabase-js';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { Platform } from 'react-native';
 import { supabase } from '../api/supabase';
+import {
+  isNativeGoogleSignInAvailable,
+  getGoogleIdToken,
+  signOutFromGoogle,
+} from '../api/googleSignIn';
 import { Tables } from '../types/database';
 import { useFoodLogStore } from './foodLogStore';
 import { useGroupStore } from './groupStore';
@@ -101,46 +106,76 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signInWithGoogle: async () => {
-    // Build the URL that Google will redirect back to after authentication.
-    // In Expo Go / dev builds this is an https:// URL on auth.expo.io.
-    // In production builds it becomes steady://auth/callback.
-    const redirectUri = AuthSession.makeRedirectUri({ scheme: 'steady', path: 'auth/callback' });
+    // Two paths to the same session, chosen at runtime.
+    //
+    // Preferred: native. The OS hands us a Google-signed ID token and Supabase
+    // verifies that JWT against Google's public keys — nobody sits in the
+    // middle of the handshake. This is also what keeps our Supabase hostname
+    // off Google's account picker: with no browser there is no redirect_uri,
+    // and the redirect_uri host is the string Google was displaying.
+    //
+    // Fallback: the original browser-redirect flow, for Expo Go, which can't
+    // load the native module. It still shows the Supabase URL — acceptable in
+    // dev, never hit by a real build.
+    let signedInUser: User | null = null;
 
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUri,
-        skipBrowserRedirect: true,
-      },
-    });
+    if (isNativeGoogleSignInAvailable()) {
+      const idToken = await getGoogleIdToken();
+      if (idToken === null) return; // user dismissed the account sheet
 
-    if (error) throw error;
-    if (!data.url) throw new Error('No OAuth URL returned from Supabase');
+      const { error, data } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: idToken,
+      });
+      if (error) {
+        track('auth_failed', { action: 'sign_in', method: 'google', reason: errorReason(error) });
+        throw error;
+      }
+      signedInUser = data.user;
+    } else {
+      // Build the URL that Google will redirect back to after authentication.
+      // In Expo Go / dev builds this is an https:// URL on auth.expo.io.
+      // In production builds it becomes steady://auth/callback.
+      const redirectUri = AuthSession.makeRedirectUri({ scheme: 'steady', path: 'auth/callback' });
 
-    // Open the Google login page inside an in-app browser and wait for it
-    // to redirect back to our app via the deep link.
-    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUri,
+          skipBrowserRedirect: true,
+        },
+      });
 
-    if (result.type !== 'success') return;
+      if (error) throw error;
+      if (!data.url) throw new Error('No OAuth URL returned from Supabase');
 
-    // Parse the tokens from the redirect URL fragment (#access_token=...&refresh_token=...)
-    const url = new URL(result.url);
-    const params = new URLSearchParams(url.hash.slice(1));
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
+      // Open the Google login page inside an in-app browser and wait for it
+      // to redirect back to our app via the deep link.
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUri);
 
-    if (!accessToken || !refreshToken) throw new Error('Missing tokens in OAuth callback');
+      if (result.type !== 'success') return;
 
-    const { error: sessionError, data: sessionData } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (sessionError) {
-      track('auth_failed', { action: 'sign_in', method: 'google', reason: errorReason(sessionError) });
-      throw sessionError;
+      // Parse the tokens from the redirect URL fragment (#access_token=...&refresh_token=...)
+      const url = new URL(result.url);
+      const params = new URLSearchParams(url.hash.slice(1));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (!accessToken || !refreshToken) throw new Error('Missing tokens in OAuth callback');
+
+      const { error: sessionError, data: sessionData } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (sessionError) {
+        track('auth_failed', { action: 'sign_in', method: 'google', reason: errorReason(sessionError) });
+        throw sessionError;
+      }
+      signedInUser = sessionData.user;
     }
-    if (sessionData.user) {
-      identifyUser(sessionData.user.id);
+
+    if (signedInUser) {
+      identifyUser(signedInUser.id);
       track('sign_in', { method: 'google' });
     }
   },
@@ -191,6 +226,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // sign-out path (drawer, future session-expiry, etc.) always clears it.
     useFoodLogStore.getState().reset();
     useGroupStore.getState().reset();
+
+    // Drop the Google SDK's cached account too. Without this the native picker
+    // never reappears — the next "Continue with Google" would silently sign the
+    // same person back in, locking a second user out of their own device.
+    void signOutFromGoogle();
 
     // Revoke the device's stored session token in the background. scope: 'local'
     // only invalidates THIS device (no all-devices round-trip), and we don't
