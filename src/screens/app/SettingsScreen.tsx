@@ -23,6 +23,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useWeightStore } from '../../store/weightStore';
 import { Tables } from '../../types/database';
 import { PRIVACY_URL, TERMS_URL } from '../../constants/legal';
+import { track } from '../../utils/analytics';
 import { AppStackNavProp } from '../../navigation/types';
 import { calculateTDEE, calculateAge, TDEEInput, TDEEResult } from '../../utils/tdee';
 import {
@@ -590,6 +591,15 @@ export default function SettingsScreen() {
 
       await updateProfile(updates);
 
+      // updateProfile already emits `profile_updated` with the changed field
+      // names. These two add the product-specific angles that a generic field
+      // list can't answer: whether people actually override the macro targets
+      // onboarding computed for them, and how the metric/imperial split falls.
+      track('macro_targets_adjusted', { changed_fields: Object.keys(targets) });
+      if (units !== ((profile?.units_system as UnitSystem) ?? 'metric')) {
+        track('units_changed', { units_system: units });
+      }
+
       // Two-way weight sync. weightStore.addEntry() upserts today's row in
       // weight_logs (and re-writes the profile column itself), so a weight
       // changed here now shows up on the Weight screen, the Progress chart and
@@ -838,7 +848,10 @@ export default function SettingsScreen() {
             <Row
               icon="shield-checkmark-outline"
               label="Privacy Policy"
-              onPress={() => Linking.openURL(PRIVACY_URL)}
+              onPress={() => {
+                track('legal_document_opened', { document: 'privacy_policy' });
+                Linking.openURL(PRIVACY_URL);
+              }}
             >
               <Ionicons name="open-outline" size={15} color={C.muted} />
             </Row>
@@ -846,7 +859,10 @@ export default function SettingsScreen() {
               icon="document-text-outline"
               label="Terms of Service"
               last
-              onPress={() => Linking.openURL(TERMS_URL)}
+              onPress={() => {
+                track('legal_document_opened', { document: 'terms_of_service' });
+                Linking.openURL(TERMS_URL);
+              }}
             >
               <Ionicons name="open-outline" size={15} color={C.muted} />
             </Row>
