@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { supabase } from '../api/supabase'
 import { Tables } from '../types/database'
 import { todayLocalDate } from '../utils/localDate'
+import { track, calorieBucket, errorReason } from '../utils/analytics'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,12 @@ export function sumTotals(meals: MealCard[]): DailyTotals {
 
 export function todayDate(): string {
   return todayLocalDate()
+}
+
+// Total calories on a single card — used only to bucket the log for analytics,
+// never sent raw. Kept next to sumTotals so the two stay conceptually paired.
+function cardCalories(meal: MealCard): number {
+  return meal.entries.reduce((sum, e) => sum + (e.calories ?? 0), 0)
 }
 
 function labelFromType(type: string): string {
@@ -265,6 +272,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       // The AI answered a question — no food to store, just hand back the reply.
       if (data.type === 'answer') {
         set({ isLogging: false })
+        track('ai_question_answered', { water_logged: data.water_logged ?? false })
         return { type: 'answer', reply: data.reply ?? '', waterLogged: data.water_logged ?? false }
       }
 
@@ -288,9 +296,20 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       const updated = [...get().meals, newCard]
 
       set({ meals: updated, totals: sumTotals(updated), isLogging: false })
+      // Captured here rather than in FoodLogChatScreen so that every caller of
+      // logMealFromText — the chat screen and Home's inline composer — is
+      // counted exactly once, with no chance of the two drifting apart.
+      track('meal_logged', {
+        source: 'text',
+        meal_type: newCard.meal_type,
+        calorie_bucket: calorieBucket(cardCalories(newCard)),
+        item_count: newCard.entries.length,
+        has_photo: newCard.photo_url != null,
+      })
       return { type: 'log', meal: newCard }
     } catch (err: any) {
       set({ isLogging: false, error: err.message ?? 'Failed to log meal' })
+      track('meal_log_failed', { source: 'text', reason: errorReason(err) })
       throw err
     }
   },
@@ -328,9 +347,17 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
 
       const updated = [...get().meals, newCard]
       set({ meals: updated, totals: sumTotals(updated), isLogging: false })
+      track('meal_logged', {
+        source: 'photo',
+        meal_type: newCard.meal_type,
+        calorie_bucket: calorieBucket(cardCalories(newCard)),
+        item_count: newCard.entries.length,
+        has_photo: true,
+      })
       return { type: 'log', meal: newCard }
     } catch (err: any) {
       set({ isLogging: false, error: err.message ?? 'Photo logging failed' })
+      track('meal_log_failed', { source: 'photo', reason: errorReason(err) })
       throw err
     }
   },
@@ -370,10 +397,17 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       },
     })
 
-    if (error) throw new Error(error.message)
-    if (!data?.success) throw new Error(data?.error ?? 'Update failed')
+    if (error) {
+      track('meal_edit_failed', { reason: errorReason(error) })
+      throw new Error(error.message)
+    }
+    if (!data?.success) {
+      track('meal_edit_failed', { reason: errorReason(data?.error) })
+      throw new Error(data?.error ?? 'Update failed')
+    }
     // An edit must resolve to food; if the AI read it as a question, surface that.
     if (data.type !== 'log') {
+      track('meal_edit_failed', { reason: 'not_food' })
       throw new Error("That didn't look like food — try describing what you ate.")
     }
 
@@ -396,6 +430,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
     // Swap the card in place (same index); everything else is untouched.
     const updated = get().meals.map(m => (m.id === mealId ? updatedCard : m))
     set({ meals: updated, totals: sumTotals(updated) })
+    track('meal_edited', { item_count: updatedCard.entries.length })
     return updatedCard
   },
 
@@ -459,6 +494,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
     }
 
     set({ meals: updated, totals: sumTotals(updated) })
+    track('meal_datetime_changed', { moved_to_different_day: newDate !== selectedDate })
   },
 
   // Delete an entire meal log (and all its food_entries via ON DELETE CASCADE).
@@ -473,6 +509,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
 
     const updated = get().meals.filter(m => m.id !== mealId)
     set({ meals: updated, totals: sumTotals(updated) })
+    track('meal_deleted', {})
   },
 
   // Delete a single food entry (for swipe-to-delete in task 3.5).
@@ -490,6 +527,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       .filter(meal => meal.entries.length > 0)
 
     set({ meals: updated, totals: sumTotals(updated) })
+    track('food_entry_deleted', {})
   },
 
   // Clear everything on sign-out so the next user starts fresh.

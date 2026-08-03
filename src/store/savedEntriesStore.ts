@@ -3,6 +3,7 @@ import { supabase } from '../api/supabase'
 import { Json } from '../types/database'
 import { useAuthStore } from './authStore'
 import { useFoodLogStore, MealCard, sumTotals, todayDate } from './foodLogStore'
+import { track, calorieBucket } from '../utils/analytics'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -103,6 +104,9 @@ export const useSavedEntriesStore = create<SavedEntriesState>((set, get) => ({
       return
     }
     set((s) => ({ entries: [data as unknown as SavedEntry, ...s.entries], error: null }))
+    // The entry's name is user-authored free text (often the raw meal
+    // description) so only the item count travels.
+    track('meal_saved_as_entry', { item_count: items.length })
   },
 
   deleteSavedEntry: async (id) => {
@@ -115,6 +119,7 @@ export const useSavedEntriesStore = create<SavedEntriesState>((set, get) => ({
       return
     }
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id), error: null }))
+    track('saved_entry_deleted', {})
   },
 
   // Re-logs a saved entry as today's meal. Everything needed (macros,
@@ -179,6 +184,21 @@ export const useSavedEntriesStore = create<SavedEntriesState>((set, get) => ({
     set((s) => ({
       entries: s.entries.map((e) => (e.id === entryId ? { ...e, last_used_at: new Date().toISOString() } : e)),
     }))
+
+    // Two events on purpose: `meal_logged` keeps the "how many meals were
+    // logged today, by any route" metric whole across all three sources,
+    // while `saved_entry_logged` answers the narrower question of whether the
+    // saved-entries shortcut is earning its place in the UI.
+    track('meal_logged', {
+      source: 'saved_entry',
+      meal_type: 'other',
+      calorie_bucket: calorieBucket(
+        entry.entries.reduce((sum, item) => sum + (item.calories ?? 0), 0)
+      ),
+      item_count: entry.entries.length,
+      has_photo: false,
+    })
+    track('saved_entry_logged', { item_count: entry.entries.length })
 
     return newCard
   },

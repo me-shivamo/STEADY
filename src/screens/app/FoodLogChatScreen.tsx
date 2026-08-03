@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFoodLogStore, MealCard as MealCardType, todayDate } from '../../store/foodLogStore';
 import MealCard from '../../components/nutrition/MealCard';
 import { supabase } from '../../api/supabase';
-import { posthog } from '../../utils/posthog';
+import { track, lengthBucket } from '../../utils/analytics';
 import { fontFamily } from '../../theme/typography';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -126,6 +126,9 @@ export default function FoodLogChatScreen() {
 
     setInput('');
     push({ id: uid(), type: 'user', text });
+    // Only the length band travels — the message itself is the user telling us
+    // what they ate, which is exactly the kind of text that never leaves here.
+    track('chat_message_sent', { length_bucket: lengthBucket(text) });
 
     const thinkingId = uid();
     push({ id: thinkingId, type: 'thinking' });
@@ -138,17 +141,17 @@ export default function FoodLogChatScreen() {
         replace(thinkingId, { id: thinkingId, type: 'answer', text: result.reply });
       } else {
         replace(thinkingId, { id: thinkingId, type: 'meal_card', meal: result.meal });
-        const totalCalories = result.meal.entries.reduce((sum, e) => sum + (e.calories ?? 0), 0);
-        posthog.capture('meal_logged', {
-          meal_type: result.meal.meal_type,
-          calories: totalCalories,
-          item_count: result.meal.entries.length,
-        });
+        // `meal_logged` is captured inside logMealFromText (foodLogStore) so
+        // the text, photo and saved-entry routes all report it identically —
+        // capturing it here too would double-count every chat log.
       }
     } catch (err: any) {
       const message = err.message ?? 'Something went wrong. Try again.';
       replace(thinkingId, { id: thinkingId, type: 'error', text: message });
-      posthog.capture('ai_chat_error', { error_message: message });
+      // The failure is already captured as `meal_log_failed` in the store,
+      // with the message run through errorReason() first. The old code sent
+      // `error_message` verbatim, and these strings routinely quote the user's
+      // own meal text back at them — a quiet PII leak into analytics.
     }
 
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);

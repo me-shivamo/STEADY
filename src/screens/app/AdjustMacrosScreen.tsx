@@ -9,6 +9,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack'
 import type { AppStackParamList } from '../../navigation/types'
 import { useFoodLogStore, MacroOverride } from '../../store/foodLogStore'
 import { fontFamily } from '../../theme/typography'
+import { track } from '../../utils/analytics'
 
 // ── Design tokens — mirrors MealCard.tsx exactly ─────────────────────────────
 const C = {
@@ -190,6 +191,12 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
           } as MacroOverride)
         )
       )
+      // Captured here rather than in updateEntryMacros: the store call runs
+      // once per entry, so tracking there would emit N events for a single
+      // user action. One event with the count is the honest shape. A high
+      // rate here means the AI's estimates are off often enough that people
+      // correct them by hand — a direct quality signal for the food pipeline.
+      track('meal_macros_adjusted', { entries_changed: drafts.length })
       // Mark all rows as saved
       setDrafts(prev => prev.map(d => ({ ...d, saved: true })))
       // Give the user a moment to see the success state, then pop back
