@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { todayLocalDate, daysAgoLocalDate } from '../utils/localDate';
+import { track } from '../utils/analytics';
 
 export type MeasurementField =
   | 'waist_cm' | 'hips_cm' | 'chest_cm' | 'arms_cm' | 'thighs_cm' | 'neck_cm' | 'body_fat_pct';
@@ -52,6 +53,7 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
 
   setRange: (range) => {
     set({ range });
+    track('measurement_range_changed', { range });
     get().fetchEntries();
   },
 
@@ -104,6 +106,12 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
         );
         return { entries: updated };
       });
+
+      // Which body parts people bother to track is a product question worth
+      // answering; the circumferences themselves are nobody's business, so
+      // only the field names travel — never `values`.
+      const fields = Object.keys(values);
+      track('measurements_logged', { fields, field_count: fields.length });
     }
   },
 
@@ -113,6 +121,7 @@ export const useBodyMeasurementsStore = create<BodyMeasurementsState>((set, get)
 
     await supabase.from('body_measurements').delete().eq('id', id).eq('user_id', userId);
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+    track('measurement_entry_deleted', {});
   },
 
   // Lightweight fetch for the Progress screen's trend-link card — only the

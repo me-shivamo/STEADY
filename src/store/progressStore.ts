@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { todayLocalDate, toLocalDateString } from '../utils/localDate';
+import { track } from '../utils/analytics';
 
 export type DayStatus = 'ok' | 'over' | 'today' | 'miss' | 'future';
 
@@ -86,7 +87,13 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
   loading: false,
 
   setWeekOffset: (weekOffset) => {
+    // Direction is derived here rather than passed in, so every caller (both
+    // arrow buttons and any future swipe gesture) reports it consistently.
+    // weekOffset counts backwards from 0 = this week, so a smaller number is
+    // further in the past.
+    const direction = weekOffset < get().weekOffset ? 'previous' : 'next';
     set({ weekOffset });
+    track('progress_week_changed', { week_offset: weekOffset, direction });
     get().fetchWeek();
   },
 

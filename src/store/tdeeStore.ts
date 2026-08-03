@@ -3,6 +3,7 @@ import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { computeWeightTrend } from './weightStore';
 import { todayLocalDate, daysAgoLocalDate } from '../utils/localDate';
+import { track } from '../utils/analytics';
 
 // Rough energy density of 1kg of body-mass change. This is the standard
 // "3500 kcal per lb" rule of thumb (≈7700 kcal/kg) used across nutrition
@@ -106,6 +107,10 @@ export const useTdeeStore = create<TdeeState>((set, get) => ({
         weightSpanDays,
         loading: false,
       });
+      // The ratio of has_estimate false-to-true tells us how many people ever
+      // log consistently enough to unlock TDEE at all — the feature is useless
+      // if that number stays near zero, and no screen view would reveal it.
+      track('tdee_estimate_viewed', { has_estimate: false });
       return;
     }
 
@@ -147,5 +152,6 @@ export const useTdeeStore = create<TdeeState>((set, get) => ({
       weightSpanDays,
       loading: false,
     });
+    track('tdee_estimate_viewed', { has_estimate: true });
   },
 }));

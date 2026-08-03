@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { todayLocalDate } from '../utils/localDate';
+import { track } from '../utils/analytics';
 
 export type WaterEntry = {
   id: string;
@@ -63,7 +64,13 @@ export const useWaterStore = create<WaterState>((set, get) => ({
       Alert.alert('Could not log water', 'Check your connection and try again.');
       return;
     }
+    const entryIndex = get().entries.length; // 0-based count before this insert
     set((s) => ({ entries: [...s.entries, data as WaterEntry] }));
+    // amount_ml is which preset button was tapped (250 / 500 / …), not a body
+    // metric, so the exact value is both safe and the whole point — it tells
+    // us whether the preset sizes we shipped match how people actually drink.
+    // entry_index shows how deep into the day's logging streak this was.
+    track('water_logged', { amount_ml, entry_index: entryIndex });
   },
 
   deleteEntry: async (id) => {
@@ -76,5 +83,6 @@ export const useWaterStore = create<WaterState>((set, get) => ({
       return;
     }
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+    track('water_entry_deleted', {});
   },
 }));

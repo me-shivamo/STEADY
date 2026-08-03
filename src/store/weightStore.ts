@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { todayLocalDate, daysAgoLocalDate } from '../utils/localDate';
+import { track, weightBucket } from '../utils/analytics';
 
 export type WeightEntry = {
   id: string;
@@ -87,6 +88,7 @@ export const useWeightStore = create<WeightState>((set, get) => ({
 
   setRange: (range) => {
     set({ range });
+    track('weight_range_changed', { range });
     get().fetchEntries();
   },
 
@@ -134,6 +136,17 @@ export const useWeightStore = create<WeightState>((set, get) => ({
       return;
     }
 
+    // Body weight is the single most sensitive number STEADY holds, so only a
+    // coarse 10 kg band leaves the device — enough to segment "who is this app
+    // for" without ever storing a datapoint that could be matched to a person.
+    // is_same_day_update distinguishes a genuine new weigh-in from someone
+    // correcting a typo, which otherwise inflate each other in the same count.
+    track('weight_logged', {
+      weight_bucket_kg: weightBucket(weight_kg),
+      has_notes: !!notes?.trim(),
+      is_same_day_update: get().entries.some((e) => e.logged_date === today),
+    });
+
     // Merge into local entries — replace today's if it exists, else append
     set((s) => {
       const without = s.entries.filter((e) => e.logged_date !== today);
@@ -163,5 +176,6 @@ export const useWeightStore = create<WeightState>((set, get) => ({
       return;
     }
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+    track('weight_entry_deleted', {});
   },
 }));
