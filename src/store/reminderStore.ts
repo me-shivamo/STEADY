@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import { Json } from '../types/database';
+import { track, errorReason } from '../utils/analytics';
 
 export type ReminderType =
   | 'workout'
@@ -281,8 +282,12 @@ export const useReminderStore = create<ReminderState>((set, get) => ({
 
     if (error) {
       set((state) => ({ reminders: { ...state.reminders, [type]: current } }));
+      track('reminder_save_failed', { type, reason: errorReason(error) });
       throw error;
     }
+    // Which reminder types people actually switch on is the clearest signal we
+    // have about what they want to be nudged about.
+    track('reminder_toggled', { type, enabled: nextEnabled });
   },
 
   // Persists a fully-edited config (and its enabled state) in one write —
@@ -312,8 +317,18 @@ export const useReminderStore = create<ReminderState>((set, get) => ({
 
     if (error) {
       set((state) => ({ reminders: { ...state.reminders, [type]: previous } }));
+      track('reminder_save_failed', { type, reason: errorReason(error) });
       throw error;
     }
+    // times_count comes from the same computeTimes() the DB write uses, so it
+    // reflects reminders that will genuinely fire — disabled meal slots and
+    // the inactive half of water's mode contribute nothing.
+    track('reminder_config_saved', {
+      type,
+      kind: config.kind,
+      enabled,
+      times_count: computeTimes(config).length,
+    });
   },
 
   reset: () => set({ reminders: defaultReminders(), loading: false }),

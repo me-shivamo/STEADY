@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from '../store/authStore';
+import { track, errorReason } from '../utils/analytics';
 
 // Registers this device for push notifications: requests permission, gets an
 // Expo push token, and sends it to the register-push-token Edge Function so
@@ -37,9 +38,14 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
   if (existingStatus !== 'granted') {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
+    // Only captured when we actually showed the OS prompt — re-reporting an
+    // already-granted permission on every launch would drown out the number
+    // that matters, which is the accept rate at the moment of asking.
+    track('push_permission_result', { granted: status === 'granted' });
   }
   if (finalStatus !== 'granted') {
     console.warn('Push notification permission denied.');
+    track('push_registration_failed', { reason: 'forbidden', stage: 'permission' });
     return;
   }
 
@@ -58,8 +64,13 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
   });
   if (error) {
     console.warn('Failed to register push token:', error.message);
+    track('push_registration_failed', { reason: errorReason(error), stage: 'server' });
     return;
   }
+  // The reminders feature is only real for devices that get this far. If
+  // enabled-reminder counts ever outrun registered tokens, the pg_cron sender
+  // has nowhere to deliver and the bug would otherwise be invisible.
+  track('push_token_registered', { platform: Platform.OS });
 
   await saveDeviceTimezone();
 }
