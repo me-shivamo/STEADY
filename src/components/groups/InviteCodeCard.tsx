@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { homeColors as C } from '../../theme/homeColors';
 import { fontFamily } from '../../theme/typography';
+import { track } from '../../utils/analytics';
 
 interface InviteCodeCardProps {
   inviteCode: string;
@@ -14,12 +15,16 @@ export default function InviteCodeCard({ inviteCode }: InviteCodeCardProps) {
 
   const handleCopy = async () => {
     await Clipboard.setStringAsync(inviteCode);
+    // Invites sent vs. groups joined is STEADY's viral loop. Only the method
+    // is captured — the code itself would be a join token in the event stream.
+    track('group_invite_shared', { method: 'copy' });
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
   };
 
   const handleShare = async () => {
     try {
+      track('group_invite_shared', { method: 'share' });
       await Share.share({
         message: `Join my group on STEADY! Use invite code ${inviteCode} to join.`,
       });

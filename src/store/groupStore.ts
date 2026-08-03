@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { supabase } from '../api/supabase';
 import { useAuthStore } from './authStore';
 import type { Tables } from '../types/database';
+import { track, errorReason } from '../utils/analytics';
 
 export type GroupCategory = 'friends' | 'family' | 'coach' | 'team';
 
@@ -136,11 +137,15 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     }));
   },
 
-  setActiveGroup: (groupId) => set({ activeGroupId: groupId }),
+  setActiveGroup: (groupId) => {
+    set({ activeGroupId: groupId });
+    track('group_switched', { group_count: get().myGroups.length });
+  },
 
   createGroup: async (name, category) => {
     const { data, error } = await supabase.rpc('create_group', { p_name: name, p_category: category });
     if (error || !data) {
+      track('group_create_failed', { reason: errorReason(error) });
       throw new Error(error?.message ?? 'Could not create group');
     }
     const group: GroupSummary = {
@@ -152,15 +157,22 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       member_count: 1,
     };
     set((s) => ({ myGroups: [group, ...s.myGroups], activeGroupId: group.id }));
+    // Category only — the group name is user-authored free text.
+    track('group_created', { category });
     return group;
   },
 
   previewGroupByCode: async (code) => {
     const { data, error } = await supabase.rpc('get_group_preview_by_code', { p_code: code });
     if (error) {
+      track('group_invite_previewed', { found: false });
       throw new Error(error.message);
     }
     const row = data?.[0];
+    // Tracks whether typed invite codes actually resolve — a high `found:
+    // false` rate would point at codes being hard to transcribe, which is a
+    // fixable design problem rather than a mysterious drop-off.
+    track('group_invite_previewed', { found: !!row });
     if (!row) return null;
     return {
       group_id: row.group_id,
@@ -174,6 +186,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
   joinGroup: async (code) => {
     const { data, error } = await supabase.rpc('join_group_by_code', { p_code: code });
     if (error || !data) {
+      track('group_join_failed', { reason: errorReason(error) });
       throw new Error(error?.message ?? 'Could not join group');
     }
     const group: GroupSummary = {
@@ -188,6 +201,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       myGroups: s.myGroups.some((g) => g.id === group.id) ? s.myGroups : [group, ...s.myGroups],
       activeGroupId: group.id,
     }));
+    track('group_joined', { member_count: group.member_count });
     return group;
   },
 
@@ -197,6 +211,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       Alert.alert('Could not leave group', error.message);
       return;
     }
+    track('group_left', {});
     set((s) => {
       const myGroups = s.myGroups.filter((g) => g.id !== groupId);
       return {
@@ -215,6 +230,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set((s) => ({
       myGroups: s.myGroups.map((g) => (g.id === groupId ? { ...g, name } : g)),
     }));
+    track('group_renamed', {});
   },
 
   removeMember: async (groupId, userId) => {
@@ -226,6 +242,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set((s) => ({
       leaderboard: s.leaderboard.filter((r) => r.user_id !== userId),
     }));
+    track('group_member_removed', {});
   },
 
   deleteGroup: async (groupId) => {
@@ -234,6 +251,7 @@ export const useGroupStore = create<GroupState>((set, get) => ({
       Alert.alert('Could not delete group', error.message);
       return;
     }
+    track('group_deleted', {});
     set((s) => {
       const myGroups = s.myGroups.filter((g) => g.id !== groupId);
       return {
@@ -277,6 +295,9 @@ export const useGroupStore = create<GroupState>((set, get) => ({
     set((s) => ({
       activityFeed: before ? [...s.activityFeed, ...items] : items,
     }));
+    // Only the "load more" case is interesting — the initial fetch is just the
+    // screen opening, which screen tracking already covers.
+    if (before) track('group_activity_feed_paginated', {});
   },
 
   postCheer: async (eventId) => {
@@ -301,7 +322,11 @@ export const useGroupStore = create<GroupState>((set, get) => ({
             : item
         ),
       }));
+      return;
     }
+    // Tracked after the write confirms, not alongside the optimistic UI flip —
+    // otherwise a rolled-back cheer would still be counted as engagement.
+    track('group_cheer_posted', {});
   },
 
   removeCheer: async (eventId) => {
@@ -329,10 +354,15 @@ export const useGroupStore = create<GroupState>((set, get) => ({
             : item
         ),
       }));
+      return;
     }
+    track('group_cheer_removed', {});
   },
 
   nudgeMember: async () => {
+    // Tracked even though the call always throws: the event count IS the
+    // demand signal for whether the push pipeline is worth finishing.
+    track('group_nudge_attempted', {});
     // TODO: wire to Reminders push infra once built (Expo push token table +
     // pg_cron + Edge Function already exist for personal reminders — a group
     // nudge is the same pipeline, targeted at someone else's token instead
