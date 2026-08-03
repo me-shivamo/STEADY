@@ -8,7 +8,7 @@ import { Chip } from '../../components/onboarding/SelectableCard';
 import { colors } from '../../theme/colors';
 import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track } from '../../utils/analytics';
 
 const DIET_OPTIONS = ['Veg', 'Non-veg', 'Keto', 'Low-carb'];
 
@@ -41,7 +41,7 @@ export default function OnboardingDietScreen({ navigation }: Props) {
     try {
       const restrictions = buildRestrictions();
       await updateProfile({ dietary_restrictions: restrictions });
-      posthog.capture('onboarding_step_completed', { step: 'diet', restrictions, count: restrictions.length });
+      track('onboarding_step_completed', { step: 'diet', restrictions, restriction_count: restrictions.length });
       navigation.navigate('OnboardingReveal');
     } finally {
       setLoading(false);
@@ -52,7 +52,7 @@ export default function OnboardingDietScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await updateProfile({ dietary_restrictions: [] });
-      posthog.capture('onboarding_step_completed', { step: 'diet', restrictions: [], count: 0 });
+      track('onboarding_step_completed', { step: 'diet', restrictions: [], restriction_count: 0 });
       navigation.navigate('OnboardingReveal');
     } finally {
       setLoading(false);

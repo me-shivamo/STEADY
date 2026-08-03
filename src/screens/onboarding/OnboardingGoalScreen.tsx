@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { OnboardingNavProp } from '../../navigation/types';
 import { useAuthStore } from '../../store/authStore';
@@ -6,7 +6,7 @@ import OnboardingScreen from '../../components/onboarding/OnboardingScreen';
 import ChatBubble from '../../components/onboarding/ChatBubble';
 import { SelectableCard } from '../../components/onboarding/SelectableCard';
 import { spacing } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track } from '../../utils/analytics';
 
 type Goal = 'lose_weight' | 'gain_weight' | 'maintain' | 'build_muscle';
 
@@ -24,12 +24,21 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
   const { updateProfile } = useAuthStore();
 
+  // The funnel needs a denominator. Without an explicit "started" event, the
+  // only baseline for onboarding completion is sign_up, which silently mixes
+  // in returning users and anyone who bounced before this screen rendered.
+  // Empty dependency array = run once on mount (React's equivalent of a
+  // constructor side effect), and this is the first screen in the stack.
+  useEffect(() => {
+    track('onboarding_started', {});
+  }, []);
+
   const handleContinue = async () => {
     if (!selected) return;
     setLoading(true);
     try {
       await updateProfile({ goal: selected });
-      posthog.capture('onboarding_step_completed', { step: 'goal', goal: selected });
+      track('onboarding_step_completed', { step: 'goal', goal: selected });
       navigation.navigate('OnboardingStats');
     } finally {
       setLoading(false);
@@ -44,7 +53,7 @@ export default function OnboardingGoalScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await updateProfile({ onboarding_complete: true });
-      posthog.capture('onboarding_skipped_to_home', { step: 'goal' });
+      track('onboarding_skipped_to_home', { step: 'goal' });
     } finally {
       setLoading(false);
     }

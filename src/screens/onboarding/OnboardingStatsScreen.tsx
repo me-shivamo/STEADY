@@ -8,7 +8,7 @@ import ChatBubble from '../../components/onboarding/ChatBubble';
 import { colors } from '../../theme/colors';
 import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track } from '../../utils/analytics';
 
 /** What gets persisted to `profiles.units_system` and read by the rest of the app. */
 type UnitSystem = 'metric' | 'imperial';
@@ -94,7 +94,7 @@ export default function OnboardingStatsScreen({ navigation }: Props) {
         current_weight_kg: weightKg,
         units_system: unitsSystem,
       });
-      posthog.capture('onboarding_step_completed', { step: 'stats', units: unitsSystem, pairing });
+      track('onboarding_step_completed', { step: 'stats', units: unitsSystem, pairing });
       navigation.navigate('OnboardingTargetWeight');
     } finally {
       setLoading(false);

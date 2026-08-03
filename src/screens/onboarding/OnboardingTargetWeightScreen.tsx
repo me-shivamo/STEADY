@@ -9,7 +9,7 @@ import { Chip } from '../../components/onboarding/SelectableCard';
 import { colors } from '../../theme/colors';
 import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track } from '../../utils/analytics';
 import { toLocalDateString } from '../../utils/localDate';
 
 type UnitSystem = 'metric' | 'imperial';
@@ -66,7 +66,7 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
         goal_weight_kg: goalWeightKg,
         deadline_date: effectiveMonths !== null ? addMonths(effectiveMonths) : null,
       });
-      posthog.capture('onboarding_step_completed', { step: 'target_weight', skipped: false });
+      track('onboarding_step_completed', { step: 'target_weight', skipped: false });
       navigation.navigate('OnboardingActivity');
     } finally {
       setLoading(false);
@@ -77,7 +77,7 @@ export default function OnboardingTargetWeightScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await updateProfile({ goal_weight_kg: null, deadline_date: null });
-      posthog.capture('onboarding_step_completed', { step: 'target_weight', skipped: true });
+      track('onboarding_step_completed', { step: 'target_weight', skipped: true });
       navigation.navigate('OnboardingActivity');
     } finally {
       setLoading(false);

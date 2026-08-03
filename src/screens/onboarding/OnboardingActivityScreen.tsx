@@ -6,7 +6,7 @@ import OnboardingScreen from '../../components/onboarding/OnboardingScreen';
 import ChatBubble from '../../components/onboarding/ChatBubble';
 import { SelectableCard } from '../../components/onboarding/SelectableCard';
 import { spacing } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track } from '../../utils/analytics';
 
 type ActivityLevel = 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'super_active';
 
@@ -30,7 +30,7 @@ export default function OnboardingActivityScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await updateProfile({ activity_level: selected });
-      posthog.capture('onboarding_step_completed', { step: 'activity', activity_level: selected });
+      track('onboarding_step_completed', { step: 'activity', activity_level: selected });
       navigation.navigate('OnboardingDiet');
     } finally {
       setLoading(false);

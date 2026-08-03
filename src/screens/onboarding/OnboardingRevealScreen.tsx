@@ -8,7 +8,7 @@ import ChatBubble from '../../components/onboarding/ChatBubble';
 import { colors } from '../../theme/colors';
 import { typography, fontFamily } from '../../theme/typography';
 import { spacing, radius } from '../../theme/spacing';
-import { posthog } from '../../utils/posthog';
+import { track, calorieGoalBucket } from '../../utils/analytics';
 
 export default function OnboardingRevealScreen() {
   const { profile, updateProfile } = useAuthStore();
@@ -65,11 +65,15 @@ export default function OnboardingRevealScreen() {
         fat_goal_g: result.fatG,
         onboarding_complete: true,
       });
-      posthog.capture('onboarding_completed', {
+      track('onboarding_completed', {
         goal: profile?.goal ?? null,
-        calorie_goal: result.calorieGoal,
-        diet_type: profile?.dietary_restrictions ?? null,
         activity_level: profile?.activity_level ?? null,
+        // Bucketed rather than raw: the calorie goal is derived from height,
+        // weight, age and sex, so a precise number is a decent fingerprint of
+        // the body it was computed from. The band answers the same product
+        // question ("what kind of targets are we handing people?") safely.
+        calorie_goal_bucket: calorieGoalBucket(result.calorieGoal),
+        diet_restriction_count: profile?.dietary_restrictions?.length ?? 0,
       });
     } finally {
       setLoading(false);
