@@ -35,6 +35,7 @@ import { useStreak } from '../../hooks/useStreak';
 import { fontFamily } from '../../theme/typography';
 import TypewriterText from '../../components/common/TypewriterText';
 import { useScreenChrome } from '../../hooks/useScreenChrome';
+import { track } from '../../utils/analytics';
 
 // ── Chat message types ─────────────────────────────────────────────────────────
 type ChatMsg =
@@ -267,11 +268,17 @@ export default function HomeScreen() {
           // swipe left → next day (blocked if already on today)
           d.setDate(d.getDate() + 1);
           const next = toLocalDateString(d);
-          if (next <= todayDate()) useFoodLogStore.getState().setSelectedDate(next);
+          if (next <= todayDate()) {
+            useFoodLogStore.getState().setSelectedDate(next);
+            track('log_date_changed', { direction: 'next', is_today: next === todayDate() });
+          }
         } else if (g.dx > 50) {
           // swipe right → previous day
           d.setDate(d.getDate() - 1);
           useFoodLogStore.getState().setSelectedDate(toLocalDateString(d));
+          // Back-filling yesterday is a very different habit from logging live,
+          // and the two are indistinguishable without this.
+          track('log_date_changed', { direction: 'previous', is_today: false });
         }
       },
     })
@@ -434,7 +441,14 @@ export default function HomeScreen() {
   // pendingPhoto so the composer shows a thumbnail and the send button is ready.
   const handleCameraPress = async () => {
     setPhotoErrorText(null);
+    // Photo logging is a four-stage funnel and every stage can lose someone:
+    // tapped the button → granted permission → actually took a shot → the AI
+    // parsed it. Only the last stage is visible from the store, so the first
+    // three are captured here. A big gap at any one of them points somewhere
+    // completely different (bad affordance / scary prompt / bad camera UX).
+    track('photo_capture_started', { source: 'camera' });
     const permission = await ImagePicker.requestCameraPermissionsAsync();
+    track('camera_permission_result', { granted: permission.granted, source: 'camera' });
     if (!permission.granted) {
       setPhotoErrorText('Please allow camera access in your device Settings to log food by photo.');
       return;
@@ -445,8 +459,13 @@ export default function HomeScreen() {
       base64: true,   // we need this to send to the Edge Function
       allowsEditing: false,
     });
-    if (!result.canceled && result.assets[0]?.base64) {
+    if (result.canceled) {
+      track('photo_capture_cancelled', { source: 'camera' });
+      return;
+    }
+    if (result.assets[0]?.base64) {
       const asset = result.assets[0];
+      track('photo_attached', { source: 'camera' });
       // Downscale before it ever leaves the device — a raw phone photo can be
       // several MB, and that same base64 string gets sent twice server-side
       // (once to Storage, once to OpenRouter), so shrinking here speeds up
@@ -459,7 +478,9 @@ export default function HomeScreen() {
   // Open the photo library (gallery) as an alternative to the live camera.
   const handleGalleryPress = async () => {
     setPhotoErrorText(null);
+    track('photo_capture_started', { source: 'library' });
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    track('camera_permission_result', { granted: permission.granted, source: 'library' });
     if (!permission.granted) {
       setPhotoErrorText('Please allow photo library access in your device Settings.');
       return;
@@ -470,8 +491,13 @@ export default function HomeScreen() {
       base64: true,
       allowsEditing: false,
     });
-    if (!result.canceled && result.assets[0]?.base64) {
+    if (result.canceled) {
+      track('photo_capture_cancelled', { source: 'library' });
+      return;
+    }
+    if (result.assets[0]?.base64) {
       const asset = result.assets[0];
+      track('photo_attached', { source: 'library' });
       const base64 = await resizeForUpload(asset.uri, asset.width, asset.height);
       setPendingPhoto({ uri: asset.uri, base64 });
     }
@@ -628,7 +654,10 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.groupsBtn}
             activeOpacity={0.7}
-            onPress={() => navigation.navigate('GroupsIntro')}
+            onPress={() => {
+              track('home_quick_action_tapped', { action: 'groups' });
+              navigation.navigate('GroupsIntro');
+            }}
           >
             <Ionicons name="people-outline" size={20} color={C.text} />
           </TouchableOpacity>
@@ -652,6 +681,7 @@ export default function HomeScreen() {
           selectedDate={selectedDate}
           onSelectDate={(date) => {
             setSelectedDate(date);
+            track('log_date_changed', { direction: 'calendar', is_today: date === todayDate() });
           }}
         />
 
@@ -893,7 +923,18 @@ export default function HomeScreen() {
             />
             {/* Saved Entries button — quick-log a previously saved meal */}
             {isViewingToday && !pendingPhoto && (
-              <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7} onPress={() => setSavedEntriesSheetOpen(true)}>
+              <TouchableOpacity
+                style={styles.iconBtn}
+                activeOpacity={0.7}
+                onPress={() => {
+                  // saved_count tells us whether people open an empty sheet
+                  // (discovery problem) or a full one they just don't use.
+                  track('saved_entries_opened', {
+                    saved_count: useSavedEntriesStore.getState().entries.length,
+                  });
+                  setSavedEntriesSheetOpen(true);
+                }}
+              >
                 <Ionicons name="bookmark-outline" size={22} color={C.text2} />
               </TouchableOpacity>
             )}
