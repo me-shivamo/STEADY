@@ -8,7 +8,7 @@ import OnboardingNavigator from './OnboardingNavigator';
 import AppNavigator from './AppNavigator';
 import SetNewPasswordScreen from '../screens/auth/SetNewPasswordScreen';
 import { colors } from '../theme/colors';
-import { posthog } from '../utils/posthog';
+import { trackScreen } from '../utils/analytics';
 
 export default function RootNavigator() {
   const { session, profile, isLoading, initialize, passwordRecovery } = useAuthStore();
@@ -51,7 +51,7 @@ export default function RootNavigator() {
       onStateChange={() => {
         const route = navigationRef.current?.getCurrentRoute();
         if (route?.name) {
-          posthog.screen(route.name);
+          trackScreen(route.name);
         }
       }}
     >
