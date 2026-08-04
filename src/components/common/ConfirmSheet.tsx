@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, StyleSheet, Modal, Pressable, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { fontFamily } from '../../theme/typography'
 
 const C = {
@@ -38,10 +39,18 @@ export default function ConfirmSheet({
   visible, title, message, confirmLabel = 'Delete', cancelLabel = 'Cancel',
   destructive = true, loading = false, errorMessage, onConfirm, onCancel,
 }: Props) {
+  // Same edge-to-edge problem as MealCard's options sheet: this Modal's window
+  // runs under the Android navigation bar, so the confirm/cancel buttons — the
+  // whole point of the sheet — end up beneath the system buttons. 32 stays the
+  // floor so the spacing is unchanged on devices with no bottom inset.
+  const insets = useSafeAreaInsets()
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 32) }]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={[styles.iconWrap, destructive && styles.iconWrapDanger]}>
             <Ionicons
               name={destructive ? 'trash-outline' : 'alert-circle-outline'}

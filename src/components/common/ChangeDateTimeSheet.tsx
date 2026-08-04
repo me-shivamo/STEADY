@@ -9,6 +9,8 @@ import DrumPicker from './DrumPicker'
 import { useFoodLogStore } from '../../store/foodLogStore'
 import { fontFamily } from '../../theme/typography'
 import { todayLocalDate } from '../../utils/localDate'
+import { toUserMessage } from '../../utils/errors'
+import { toast } from '../../store/toastStore'
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const C = {
@@ -121,7 +123,7 @@ export default function ChangeDateTimeSheet({
       await updateMealDateTime(mealId, selectedDate, buildISOTimestamp(selectedDate, hour24, minuteIndex))
       onClose()
     } catch (err: any) {
-      Alert.alert('Could not update', err?.message ?? 'Please try again.')
+      toast.error(toUserMessage(err, 'editMeal'))
     } finally {
       setSaving(false)
     }
