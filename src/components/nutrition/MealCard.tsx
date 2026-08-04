@@ -4,6 +4,7 @@ import {
   TextInput, ActivityIndicator, Alert, Modal, Pressable,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import type { AppStackParamList } from '../../navigation/types'
@@ -12,6 +13,9 @@ import { useSavedEntriesStore } from '../../store/savedEntriesStore'
 import { useAuthStore } from '../../store/authStore'
 import ChangeDateTimeSheet from '../common/ChangeDateTimeSheet'
 import ConfirmSheet from '../common/ConfirmSheet'
+import ImageViewerModal from '../common/ImageViewerModal'
+import { toast } from '../../store/toastStore'
+import { toUserMessage } from '../../utils/errors'
 import { fontFamily } from '../../theme/typography'
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>
@@ -85,6 +89,14 @@ function buildFoodSummary(entries: MealCardType['entries']): string {
 
 export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props) {
   const navigation = useNavigation<NavProp>()
+  // The app runs edge-to-edge (android/gradle.properties: edgeToEdgeEnabled=true),
+  // which means a Modal's window extends under the system navigation bar rather
+  // than stopping above it. Without this inset the last row of the options sheet
+  // — Delete — sits underneath the Android back/home/recents buttons and can't
+  // be tapped. insets.bottom reports the real bar height: ~48dp with 3-button
+  // navigation, ~16-24dp with gesture navigation, 0 where there's no bar at all,
+  // so one expression covers every device instead of a hardcoded guess.
+  const insets = useSafeAreaInsets()
   const { profile } = useAuthStore()
   const editMealFromText = useFoodLogStore(s => s.editMealFromText)
   const deleteMeal       = useFoodLogStore(s => s.deleteMeal)
@@ -99,7 +111,8 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting,   setIsDeleting]   = useState(false)
   const [deleteError,  setDeleteError]  = useState<string | null>(null)
-  const [justSaved,    setJustSaved]    = useState(false)
+  // Non-null = the full-screen photo preview is open.
+  const [viewerUri,    setViewerUri]    = useState<string | null>(null)
 
   const startEdit = () => {
     setShowOptions(false)
@@ -116,10 +129,18 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   }
 
   const handleSaveAsEntry = async () => {
-    await saveMealAsEntry(meal)
-    setShowOptions(false)
-    setJustSaved(true)
-    setTimeout(() => setJustSaved(false), 1500)
+    // Previously this set a `justSaved` flag whose only render site was the
+    // sheet row below — inside the very Modal the next line closes. The
+    // confirmation was mounted into a container being unmounted, so it was
+    // never visible. The toast lives at the app root and outlives the sheet.
+    try {
+      await saveMealAsEntry(meal)
+      setShowOptions(false)
+      toast.success('Saved to your entries')
+    } catch (err) {
+      setShowOptions(false)
+      toast.error(toUserMessage(err, 'generic'))
+    }
   }
 
   const confirmDelete = async () => {
@@ -127,8 +148,12 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
     try {
       await deleteMeal(meal.id)
       setShowDeleteConfirm(false)
-    } catch {
-      setDeleteError('Could not delete. Please try again.')
+    } catch (err) {
+      // Was a bare `catch {}`, which swallowed the Postgres code and detail —
+      // that is why this bug survived two rounds of investigation looking like
+      // a URL problem when it was actually a foreign-key constraint.
+      // toUserMessage console.errors the original before returning safe copy.
+      setDeleteError(toUserMessage(err, 'deleteMeal'))
     } finally {
       setIsDeleting(false)
     }
@@ -147,7 +172,7 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
       await editMealFromText(meal.id, text)
       // On success the store swaps this card's data via props → re-render.
     } catch (err: any) {
-      Alert.alert('Couldn’t update', err?.message ?? 'Please try again.')
+      toast.error(toUserMessage(err, 'editMeal'))
     } finally {
       setIsSaving(false)
     }
@@ -216,7 +241,16 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
               </Text>
             ) : null}
             {meal.photo_url ? (
-              <Image source={{ uri: meal.photo_url }} style={styles.photoThumb} />
+              // 48px is too small to check whether the AI read the plate
+              // correctly, so the thumbnail opens a full-screen preview.
+              <TouchableOpacity
+                onPress={() => setViewerUri(meal.photo_url ?? null)}
+                activeOpacity={0.8}
+                accessibilityRole="imagebutton"
+                accessibilityLabel="View meal photo full screen"
+              >
+                <Image source={{ uri: meal.photo_url }} style={styles.photoThumb} />
+              </TouchableOpacity>
             ) : null}
           </View>
         ) : null}
@@ -308,7 +342,10 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
         {/* Semi-transparent backdrop — tap it to dismiss */}
         <Pressable style={styles.sheetBackdrop} onPress={() => setShowOptions(false)}>
           {/* Stop taps on the sheet panel from closing the modal */}
-          <Pressable style={styles.sheetPanel} onPress={e => e.stopPropagation()}>
+          <Pressable
+            style={[styles.sheetPanel, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}
+            onPress={e => e.stopPropagation()}
+          >
 
             {/* Drag handle */}
             <View style={styles.sheetHandle} />
@@ -357,8 +394,8 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
 
             {/* Add to Saved Entries */}
             <TouchableOpacity style={styles.sheetRow} onPress={handleSaveAsEntry} activeOpacity={0.7}>
-              <Ionicons name={justSaved ? 'checkmark-circle' : 'bookmark-outline'} size={22} color={justSaved ? C.accent : C.text} />
-              <Text style={styles.sheetRowText}>{justSaved ? 'Saved!' : 'Add to Saved Entries'}</Text>
+              <Ionicons name="bookmark-outline" size={22} color={C.text} />
+              <Text style={styles.sheetRowText}>Add to Saved Entries</Text>
             </TouchableOpacity>
 
             {/* Delete */}
@@ -381,6 +418,8 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
       />
 
       {/* ── Delete confirmation ──────────────────────────────────────────── */}
+      <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
+
       <ConfirmSheet
         visible={showDeleteConfirm}
         title="Delete meal?"
