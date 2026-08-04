@@ -40,3 +40,24 @@ scripts/eval/results.json
 scripts/eval/results-v2.json
 scripts/eval/results-dataset-*.json
 scripts/eval/.eval-session*.json
+
+# Firebase / FCM credential (per-environment, never committed)
+google-services.json
+GoogleService-Info.plist
+
+# EAS build artifacts (large binaries, not source)
+build-output/
+*.aab
+*.apk
+
+# FCM V1 service account key — SECRET, unlike google-services.json.
+# Google Cloud names these downloads "<project-id>-<key-id>.json", which matches
+# none of the obvious "service-account" patterns — the 2026-08-04 download landed
+# in the repo root as steady-499821-0c73e0ba0185.json and was NOT covered. These
+# rules are deliberately broad: a false positive costs one `git add -f`, a false
+# negative publishes a credential that can send push as us until manually revoked.
+*-firebase-adminsdk-*.json
+service-account*.json
+fcm-service-account*.json
+steady-*-*.json
+*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.json
