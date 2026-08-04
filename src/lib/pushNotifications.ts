@@ -57,7 +57,30 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
   }
 
   const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-  const { data: tokenData } = await Notifications.getExpoPushTokenAsync({ projectId });
+
+  // This call is the single point where push registration actually fails in a
+  // standalone build, and until now it failed INVISIBLY.
+  //
+  // On Android the Expo push token is minted from an underlying FCM device
+  // token. Obtaining that requires a configured default FirebaseApp, which comes
+  // from google-services.json baked in at build time. Without it,
+  // FirebaseMessaging.getInstance() throws, expo-notifications rejects with
+  // "Make sure to complete the guide at .../fcm-credentials/", and — because
+  // nothing here caught it and the caller in App.tsx was fire-and-forget — the
+  // rejection vanished. No token was ever stored for the standalone app, so the
+  // scheduled sender kept delivering to the one stale Expo Go token still in the
+  // table. That is the whole "notifications arrive in Expo Go" bug.
+  //
+  // Catching it here turns a silent fleet-wide outage into a PostHog metric.
+  let tokenData: string;
+  try {
+    const result = await Notifications.getExpoPushTokenAsync({ projectId });
+    tokenData = result.data;
+  } catch (err) {
+    console.warn('Failed to obtain Expo push token:', err);
+    track('push_registration_failed', { reason: errorReason(err), stage: 'token' });
+    return;
+  }
 
   const { error } = await supabase.functions.invoke('register-push-token', {
     body: { expo_push_token: tokenData, platform: Platform.OS },
