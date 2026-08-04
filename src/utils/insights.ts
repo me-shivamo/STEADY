@@ -169,3 +169,106 @@ export function evaluateInsights(inputs: InsightInputs): Insight {
 
   return candidates[0] ?? strongWeekFallback();
 }
+
+// ── Weekly averages summary ──────────────────────────────────────────────────
+//
+// The sentence under the "Weekly averages" bars used to come from
+// evaluateInsights(), whose rules are all about OTHER things — streaks, TDEE
+// drift, weekend patterns, protein. None of them look at the calorie average
+// or at how many days were actually logged, so the line under a calorie chart
+// could cheerfully say "Calories and macros are tracking right where they
+// should be" during a week with two logged days and a 900 kcal average. It read
+// as canned because, for this section, it effectively was.
+//
+// This function is the opposite: every branch is chosen by the real numbers,
+// and every number quoted is one the user can see in the bars right above it.
+
+export interface WeeklyAverageInputs {
+  avgKcal: number;
+  goalKcal: number;
+  avgP: number;
+  goalP: number;
+  /** Days in the visible week with any food logged. */
+  daysLogged: number;
+  /** Days of the week that have actually happened (partial current week). */
+  elapsedDays: number;
+}
+
+export interface WeeklySummary {
+  icon: string;
+  text: string;
+}
+
+/**
+ * Builds the one-line read-out under the weekly average bars.
+ *
+ * Ordering matters and is deliberate: sample size is checked BEFORE accuracy,
+ * because an average over two days is not evidence of anything and telling
+ * someone they're "on target" from it is actively misleading.
+ */
+export function describeWeeklyAverages(inputs: WeeklyAverageInputs): WeeklySummary {
+  const { avgKcal, goalKcal, avgP, goalP, daysLogged, elapsedDays } = inputs;
+
+  // 1. Nothing logged — say that, rather than describing an average of zero.
+  if (daysLogged === 0) {
+    return {
+      icon: 'calendar-outline',
+      text: 'No meals logged this week yet. Log a day or two and your averages will show up here.',
+    };
+  }
+
+  // 2. Too small a sample to average honestly.
+  if (daysLogged < 3) {
+    const dayWord = daysLogged === 1 ? 'day' : 'days';
+    return {
+      icon: 'information-circle-outline',
+      text: `Only ${daysLogged} ${dayWord} logged so far, so these averages aren't very meaningful yet. Log a few more for a clearer picture.`,
+    };
+  }
+
+  // 3. No calorie target set — describe intake without judging it.
+  if (!goalKcal || goalKcal <= 0) {
+    return {
+      icon: 'stats-chart-outline',
+      text: `You're averaging ${Math.round(avgKcal).toLocaleString()} kcal a day across ${daysLogged} logged days. Set a calorie goal to see how that compares.`,
+    };
+  }
+
+  const diff = Math.round(avgKcal - goalKcal);
+  const absDiff = Math.abs(diff);
+  const pctOff = absDiff / goalKcal;
+  const proteinShortfall = goalP > 0 ? goalP - avgP : 0;
+  const consistent = daysLogged >= Math.max(5, elapsedDays - 1);
+
+  // 4. Within 10% of target — on track. Mention protein only if it's the one
+  //    thing dragging, so the line stays specific rather than congratulatory.
+  if (pctOff <= 0.1) {
+    if (proteinShortfall > 15) {
+      return {
+        icon: 'trending-up-outline',
+        text: `Calories are on target at ${Math.round(avgKcal).toLocaleString()} a day, but protein is averaging ${Math.round(avgP)}g against a ${Math.round(goalP)}g goal — about ${Math.round(proteinShortfall)}g short.`,
+      };
+    }
+    return {
+      icon: 'checkmark-circle-outline',
+      text: consistent
+        ? `Averaging ${Math.round(avgKcal).toLocaleString()} kcal against a ${goalKcal.toLocaleString()} goal across ${daysLogged} logged days — steady and on target.`
+        : `Averaging ${Math.round(avgKcal).toLocaleString()} kcal against a ${goalKcal.toLocaleString()} goal, right where it should be. Logging a few more days would make this more reliable.`,
+    };
+  }
+
+  // 5. Meaningfully over or under.
+  const direction = diff > 0 ? 'over' : 'under';
+  const icon = diff > 0 ? 'arrow-up-circle-outline' : 'arrow-down-circle-outline';
+  const weeklyTotal = absDiff * daysLogged;
+  // ~7700 kcal ≈ 1 kg of body mass; only worth mentioning once it's material.
+  const bodyMassNote =
+    weeklyTotal >= 2000
+      ? ` Over a full week that's roughly ${(weeklyTotal / 7700).toFixed(1)} kg worth of energy ${direction === 'over' ? 'surplus' : 'deficit'}.`
+      : '';
+
+  return {
+    icon,
+    text: `You're averaging ${Math.round(avgKcal).toLocaleString()} kcal a day — about ${absDiff.toLocaleString()} ${direction} your ${goalKcal.toLocaleString()} goal across ${daysLogged} logged days.${bodyMassNote}`,
+  };
+}

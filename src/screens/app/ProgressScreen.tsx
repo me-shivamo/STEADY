@@ -29,7 +29,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useTdeeStore } from '../../store/tdeeStore';
 import { useBodyMeasurementsStore } from '../../store/bodyMeasurementsStore';
 import { useStreaks } from '../../hooks/useStreaks';
-import { evaluateInsights } from '../../utils/insights';
+import { evaluateInsights, describeWeeklyAverages } from '../../utils/insights';
 import { AppStackNavProp } from '../../navigation/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -487,6 +487,19 @@ export default function ProgressScreen() {
     elapsedDaysThisWeek: elapsed.length,
   });
 
+  // The line under the Weekly averages bars is about THOSE bars, so it is
+  // derived from the same numbers rather than from evaluateInsights(), whose
+  // rules cover streaks/TDEE/weekend patterns and never look at the calorie
+  // average or how many days were actually logged.
+  const weeklySummary = describeWeeklyAverages({
+    avgKcal,
+    goalKcal,
+    avgP,
+    goalP,
+    daysLogged: logged.length,
+    elapsedDays: elapsed.length,
+  });
+
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <View style={styles.header}>
@@ -528,9 +541,20 @@ export default function ProgressScreen() {
           <MacroAverageBar label="Carbs" value={avgC} goal={goalC} color={C.carbs} />
           <MacroAverageBar label="Fat" value={avgF} goal={goalF} color={C.fat} />
           <View style={styles.insightRow}>
-            <Ionicons name={insight.icon as any} size={16} color={C.accent} style={{ marginTop: 1 }} />
-            <Text style={styles.insightText}>{insight.text}</Text>
+            <Ionicons name={weeklySummary.icon as any} size={16} color={C.accent} style={{ marginTop: 1 }} />
+            <Text style={styles.insightText}>{weeklySummary.text}</Text>
           </View>
+          {/* The rule-based insight (streak milestone, TDEE drift, weekend
+              pattern, protein gap) is still worth showing — but only when a
+              real rule fired. 'strong_week' is evaluateInsights' catch-all
+              fallback, and it is precisely the generic filler that made this
+              section feel canned, so it is suppressed. */}
+          {insight.id !== 'strong_week' && (
+            <View style={styles.insightRow}>
+              <Ionicons name={insight.icon as any} size={16} color={C.accent} style={{ marginTop: 1 }} />
+              <Text style={styles.insightText}>{insight.text}</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>Estimated maintenance</Text>
