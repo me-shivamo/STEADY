@@ -17,25 +17,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../../navigation/types';
 import { track } from '../../utils/analytics';
+import { toUserMessage, isCancellation } from '../../utils/errors';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 import { fontWeight, fontFamily } from '../../theme/typography';
 import { useScreenChrome } from '../../hooks/useScreenChrome';
+import GoogleSignInButton from '../../components/common/GoogleSignInButton';
 
 type Props = {
   navigation: NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 };
-
-function GoogleLogo() {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 18 18">
-      <Path fill="#4285F4" d="M17.6 9.2c0-.6-.1-1.3-.2-1.9H9v3.6h4.8c-.2 1.1-.8 2.1-1.8 2.7v2.3h2.9c1.7-1.6 2.7-3.9 2.7-6.7z" />
-      <Path fill="#34A853" d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.3c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H.9v2.3C2.4 15.9 5.5 18 9 18z" />
-      <Path fill="#FBBC05" d="M3.9 10.7c-.2-.5-.3-1.1-.3-1.7s.1-1.2.3-1.7V5H.9C.3 6.2 0 7.5 0 9s.3 2.8.9 4l3-2.3z" />
-      <Path fill="#EA4335" d="M9 3.6c1.3 0 2.5.5 3.5 1.4l2.6-2.6C13.5.9 11.4 0 9 0 5.5 0 2.4 2.1.9 5l3 2.3C4.6 5.1 6.6 3.6 9 3.6z" />
-    </Svg>
-  );
-}
 
 export default function LoginScreen({ navigation }: Props) {
   useScreenChrome(colors.bgPrimary, 'dark');
@@ -63,7 +54,7 @@ export default function LoginScreen({ navigation }: Props) {
       await requestPasswordReset(target);
       setResetInfoText(`If an account exists for ${target}, we've sent it a password-reset link.`);
     } catch (err: any) {
-      setErrorText(err.message ?? 'Could not send reset email. Please try again.');
+      setErrorText(toUserMessage(err, 'generic'));
     } finally {
       setResetLoading(false);
     }
@@ -78,9 +69,13 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       setGoogleLoading(true);
       await signInWithGoogle();
-    } catch (error: any) {
-      if (error?.message !== 'User cancelled') {
-        setErrorText(error?.message ?? 'Sign in failed. Please try again.');
+    } catch (error) {
+      // The old guard compared against the string 'User cancelled', which the
+      // native module never produces — so a cancelled sign-in showed an error,
+      // and every real failure showed Google's developer text verbatim.
+      // isCancellation() checks the actual native status code instead.
+      if (!isCancellation(error)) {
+        setErrorText(toUserMessage(error, 'signIn'));
       }
     } finally {
       setGoogleLoading(false);
@@ -98,7 +93,7 @@ export default function LoginScreen({ navigation }: Props) {
     try {
       await signIn(email.trim(), password);
     } catch (err: any) {
-      setErrorText(err.message ?? 'Invalid email or password.');
+      setErrorText(toUserMessage(err, 'signIn'));
     } finally {
       setIsLoading(false);
     }
@@ -169,33 +164,12 @@ export default function LoginScreen({ navigation }: Props) {
             {resetInfoText ? <Text style={styles.inlineInfo}>{resetInfoText}</Text> : null}
           </View>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Social buttons */}
-          <View style={styles.socialButtons}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              activeOpacity={0.8}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator size="small" color={colors.textPrimary} />
-              ) : (
-                <>
-                  <GoogleLogo />
-                  <Text style={styles.socialButtonText}>Continue with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Primary CTA */}
+          {/* Primary CTA — must come FIRST. It used to render below both the
+              divider and the Google button, so the screen read "email /
+              password / or continue with / Continue with Google / Log In":
+              the submit button for the form the user had just filled in sat
+              underneath the alternative sign-in method, and underneath a
+              divider whose whole job is to introduce that alternative. */}
           <TouchableOpacity
             style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
@@ -206,6 +180,17 @@ export default function LoginScreen({ navigation }: Props) {
               {isLoading ? 'Logging in…' : 'Log In'}
             </Text>
           </TouchableOpacity>
+
+          {/* Divider — now just "or", since the button below already says
+              "Continue with Google" and "or continue with / Continue with
+              Google" read as a stutter. */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <GoogleSignInButton onPress={handleGoogleSignIn} loading={googleLoading} />
 
           {/* Switch to signup */}
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>

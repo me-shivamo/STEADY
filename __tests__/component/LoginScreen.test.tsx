@@ -90,16 +90,19 @@ describe('LoginScreen', () => {
     expect(mockSignIn).not.toHaveBeenCalled();
   });
 
-  // §1.2.3 — correct email, wrong password: generic "Login failed" inline error with err.message
-  it('1.2.3 shows the error message inline when signIn rejects (wrong password)', async () => {
+  // §1.2.3 — correct email, wrong password: sanitised inline error. The raw
+  // Supabase text ("Invalid login credentials") must NOT reach the screen —
+  // toUserMessage() maps it to STEADY's own copy (BUG.md #7).
+  it('1.2.3 shows sanitised copy inline when signIn rejects (wrong password)', async () => {
     mockSignIn.mockRejectedValueOnce(new Error('Invalid login credentials'));
-    const { getByPlaceholderText, getByText } = await renderScreen();
+    const { getByPlaceholderText, getByText, queryByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.changeText(getByPlaceholderText('Password'), 'wrongpassword');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() => expect(getByText('Invalid login credentials')).toBeTruthy());
+    await waitFor(() => expect(getByText("We couldn't sign you in. Please try again.")).toBeTruthy());
+    expect(queryByText('Invalid login credentials')).toBeNull();
   });
 
   // §1.2.4 — no such account: SAME generic message, code does not distinguish (avoids account enumeration)
@@ -111,11 +114,11 @@ describe('LoginScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() => expect(getByText('Invalid login credentials')).toBeTruthy());
+    await waitFor(() => expect(getByText("We couldn't sign you in. Please try again.")).toBeTruthy());
   });
 
   // §1.2.4 (fallback) — rejected error with no message falls back to the generic copy
-  it('1.2.4 falls back to "Invalid email or password." when the rejected error has no message', async () => {
+  it('1.2.4 falls back to the sign-in copy when the rejected error has no message', async () => {
     mockSignIn.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -123,7 +126,7 @@ describe('LoginScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Log In'));
 
-    await waitFor(() => expect(getByText('Invalid email or password.')).toBeTruthy());
+    await waitFor(() => expect(getByText("We couldn't sign you in. Please try again.")).toBeTruthy());
   });
 
   // §1.2.5 — regression: email is trimmed, password is NOT — trailing spaces sent verbatim
@@ -163,25 +166,27 @@ describe('LoginScreen', () => {
   });
 
   // §1.3.1 (failure branch) — inline error with err.message when requestPasswordReset rejects
-  it('1.3.1 shows the error message inline when requestPasswordReset rejects', async () => {
+  it('1.3.1 shows sanitised copy inline when requestPasswordReset rejects', async () => {
     mockRequestPasswordReset.mockRejectedValueOnce(new Error('Rate limited'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.press(getByText('Forgot password?'));
 
-    await waitFor(() => expect(getByText('Rate limited')).toBeTruthy());
+    await waitFor(() =>
+      expect(getByText("You've made a lot of requests just now. Please wait a moment and try again.")).toBeTruthy(),
+    );
   });
 
   // §1.3.1 (failure branch fallback text)
-  it('1.3.1 falls back to "Could not send reset email. Please try again." when the reset rejection has no message', async () => {
+  it('1.3.1 falls back to the generic copy when the reset rejection has no message', async () => {
     mockRequestPasswordReset.mockRejectedValueOnce({});
     const { getByPlaceholderText, getByText } = await renderScreen();
 
     await fireEvent.changeText(getByPlaceholderText('Email address'), 'test@example.com');
     await fireEvent.press(getByText('Forgot password?'));
 
-    await waitFor(() => expect(getByText('Could not send reset email. Please try again.')).toBeTruthy());
+    await waitFor(() => expect(getByText("Something went wrong. Please try again.")).toBeTruthy());
   });
 
   // §1.3.3 — rapid double-tap of Forgot password only sends one reset email (resetLoading guard)

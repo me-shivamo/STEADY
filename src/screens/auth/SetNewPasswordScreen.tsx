@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 import { fontWeight, fontFamily } from '../../theme/typography';
+import { toUserMessage } from '../../utils/errors';
 
 // Shown by RootNavigator (instead of the app) while authStore.passwordRecovery
 // is true — i.e. the user arrived via a password-reset email link and holds a
@@ -46,7 +47,7 @@ export default function SetNewPasswordScreen() {
       await completePasswordReset(password);
       setInfoText('Password updated. You are signed in with your new password.');
     } catch (err: any) {
-      setErrorText(err.message ?? 'Could not update password. Please try again.');
+      setErrorText(toUserMessage(err, 'generic'));
     } finally {
       setIsLoading(false);
     }

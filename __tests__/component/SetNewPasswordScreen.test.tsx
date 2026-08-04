@@ -105,8 +105,13 @@ describe('SetNewPasswordScreen', () => {
 
   // §1.3.7 (failure path, same success scenario's error branch) — completePasswordReset
   // rejects, so the screen must show the failure message inline with the thrown message.
-  it("1.3.7 shows the error message inline on failure", async () => {
-    mockCompletePasswordReset.mockRejectedValueOnce(new Error('Session expired'));
+  it("1.3.7 shows sanitised copy inline on failure", async () => {
+    // Shaped like a real Supabase AuthApiError: the status, not the message
+    // text, is what classify() reads — so an expired reset link produces
+    // "sign in again" copy rather than the generic apology.
+    mockCompletePasswordReset.mockRejectedValueOnce(
+      Object.assign(new Error('Session expired'), { status: 401 }),
+    );
     const { getByPlaceholderText, getByText } = await render(<SetNewPasswordScreen />);
 
     await fireEvent.changeText(getByPlaceholderText('New password'), 'newSecret123');
@@ -114,7 +119,7 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(getByText('Session expired')).toBeTruthy();
+      expect(getByText('Your session has expired. Please sign in again.')).toBeTruthy();
     });
   });
 
@@ -128,7 +133,7 @@ describe('SetNewPasswordScreen', () => {
     await fireEvent.press(getByText('Save new password'));
 
     await waitFor(() => {
-      expect(getByText('Could not update password. Please try again.')).toBeTruthy();
+      expect(getByText("Something went wrong. Please try again.")).toBeTruthy();
     });
   });
 

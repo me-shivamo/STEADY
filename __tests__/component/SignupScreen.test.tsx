@@ -164,7 +164,7 @@ describe('SignupScreen', () => {
   });
 
   // §1.1.8 / 1.1.9 — signUp() rejects (duplicate email / network failure) surfaces the inline error
-  it('1.1.8 shows the error message inline when signUp rejects (e.g. duplicate email)', async () => {
+  it('1.1.8 shows sanitised copy inline when signUp rejects (e.g. duplicate email)', async () => {
     mockSignUp.mockRejectedValueOnce(new Error('User already registered'));
     const { getByPlaceholderText, getByText } = await renderScreen();
 
@@ -173,7 +173,8 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    await waitFor(() => expect(getByText('User already registered')).toBeTruthy());
+    // Raw Supabase text must not surface — see BUG.md #7.
+    await waitFor(() => expect(getByText("We couldn't create your account. Please try again.")).toBeTruthy());
   });
 
   // §1.1.9 — network failure surfaces the generic fallback when the rejected error has no message
@@ -186,7 +187,7 @@ describe('SignupScreen', () => {
     await fireEvent.changeText(getByPlaceholderText('Password'), 'password123');
     await fireEvent.press(getByText('Create Account'));
 
-    await waitFor(() => expect(getByText('Sign up failed. Something went wrong.')).toBeTruthy());
+    await waitFor(() => expect(getByText("We couldn't create your account. Please try again.")).toBeTruthy());
   });
 
   // §1.1.10 — Google cancel suppression: no inline error when error.message === 'User cancelled'
@@ -207,7 +208,7 @@ describe('SignupScreen', () => {
 
     await fireEvent.press(getByText('Continue with Google'));
 
-    await waitFor(() => expect(getByText('Network error')).toBeTruthy());
+    await waitFor(() => expect(getByText("You appear to be offline. Check your connection and try again.")).toBeTruthy());
   });
 
   // §1.1.13 — double-tap Create Account: button disabled while isLoading, second press must not fire signUp twice
