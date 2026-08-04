@@ -286,10 +286,21 @@ function Field({
   value,
   onChangeText,
   unit,
+  // Almost every row on this screen is a number (age, height, the macro
+  // targets), so 'numeric' is the useful default. The catch is that a default
+  // silently applies to any call site that forgets to override it — which is
+  // exactly how the Name row ended up opening a number pad. Text fields must
+  // now opt out explicitly.
   keyboardType = 'numeric',
   maxLength,
   placeholder = '—',
   wide = false,
+  autoCapitalize,
+  autoCorrect,
+  // Select-all-on-focus is right for the numeric pills (tap once, type the new
+  // number, done — see DEVLOG 2026-08-01) but wrong for a name, where you
+  // usually want to fix one letter rather than retype the whole thing.
+  selectOnFocus = true,
 }: {
   value: string;
   onChangeText: (v: string) => void;
@@ -298,6 +309,9 @@ function Field({
   maxLength?: number;
   placeholder?: string;
   wide?: boolean;
+  autoCapitalize?: 'none' | 'words';
+  autoCorrect?: boolean;
+  selectOnFocus?: boolean;
 }) {
   const inputRef = useRef<TextInput>(null);
   return (
@@ -315,7 +329,9 @@ function Field({
         placeholderTextColor={C.muted}
         style={styles.fieldInput}
         maxLength={maxLength}
-        selectTextOnFocus
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
+        selectTextOnFocus={selectOnFocus}
         returnKeyType="done"
       />
       {unit ? (
@@ -707,7 +723,17 @@ export default function SettingsScreen() {
           <SectionLabel label="Profile" />
           <Card>
             <Row icon="person-outline" label="Name">
-              <Field value={name} onChangeText={setName} placeholder="Your name" maxLength={50} wide />
+              <Field
+                value={name}
+                onChangeText={setName}
+                placeholder="Your name"
+                maxLength={50}
+                wide
+                keyboardType="default"
+                autoCapitalize="words"
+                autoCorrect={false}
+                selectOnFocus={false}
+              />
             </Row>
             <Row icon="calendar-outline" label="Age">
               <Field value={ageText} onChangeText={setAgeText} unit="yrs" maxLength={3} />
