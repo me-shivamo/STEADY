@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   TextInput,
   KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ActivityIndicator,
   PanResponder,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../navigation/types';
@@ -28,6 +29,7 @@ import { homeColors as C } from '../../theme/homeColors';
 import ProfileDrawer from '../../components/profile/ProfileDrawer';
 import DatePickerSheet from '../../components/common/DatePickerSheet';
 import SavedEntriesSheet from '../../components/nutrition/SavedEntriesSheet';
+import ImageViewerModal from '../../components/common/ImageViewerModal';
 import { useSavedEntriesStore } from '../../store/savedEntriesStore';
 import { supabase } from '../../api/supabase';
 import { toLocalDateString } from '../../utils/localDate';
@@ -36,10 +38,15 @@ import { fontFamily } from '../../theme/typography';
 import TypewriterText from '../../components/common/TypewriterText';
 import { useScreenChrome } from '../../hooks/useScreenChrome';
 import { track } from '../../utils/analytics';
+import { toUserMessage } from '../../utils/errors';
 
 // ── Chat message types ─────────────────────────────────────────────────────────
 type ChatMsg =
-  | { id: string; type: 'user';      text: string; sentAt?: string }
+  // imageUri carries the photo the user attached. Without this field there was
+  // nowhere to put it, so a photo-logged meal produced either a bare text
+  // bubble (caption case) or no bubble at all (photo-only case) — the message
+  // never showed that an image had been sent.
+  | { id: string; type: 'user';      text: string; sentAt?: string; imageUri?: string }
   | { id: string; type: 'thinking' }
   | { id: string; type: 'meal_card'; meal: MealCardType }
   | { id: string; type: 'answer';    text: string; sentAt?: string }
@@ -231,11 +238,57 @@ export default function HomeScreen() {
   // frame, not this sibling's height above it, so without this offset it
   // under-pads by exactly topBar's height and the keyboard covers the composer.
   const [topBarHeight, setTopBarHeight] = useState(0);
+
+  // ── Keyboard handling (Android) ────────────────────────────────────────
+  // We track the keyboard height ourselves on Android instead of letting
+  // KeyboardAvoidingView do it, because RN's Android implementation cannot
+  // return to zero.
+  //
+  // The mechanism, for the record: on Android, KAV subscribes to BOTH
+  // keyboardDidShow and keyboardDidHide and feeds both into the same handler,
+  // which reads `event.endCoordinates.screenY`. But RN's native side fills that
+  // field differently per event — on show it is a real Y coordinate, on hide it
+  // is the visible frame's HEIGHT. The height is the larger number, so the
+  // "reset" arithmetic lands on the status-bar height instead of 0, and KAV's
+  // own `if (this._keyboardEvent == null) setBottom(0)` early-out never fires
+  // because the hide event is non-null. The result is a permanent gap exactly
+  // as tall as the status bar, which is the phantom padding on this screen.
+  //
+  // Two listeners with an explicit 0 on hide cannot drift: the reset is a
+  // literal, not a computation.
+  const insets = useSafeAreaInsets();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    // 'Did' rather than 'Will' — keyboardWillShow/Hide never fire on Android.
+    const showSub = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const isAndroid = Platform.OS === 'android';
+  const keyboardOpen = keyboardHeight > 0;
+  // Lift the composer by exactly the keyboard height on Android; on iOS the
+  // KeyboardAvoidingView 'padding' behavior still does this correctly.
+  const androidKeyboardLift = isAndroid ? keyboardHeight : 0;
+  // The bottom safe-area inset now lives on the composer rather than on
+  // SafeAreaView, so the composer's own card background fills the gesture/nav
+  // bar strip instead of leaving a bare band in the page colour. It collapses
+  // while the keyboard is up, because the nav bar is covered by the keyboard
+  // then and the inset would read as dead space above it.
+  const composerBottomPad = keyboardOpen ? 0 : insets.bottom;
   const [pickerOpen, setPickerOpen]   = useState(false);
   // pendingPhoto holds the local URI (for the thumbnail preview) and base64
   // string (for the Edge Function). null means no photo is queued.
   const [pendingPhoto, setPendingPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [photoErrorText, setPhotoErrorText] = useState<string | null>(null);
+  // Non-null = full-screen photo preview open (attached photos in chat bubbles).
+  const [viewerUri, setViewerUri] = useState<string | null>(null);
   const [savedEntriesSheetOpen, setSavedEntriesSheetOpen] = useState(false);
   const scrollRef                   = useRef<ScrollView>(null);
   const cardRefs                    = useRef<Map<string, View | null>>(new Map());
@@ -433,7 +486,7 @@ export default function HomeScreen() {
       push({ id: meal.id, type: 'meal_card', meal });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (err: any) {
-      push({ id: uid(), type: 'error', text: err?.message ?? 'Could not log this entry. Please try again.' });
+      push({ id: uid(), type: 'error', text: toUserMessage(err, 'logMeal') });
     }
   };
 
@@ -514,9 +567,16 @@ export default function HomeScreen() {
       setInput('');
       setMode('all');
       initialSeedDone.current = true;
-      if (caption) {
-        push({ id: uid(), type: 'user', text: caption, sentAt: new Date().toISOString() });
-      }
+      // Always push the bubble now, not just when there's a caption: a
+      // photo-only log previously pushed nothing, so the thread jumped straight
+      // to "thinking" with no record of what the user had sent.
+      push({
+        id: uid(),
+        type: 'user',
+        text: caption,
+        imageUri: photoToSend.uri,
+        sentAt: new Date().toISOString(),
+      });
       const thinkingId = uid();
       push({ id: thinkingId, type: 'thinking' });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
@@ -529,7 +589,7 @@ export default function HomeScreen() {
       } catch (err: any) {
         replace(thinkingId, {
           id: thinkingId, type: 'error',
-          text: err?.message ?? 'Could not analyse photo. Try again.',
+          text: toUserMessage(err, 'logMeal'),
         });
       }
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -573,7 +633,7 @@ export default function HomeScreen() {
     } catch (err: any) {
       replace(thinkingId, {
         id: thinkingId, type: 'error',
-        text: err?.message ?? 'Something went wrong. Try again.',
+        text: toUserMessage(err, 'logMeal'),
       });
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -623,7 +683,13 @@ export default function HomeScreen() {
     : messages;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    // 'bottom' is deliberately NOT in edges: SafeAreaView would apply the
+    // bottom inset permanently, leaving a bare strip in the page colour under
+    // the composer AND keeping that strip while the keyboard is open. The
+    // composer applies the inset itself via composerBottomPad, so the card
+    // colour runs all the way into the gesture bar — the WhatsApp/iMessage
+    // arrangement.
+    <SafeAreaView style={styles.safe} edges={['top']}>
 
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <View style={styles.topBar} onLayout={e => setTopBarHeight(e.nativeEvent.layout.height)}>
@@ -733,8 +799,12 @@ export default function HomeScreen() {
 
       {/* ── Keyboard-aware area ──────────────────────────────────────────── */}
       <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // behavior=undefined on Android makes KAV inert (its `default:` branch
+        // renders a plain View and applies nothing), so the broken reset path
+        // described above is never entered. The lift comes from
+        // androidKeyboardLift instead, which is driven by our own listeners.
+        style={[styles.flex, isAndroid && { paddingBottom: androidKeyboardLift }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? topBarHeight : 0}
         {...swipeResponder.panHandlers}
       >
@@ -802,10 +872,24 @@ export default function HomeScreen() {
                 return (
                   <View key={msg.id} style={styles.userRow}>
                     <View style={styles.userBubble}>
-                      <Text style={styles.userBubbleText}>
+                      {msg.imageUri ? (
+                        <TouchableOpacity
+                          onPress={() => setViewerUri(msg.imageUri ?? null)}
+                          activeOpacity={0.85}
+                          accessibilityRole="imagebutton"
+                          accessibilityLabel="View attached photo full screen"
+                        >
+                          <Image source={{ uri: msg.imageUri }} style={styles.bubbleImage} />
+                        </TouchableOpacity>
+                      ) : null}
+                      {/* A photo-only message has no text; rendering an empty
+                          Text node would still reserve a line's height. */}
+                      {(msg.text || !!time) && (
+                      <Text style={[styles.userBubbleText, msg.imageUri && styles.userBubbleTextWithImage]}>
                         {msg.text}
                         {!!time && <Text style={styles.timeSpacerOnAccent}>{timeSpacer(time)}</Text>}
                       </Text>
+                      )}
                       {!!time && (
                         <Text style={[styles.bubbleTime, styles.bubbleTimeOnAccent]}>{time}</Text>
                       )}
@@ -882,7 +966,7 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* ── Composer — always visible; camera/image hidden on past days ── */}
-        <View style={styles.composerWrap}>
+        <View style={[styles.composerWrap, { paddingBottom: composerBottomPad }]}>
           {photoErrorText ? <Text style={styles.photoErrorText}>{photoErrorText}</Text> : null}
 
           {/* Photo thumbnail strip — shown only when a photo is queued */}
@@ -980,6 +1064,8 @@ export default function HomeScreen() {
         onSelect={handleLogSavedEntry}
       />
 
+
+      <ImageViewerModal uri={viewerUri} onClose={() => setViewerUri(null)} />
     </SafeAreaView>
   );
 }
@@ -1120,6 +1206,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, maxWidth: '82%',
   },
   userBubbleText: { color: '#FFFFFF', fontSize: 14, fontWeight: '400', fontFamily: fontFamily.regular, lineHeight: 21 },
+  // The photo sits above the caption, so the caption needs a gap under it.
+  userBubbleTextWithImage: { marginTop: 8 },
+  // Attached photo inside an outgoing bubble. Fixed height with a 4:3-ish
+  // aspect keeps a portrait phone snap from taking over the whole thread;
+  // 'cover' crops rather than letterboxes, and tapping opens the full view.
+  bubbleImage: {
+    // 150 rather than the original 200: the bubble is maxWidth 82%, so a 200pt
+    // image filled almost the entire content width and the photo dominated the
+    // thread instead of reading as an attachment. Half the area is plenty here,
+    // because tapping opens the full-screen viewer — the bubble only has to say
+    // "a photo went with this", not let you inspect the food.
+    width: 150,
+    // aspectRatio instead of a hardcoded height keeps the 4:3 shape locked to
+    // the width, so future size tweaks are a one-number change.
+    aspectRatio: 4 / 3,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
   // Invisible width-reserver appended to the message text — see timeSpacer().
   //
   // Two rules for these. First, fontSize MUST match bubbleTime, or the room the
