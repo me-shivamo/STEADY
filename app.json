@@ -13,7 +13,7 @@
     "android": {
       "package": "com.steadyapp.android",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F1526",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -31,8 +31,8 @@
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
-          "backgroundColor": "#E6F4FE"
+          "imageWidth": 220,
+          "backgroundColor": "#FAFAFA"
         }
       ],
       "expo-apple-authentication",
@@ -46,7 +46,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/icon.png",
+          "icon": "./assets/notification-icon.png",
           "color": "#6366F1"
         }
       ],
