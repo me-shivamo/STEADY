@@ -49,24 +49,70 @@ export async function getGoogleIdToken(): Promise<string | null> {
   if (!configured) {
     GoogleSignin.configure({
       webClientId: WEB_CLIENT_ID,
-      iosClientId: IOS_CLIENT_ID,
+      // `|| undefined` rather than the raw value: dotenv turns an unset key into
+      // an EMPTY STRING, not undefined, and an empty string is a very different
+      // thing to hand a native SDK than "absent". EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+      // is currently blank, so this matters the moment we do an iOS build.
+      iosClientId: IOS_CLIENT_ID || undefined,
       scopes: ['profile', 'email'],
     });
     configured = true;
   }
 
-  // Android-only preflight: on a device with a missing or outdated Play
-  // Services this shows the update prompt instead of failing cryptically.
-  if (Platform.OS === 'android') {
-    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+  try {
+    // Android-only preflight: on a device with a missing or outdated Play
+    // Services this shows the update prompt instead of failing cryptically.
+    if (Platform.OS === 'android') {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    }
+
+    const response = await GoogleSignin.signIn();
+    if (!isSuccessResponse(response)) return null; // { type: 'cancelled' }
+
+    const { idToken } = response.data;
+    if (!idToken) throw new Error('No ID token returned from Google Sign-In');
+    return idToken;
+  } catch (err) {
+    // The native module reports failures as a numeric `code`, and the message
+    // that comes with them is developer-facing ("DEVELOPER_ERROR: Follow
+    // troubleshooting instructions at ..."). That string was being rendered
+    // straight into the sign-in screen's red error text — useless to a user and,
+    // worse, it meant the ONE piece of information needed to diagnose which
+    // Google Cloud / Play setting is wrong was only ever visible on a phone
+    // screen and never logged anywhere we could read it.
+    //
+    // Log it loudly here (reaches `adb logcat` even in a release build) and
+    // re-throw so the caller can decide what the user sees.
+    const code = String((err as { code?: unknown })?.code ?? '');
+    if (code === '10' || code === 'DEVELOPER_ERROR') {
+      // Everything needed to diagnose this printed in one place, because the
+      // alternative is cross-referencing three consoles from memory.
+      const pkg = Constants.expoConfig?.android?.package ?? '(unknown)';
+      // Only the project number is logged, never the full client ID — it is not
+      // secret, but logs get pasted into issues and screenshots.
+      const project = WEB_CLIENT_ID?.split('-')[0] ?? '(unset)';
+      console.error(
+        '[googleSignIn] DEVELOPER_ERROR (code 10) — Google Play Services refused this app’s identity.\n' +
+          `  package        : ${pkg}\n` +
+          `  GCP project #  : ${project}\n` +
+          '  This is NEVER an app-code bug. Google matches the RUNNING binary by\n' +
+          '  (package name + signing certificate SHA-1) against the Android OAuth\n' +
+          '  clients in that project. Checklist, most likely first:\n' +
+          '   1. A Play Store install is re-signed by Play App Signing — its cert is\n' +
+          '      NOT the upload key you built with. Register the SHA-1 from Play\n' +
+          '      Console > App integrity > App signing key certificate.\n' +
+          '   2. The OAuth client must live in the SAME project as the web client\n' +
+          '      above, and its package name must match exactly.\n' +
+          '   3. EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID must be a *Web* client, not an\n' +
+          '      Android one — an Android ID here fails with this same error.\n' +
+          '   4. Changes can take a few minutes to propagate.',
+        err,
+      );
+    } else {
+      console.error('[googleSignIn] sign-in failed, code=' + (code || 'none'), err);
+    }
+    throw err;
   }
-
-  const response = await GoogleSignin.signIn();
-  if (!isSuccessResponse(response)) return null; // { type: 'cancelled' }
-
-  const { idToken } = response.data;
-  if (!idToken) throw new Error('No ID token returned from Google Sign-In');
-  return idToken;
 }
 
 /**
