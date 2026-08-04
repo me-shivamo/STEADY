@@ -10,6 +10,7 @@ import type { AppStackParamList } from '../../navigation/types'
 import { useFoodLogStore, MacroOverride } from '../../store/foodLogStore'
 import { fontFamily } from '../../theme/typography'
 import { track } from '../../utils/analytics'
+import { toUserMessage } from '../../utils/errors'
 
 // ── Design tokens — mirrors MealCard.tsx exactly ─────────────────────────────
 const C = {
@@ -202,7 +203,7 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
       // Give the user a moment to see the success state, then pop back
       setTimeout(() => navigation.goBack(), 700)
     } catch (err: any) {
-      setSaveErrorText(err?.message ?? 'Could not save. Please try again.')
+      setSaveErrorText(toUserMessage(err, 'saveProfile'))
     } finally {
       setIsSavingAll(false)
     }

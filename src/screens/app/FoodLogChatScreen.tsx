@@ -17,6 +17,7 @@ import MealCard from '../../components/nutrition/MealCard';
 import { supabase } from '../../api/supabase';
 import { track, lengthBucket } from '../../utils/analytics';
 import { fontFamily } from '../../theme/typography';
+import { toUserMessage } from '../../utils/errors';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const C = {
@@ -146,7 +147,7 @@ export default function FoodLogChatScreen() {
         // capturing it here too would double-count every chat log.
       }
     } catch (err: any) {
-      const message = err.message ?? 'Something went wrong. Try again.';
+      const message = toUserMessage(err, 'logMeal');
       replace(thinkingId, { id: thinkingId, type: 'error', text: message });
       // The failure is already captured as `meal_log_failed` in the store,
       // with the message run through errorReason() first. The old code sent
