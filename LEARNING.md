@@ -3,6 +3,26 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### Config files that are read only at boot
+*2026-08-04 · Tool*
+
+`.wslconfig` configures the WSL 2 virtual machine, and Windows reads it exactly once — when that VM starts. Editing it while WSL is running changes nothing, and there is no warning, no reload, and no error: the file says one thing and the running system does another, indefinitely. We lost a day of tunnel workarounds to a `networkingMode=mirrored` line that had been correct since the day before but never booted. The general habit worth forming: after editing any boot-time config (`.wslconfig`, `/etc/fstab`, systemd units, kernel params), immediately ask "what has to restart for this to be real?" — and verify from the running system's own state (`ip addr`), never from the file you just wrote.
+
+### Big payloads make timeouts look like bugs
+*2026-08-04 · Protocol*
+
+A development JS bundle is huge — STEADY's is 14 MB, because dev builds skip minification and carry source maps, module names, and hot-reload machinery that a production build strips. That size is irrelevant over a LAN and fatal over a shared free tunnel at ~376 KB/s, where the download runs past the client's timeout and surfaces as `java.io.IOException: Failed to download remote update` — an error whose wording suggests something is *broken* when nothing is: the transfer was simply too slow to finish. When a "failed to download" error appears, measure the payload and the throughput before debugging the application; the fix is usually a fatter pipe, not a code change.
+
+### What a dev "tunnel" actually is, and why Expo needs one
+*2026-08-03 · Tool*
+
+When you run Metro, it's just an HTTP server bound to `localhost:8081` on your machine — and "localhost" is private by definition, so your phone (a different device, and under WSL2 not even on the same virtual network) has no route to it. A tunnel fixes this by inverting who dials whom: instead of your phone trying to reach in through the router and NAT, a small agent on your machine makes an *outbound* connection to a public relay server and holds it open, and the relay then forwards anything hitting its public URL back down that already-open pipe. Outbound connections sail through NAT and firewalls unimpeded — that asymmetry is the whole trick, and it's why a tunnel works where typing your laptop's LAN IP into Expo Go doesn't.
+
+### A crash inside an error handler hides the error it was handling
+*2026-08-03 · Pattern*
+
+Our ngrok failure surfaced as `Cannot read properties of undefined (reading 'body')` — a null-dereference that says nothing about tunnels. The actual cause was a clean, well-written server message (agent too old, upgrade to 3.20.0), but `@expo/ngrok` assumed every failure would be an HTTP response and did `error.response.body`; on a *connection-level* auth failure there was no `response`, so the error handler threw its own error and the useful one was lost. The general lesson worth carrying into our own code: error-handling paths need the same defensive care as happy paths, because a bug there doesn't just fail — it destroys the evidence. The practical debugging move that cracked it was going one layer down and running the underlying binary by hand with debug logging, bypassing the JS wrapper that was mangling the message.
+
 ### "Mathematically correct" and "a good recommendation" aren't the same thing
 *2026-08-02 · Pattern*
 
@@ -1358,3 +1378,113 @@ Play App Signing means Google **strips the signature off the AAB you upload and 
 *2026-08-03 · Tool*
 
 `EXPO_PUBLIC_*` variables aren't read at runtime the way `os.environ` is in Python; Metro **inlines them into the bundle at build time**, so whatever value is present when the bundle is compiled is permanently baked in. That's fine locally, where `.env` sits next to the code — but `.env` is gitignored, and EAS Build uploads your project *respecting `.gitignore`*, so the cloud builder never receives the file at all. The real source of truth for any cloud build is the **EAS environment variable store** (`eas env:list` / `eas env:create`), which is a completely separate place from `.env` with no syncing between them. Checking STEADY's revealed the gap this creates: the `development` environment was entirely empty and PostHog had never been registered anywhere, meaning every EAS build we'd ever made shipped with analytics silently disabled. The failure mode is the dangerous kind — nothing errors, the variable is just `undefined`, and code with a graceful fallback (ours disables analytics, or drops to the browser OAuth flow) behaves plausibly while doing the wrong thing. Two habits follow: run `eas env:list <environment>` before trusting any cloud build, and declare `"environment"` explicitly on each profile in `eas.json` so which-vars-does-this-build-get is answerable by reading the repo instead of querying a remote service.
+
+### Three build profiles, and only one of them gives you an APK you can just install
+*2026-08-03 · Tool*
+
+The word "build" hides three genuinely different artifacts in Expo, and `eas.json` is where you pick. `development` sets `developmentClient: true`, which produces an APK that is really a *shell* — it contains the native code but no JavaScript, and on launch it goes looking for a Metro dev server to stream the bundle from, so it's useless on a phone that isn't on your network. `preview` drops that flag, so Metro runs once at build time and the compiled bundle is baked into the binary: a genuinely standalone APK that installs and runs anywhere. `production` differs on one axis only — `buildType: "app-bundle"` emits an `.aab`, which is a *publishing format* Play Store consumes and re-packages per-device, and which no phone can install directly. So "give me an APK I can send someone" always means the `preview` profile, and the mental model is closer to debug-vs-release in Gradle than to anything in Python packaging. The second half of the story is signing: EAS holds a keystore for the project, every profile signs with it, and Android Google Sign-In keys off package-name-plus-certificate-SHA-1. That's why building the same code locally with `expo run:android` yields a working app whose Google Sign-In fails — a debug keystore means a different fingerprint, and no OAuth client registered for it.
+
+### An error handler that crashes hides the error you needed
+*2026-08-03 · Pattern*
+
+`expo start --tunnel` failed with `TypeError: Cannot read properties of undefined (reading 'body')`, which describes a bug in the *reporting code*, not the actual problem. `@expo/ngrok`'s client wraps every failure in `JSON.parse(error.response.body)` on the assumption that anything going wrong comes back as an HTTP response from the ngrok agent's local API on `127.0.0.1:4040` — but when the agent process dies on startup, the request fails at the socket level and there is no `response` object to read, so the `catch` block throws its own `TypeError` and the genuine message is lost. The general lesson, and one that transfers well from Python's `except` blocks: a `catch` that assumes a *shape* for the thing it caught is a trapdoor, and the fix when you hit one is to stop reading the wrapper's output and run the underlying process by hand. Doing exactly that — invoking the bundled `ngrok` binary directly with `--log=stdout --log-level=debug` — printed `ERR_NGROK_108` in one line.
+
+### Expo's `--tunnel` runs on one shared ngrok account for the whole world
+*2026-08-03 · Tool*
+
+`--tunnel` doesn't use an account you own — the authtoken is a literal string compiled into `@expo/cli`'s `AsyncNgrok.js`, paired with the `exp.direct` domain, and every Expo developer everywhere shares it. That account is capped at 5000 simultaneous agent sessions, so when the pool saturates you get a failure that has nothing to do with your machine and cannot be fixed by reinstalling anything. Substituting your own ngrok account isn't practical either: the agent Expo bundles is v2.3.41 and free ngrok accounts now require ≥3.20.0 (`ERR_NGROK_121`), and Expo overwrites whatever token you configure with its own before requesting an `exp.direct` hostname your account doesn't own. The takeaway for STEADY is to treat the tunnel as a fallback we don't depend on, and keep the LAN path working so a third-party quota is never on the critical path of our dev loop.
+
+### WSL2 mirrored networking is why the phone can finally see Metro
+*2026-08-03 · Architecture*
+
+By default WSL2 runs behind a NAT'd virtual switch with its own private address (ours was `172.20.248.127`), and Windows only auto-forwards `localhost` from the host into the VM — nothing on the wider network gets a route in. That's the actual reason `npx expo start` on its own never worked from the phone and we'd been reaching for `--tunnel`: Metro was listening on an address no other device could reach, so we were routing traffic through ngrok's servers to solve what was really a local routing problem. Setting `networkingMode=mirrored` in `.wslconfig` makes the VM share the Windows host's real network interfaces, so Metro binds on the PC's LAN IP and the phone connects directly — removing an entire third-party dependency from the dev loop and cutting the latency of every bundle reload. It needs Windows 11 22H2+, takes effect only after `wsl --shutdown`, and if a device still can't connect the next suspect is the Windows firewall rather than WSL.
+
+### A ten-second timeout on a redirect you didn't know existed
+*2026-08-03 · Tool*
+
+The Gradle wrapper (`gradlew`) is a ~60 KB script whose only job is to fetch the real Gradle build tool, so every build has a hidden network dependency before any compilation begins — and `gradle-wrapper.properties` caps that fetch with `networkTimeout=10000`. The subtlety is that `services.gradle.org` is not a file host but a redirector: it answers with a 307 pointing at GitHub's release-asset CDN, and the ten-second budget applies to *connecting to the redirect target*, a host you never named and won't see in any config file. So a build can fail with `SocketTimeoutException` on a network that is provably fine — the giveaway is that `curl -L` pulls the identical URL at full speed, which separates "too slow to connect" from "blocked" or "offline". The repair worth remembering is that the wrapper's cache is just a directory convention it trusts blindly: put the zip at `~/.gradle/wrapper/dists/<name>/<hash>/`, unpack it beside itself, drop an empty `<name>.zip.ok` marker next to it, and the wrapper concludes it already downloaded successfully and proceeds. Since `distributionBase=GRADLE_USER_HOME`, that lives outside the project and therefore survives Expo's managed workflow regenerating `android/` from scratch on every build — which is exactly why patching `gradle-wrapper.properties` in the repo would *not* have worked.
+
+### A failed build can print your signing key
+*2026-08-03 · Protocol*
+
+`eas build --local` works by handing a single base64-encoded "job" blob to a helper package, and that blob has to carry everything the build needs offline — including `buildCredentials.keystore.dataBase64` and the keystore, key, and alias passwords in clear text. On success you never see it; on failure the helper echoes the command that failed, blob and all, straight into the log. For STEADY that blob is the Play Store **upload key**, the credential that proves to Google an upload is genuinely ours, so treating a local build log as ordinary diagnostic text is the mistake: pasting one into an issue tracker or a chat channel to ask for help would hand over the ability to publish as us. The general shape is worth internalising beyond this tool — anything that serialises credentials to pass them between processes will eventually serialise them into an error message, so logs from credentialed tooling get read before they get shared.
+
+### An Android app has two logos, and only one of them is in your repo
+*2026-08-03 · Protocol*
+
+The 512×512 image on the Play Store listing and the icon on the user's home screen are separate assets living in separate systems: the store icon is pure Play Console metadata you edit in a form and send for review, while the launcher icon is a compiled resource baked into the `.aab` from `adaptiveIcon` in `app.json`, so changing it requires a new build, a new `versionCode`, and a full release rollout. The consequence is that updating one silently leaves the other stale — the classic symptom being a fresh logo on the store page and the old one still sitting on every installed phone. For STEADY that means three files move together (`android-icon-foreground` 512², `android-icon-background` 512², `android-icon-monochrome` 432²) plus `icon.png` at 1024², which `expo-notifications` also consumes, and that Android crops the foreground to a circle so only the centre ~66% is guaranteed to survive.
+
+### Put the constraint on the template, not on the log
+*2026-08-03 · Architecture*
+
+STEADY's notification tables encode a distinction worth stealing: `notification_templates.reminder_type` is CHECK-constrained to seven exact values, while `notification_log.reminder_type` is unconstrained `TEXT` and its `template_id` is nullable. The template table is a *catalogue* — a closed set we control, where a typo should be rejected at write time — but the log is a *record of what happened*, and reality includes things the catalogue never anticipated, like a one-off welcome message. Had we mirrored the CHECK onto the log "for consistency", the only way to send a welcome push would have been a schema migration or a lie (filing it as a `meal` reminder), which is how delivery analytics quietly become untrustworthy. The general rule: validate aggressively on the tables that define what's *allowed*, permissively on the tables that describe what *occurred*.
+
+### Possession of the service-role key is the authorisation
+*2026-08-03 · Protocol*
+
+STEADY has two admin send paths that authorise in completely different ways, and the difference is instructive. `admin-send-notification` runs as an Edge Function, so it demands a real *user* JWT and then checks `profiles.is_admin` server-side — a service-role key would actually fail there, because `auth.getUser()` rejects anything that isn't a user token. A local script talking straight to PostgREST skips all of that: the service-role key bypasses RLS entirely, so there's no `is_admin` gate to satisfy because there's no server in the loop to enforce one. That's why reading another user's row from `device_push_tokens` (RLS'd to `auth.uid() = user_id`) is impossible with the anon key and trivial with the service-role key — and why that key belongs in a shell invocation or a secret store, never in `.env` alongside the `EXPO_PUBLIC_` values that ship inside the app bundle.
+
+### An Expo push ticket is an acceptance, not a delivery
+*2026-08-03 · Protocol*
+
+When `exp.host/--/api/v2/push/send` returns `status: "ok"`, all that means is Expo queued the message — it has not yet talked to FCM or APNs, let alone reached a phone. The real outcome arrives later as a *receipt*, fetched separately from `/push/getReceipts` using the ticket id, and that's the only place errors like `DeviceNotRegistered` (the user uninstalled) or `MessageRateExceeded` surface. For STEADY this matters because `notification_log.status = 'sent'` currently records the ticket, not the receipt, so a row saying `sent` is really saying "Expo accepted it" — the gap where a stale token silently swallows every reminder is invisible in our own logs. The general shape: any two-stage delivery API will happily give you a synchronous success that means "received your request", and mistaking it for "delivered" is how dead push tokens accumulate unnoticed.
+
+### Android notification icons are alpha masks, not images
+*2026-08-04 · Protocol*
+
+Since API 21, Android takes only the **alpha channel** of a small notification icon, discards every RGB value, and paints the remaining shape in a single tint colour. So the icon's design lives entirely in which pixels are transparent — feed it a full-colour, fully-opaque PNG and the silhouette it extracts is the whole rectangle, which renders as a solid coloured block. For STEADY this is exactly what shipped, because `app.json` pointed expo-notifications at our 1024×1024 opaque launcher icon; the rule is that a notification icon must be authored as white-on-transparent from the start, and no build plugin will convert one for you.
+
+### Adaptive icons and the Android 12 splash share one "safe zone" rule
+*2026-08-04 · Protocol*
+
+An Android adaptive icon is a 108×108dp canvas of which only the centre **72×72dp (66%)** is guaranteed visible — the launcher masks the rest to a circle, squircle or teardrop of its choosing. The Android 12+ splash screen applies the same idea: `windowSplashScreenAnimatedIcon` draws into a 240dp area but reveals only the inner 160dp circle. For STEADY both mattered at once: our wordmark logo overflowed the icon safe zone by 142px (losing the "S" and the trailing dot), and it's why the splash can show the bowl but *not* the six macro callouts arranged around it — anything spread to the edges of the canvas is cropped away before it ever reaches the screen.
+
+### A `??` fallback after `.message` is almost always dead code
+*2026-08-04 · Pattern*
+
+`setError(err.message ?? 'Something went wrong')` reads like a safety net, but `??` only fires on `null`/`undefined` — and every realistic thrown value already carries a non-empty `.message`. The friendly string is therefore unreachable, and the raw developer text wins 100% of the time. The habit worth forming is that a UI never touches `.message` at all: route everything through one mapper that decides what a human sees, and log the original separately so debuggability doesn't pay for the politeness.
+
+### Classify errors by type and status, not by message text
+*2026-08-04 · Pattern*
+
+Substring-matching an error message is tempting but brittle, and against supabase-js it simply doesn't work: every Edge Function failure arrives as the same opaque sentence, "Edge Function returned a non-2xx status code", with no code in the text to match on. The structured data is there, just not in `.message` — `FunctionsHttpError` carries the full `Response` on `.context`, `PostgrestError` carries a SQLSTATE on `.code`, and the Google Sign-In module carries a numeric status code. Branching on those is both exact and cheap, and it fixed our analytics at the same time, which had been reporting `unknown` for essentially every server failure.
+
+### RN's Android KeyboardAvoidingView has an asymmetric event payload
+*2026-08-04 · Library*
+
+On Android, `KeyboardAvoidingView` feeds both `keyboardDidShow` and `keyboardDidHide` into one handler that reads `endCoordinates.screenY` — but React Native's native side fills that field with a Y coordinate on show and with the visible frame's *height* on hide. The two aren't the same quantity, so the "reset" computation lands on the status-bar height rather than 0, and the component's `if (_keyboardEvent == null) setBottom(0)` guard can't save it because the hide event is non-null. The practical rule for STEADY: on Android, make the component inert and drive the offset from your own `Keyboard` listeners, where returning to zero is a literal rather than an arithmetic result that can drift.
+
+### Edge-to-edge makes every Modal reach under the navigation bar
+*2026-08-04 · Architecture*
+
+With `edgeToEdgeEnabled=true` (the default in Expo SDK 54), a React Native `<Modal>` opens a window that extends beneath the system navigation bar, so a bottom sheet's last row sits under the back/home/recents buttons unless it applies the inset itself. `useSafeAreaInsets().bottom` is the right source because it reports the real bar height per device — roughly 48dp with 3-button navigation, 16–24dp with gestures, 0 where there's no bar — which is exactly the "above the buttons when they exist, at the edge when they don't" behaviour you want, from a single expression. Note that RN forces `navigationBarTranslucent` to true while edge-to-edge is on, so passing `false` to opt out does nothing.
+
+### A default parameter is a silent contract with every call site
+*2026-08-04 · Pattern*
+
+STEADY's Settings screen renders every editable field through one `Field` helper whose signature begins `keyboardType = 'numeric'` — sensible, since most rows are numbers. But a default applies to every call site that *forgets* to think about it, which is how the Name row ended up opening a number pad: it simply passed no `keyboardType`. Defaults are best reserved for values where the majority case is also the *safe* case; where a wrong value is user-visible, making the parameter required forces each call site to make the decision explicitly.
+
+### Hoist transient UI out of the thing that dismisses it
+*2026-08-04 · Pattern*
+
+STEADY's "saved!" confirmation was rendered inside the bottom sheet that the same handler closed, so it was mounted into a container that was already unmounting and could never appear. Any confirmation owned by local state hits this whenever the confirmed action also dismisses the surrounding UI. The fix is to separate "something happened" from "show a message": a small global store any component can publish to, and one host mounted near the navigation root that outlives every screen and sheet — with the caveat that on Android a `<Modal>` is a separate native window, so a root-level toast still cannot paint over a sheet that stays open.
+
+### A shared stylesheet is a correctness tool, not just a tidiness one
+*2026-08-04 · Architecture*
+
+STEADY's four legal pages each carried their own copy of an identical inline `<style>` block — four copies means three chances to drift, and `privacy.html` duly drifted when it was edited on its own in GitHub's web editor. It came back with different body text, different link colour, bordered tables, and `:root { color-scheme: light }` with the dark-mode block dropped, so Privacy stayed white while Terms followed the system theme. Extracting one `legal.css` doesn't just remove duplication; it makes the pages structurally incapable of disagreeing, which is the actual property we wanted.
+
+### One app, three signing certificates — depending on how it was installed
+*2026-08-04 · Protocol*
+
+The same Android app can carry a *different* signing certificate depending on its delivery path: sideloaded APKs keep the key you built with (for us the EAS keystore, `EB:23:…`), anything from Play is re-signed by **Play App Signing** with Google's own key, and Internal App Sharing re-signs with a third key again. Any service that authenticates your app by fingerprint — Google Sign-In, Maps, SafetyNet — therefore needs an entry per certificate, which is why "works on my device, fails for every tester" is such a common and confusing report. For STEADY this was the whole Google Sign-In bug: we had registered the upload key and never the Play app-signing key, so `DEVELOPER_ERROR` was guaranteed for anyone installing from the internal test track.
+
+### `DEVELOPER_ERROR` is an identity mismatch, never a code bug
+*2026-08-04 · Protocol*
+
+Google Play Services returns status code 10 when it cannot find an OAuth client matching the running binary's `package name + signing SHA-1` **in the same Google Cloud project** as the client ID you passed. Because the check happens before any network round trip to your backend, no amount of app-side change can affect it — the useful response is always to go compare three values (certificate, package, project), not to touch code. The corollary worth remembering: the fix is server-side, so an app already installed on a device starts working within minutes of registering the client, with no rebuild or re-upload.
+
+### `requestIdToken(clientId)` sets the token's audience to that same client ID
+*2026-08-04 · Protocol*
+
+On Android, `@react-native-google-signin` is handed the **web** client ID and calls `GoogleSignInOptions.requestIdToken(webClientId)` — and `requestIdToken` is what determines the `aud` claim of the issued ID token. So despite running on Android, the token's audience is the *web* client, which is precisely what Supabase's Google provider is configured with. This is why our native sign-in works against Supabase without allow-listing the Android client IDs, and why a note in BUILD.md claiming the opposite was worth correcting: an inaccurate mental model of which credential ends up in `aud` sends you tuning the wrong dashboard.
