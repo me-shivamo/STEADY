@@ -667,7 +667,7 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
   try {
     const { data, error } = await supabase
       .from('chat_messages')
-      .select('role, content, message_type')
+      .select('role, content, message_type, meal_log_id')
       .eq('user_id', userId)
       .eq('chat_date', date)
       .order('created_at', { ascending: true })
@@ -690,7 +690,9 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
     // prose turns — the model still knows what's already logged today
     // (useful context), but there's no repeated "log → prose reply" shape
     // left to pattern-match against.
-    const rows = data as Array<{ role: string; content: string; message_type: string | null }>
+    const rows = data as Array<{
+      role: string; content: string; message_type: string | null; meal_log_id: string | null
+    }>
     const loggedFoods: string[] = []
     const conversational: Array<{ role: string; content: string }> = []
 
@@ -700,8 +702,22 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
         loggedFoods.push(m.content)
         continue
       }
-      if (m.role === 'user' && rows[i + 1]?.message_type === 'food_log_confirmation') {
-        continue // the log's user turn is folded into the summary line below, not replayed
+      // A user turn that produced a meal is folded into the summary line below
+      // rather than replayed. Two tests, deliberately:
+      //
+      //   m.meal_log_id !== null  — the row says so ITSELF. This is the reliable
+      //     one, and it is why saveChatTurn now stamps meal_log_id on the user
+      //     row too.
+      //   rows[i+1] is a confirmation — the original positional test, kept only
+      //     as a fallback for rows written before that change.
+      //
+      // The positional test alone was the bug: it asks a question about the
+      // NEIGHBOUR, so deleting a meal (which cascades the neighbour away)
+      // silently flipped the answer and resurrected the user's message into the
+      // model's context. Identity should never be inferred from an adjacent
+      // row's continued existence.
+      if (m.role === 'user' && (m.meal_log_id !== null || rows[i + 1]?.message_type === 'food_log_confirmation')) {
+        continue
       }
       conversational.push({ role: m.role, content: m.content })
     }
@@ -737,6 +753,16 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userTex
         role: 'user',
         content: userText,
         message_type: 'chat',
+        // The user's own message must carry meal_log_id too, not just the
+        // assistant's confirmation. Without it, deleting a meal cascades away
+        // the assistant row and STRANDS this one: the bubble stays on screen
+        // with no card under it, and — worse — loadChatHistory() stops folding
+        // it out of the AI context (it recognises a log's user turn by looking
+        // at whether the NEXT row is a food_log_confirmation). The orphan then
+        // replays as a live user turn, so the model sees two consecutive user
+        // messages, reads them as one utterance, and re-logs the deleted food
+        // alongside the new one.
+        meal_log_id: mealLogId,
         chat_date: date,
         created_at: userSentAt,
       },

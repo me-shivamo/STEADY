@@ -443,6 +443,11 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userCap
         role: 'user',
         content: userCaption,
         message_type: 'chat',
+        // Same reasoning as log-food-from-text: without meal_log_id here, a
+        // deleted meal cascades the assistant row away and leaves this caption
+        // stranded — visible in the thread with no card, and replayed into the
+        // AI context so the deleted food gets logged again on the next message.
+        meal_log_id: mealLogId,
         chat_date: date,
         created_at: userSentAt,
       })
