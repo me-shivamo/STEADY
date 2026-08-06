@@ -192,8 +192,11 @@ export default function LoginScreen({ navigation }: Props) {
 
           <GoogleSignInButton onPress={handleGoogleSignIn} loading={googleLoading} />
 
-          {/* Switch to signup */}
-          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
+          {/* Switch to signup. The spacing lives on this button rather than on
+              a wrapper around the Google button — the previous layout inherited
+              its gap from a container that got removed when we adopted the
+              shared GoogleSignInButton, and the line collapsed onto it. */}
+          <TouchableOpacity style={styles.switchButton} onPress={() => navigation.navigate('Signup')}>
             <Text style={styles.switchText}>
               Don't have an account?{' '}
               <Text style={styles.switchLink}>Sign up</Text>
@@ -311,27 +314,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontFamily: fontFamily.regular,
   },
-  socialButtons: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  socialButton: {
-    height: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.bgCard,
-    gap: 8,
-  },
-  socialButtonText: {
-    fontSize: 16,
-    fontWeight: fontWeight.semibold,
-    fontFamily: fontFamily.semibold,
-    color: colors.textPrimary,
-  },
   primaryButton: {
     height: 46,
     backgroundColor: colors.accent,
@@ -354,6 +336,12 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.bold,
     fontFamily: fontFamily.bold,
     letterSpacing: 0.2,
+  },
+  switchButton: {
+    marginTop: 20,
+    // Vertical padding gives the 13px text line a real tap target instead of
+    // relying on the glyph height alone.
+    paddingVertical: 8,
   },
   switchText: {
     fontSize: 13,
