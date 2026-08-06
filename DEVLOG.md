@@ -3,6 +3,40 @@
 > A chronological story of building STEADY, an AI-powered calorie tracking app for iOS and Android.
 > Written as it happens — raw, real, and ready to share.
 
+### A sideloadable APK to go with the bundle — and a verification step that lied
+*2026-08-05 · Setup*
+
+With the AAB done we cut a `preview` APK from the exact same tree, since an AAB can't be installed on a phone and we wanted something holdable. Checked `eas.json` first to be sure it wouldn't disturb the release we'd just made: `autoIncrement` is set only on `production`, so the preview build reads the remote counter without touching it, and both artifacts are timestamped so nothing gets overwritten. It came out at 113 MB versus the AAB's 76 — expected, because a standalone APK carries all four ABIs at once while Google slices the bundle per device. `BUILD SUCCESSFUL in 16m 51s`, versionCode 12, `com.steadyapp.android`, JS bundle baked in at 4.1 MB (`assets/index.android.bundle` — that's what makes it run without a Metro server, unlike a `development` build).
+
+Then the verification step from the runbook quietly failed us. `keytool -printcert -jarfile` — the exact command in `BUILD.md §6` — printed **nothing at all** for the APK. Not a wrong fingerprint, not an error: silence. Twice in one day we'd now hit a check whose negative result meant nothing, so instead of shrugging we asked why. `apksigner verify --print-certs` gave the answer: this APK is signed with **APK Signature Scheme v2 only** (`v1 scheme (JAR signing): false`). `keytool` only understands the old v1 JAR signature, so it had nothing to read. The fingerprint is correct — `EB:23:27:…:C7`, the EAS upload key — it just needs the right tool to see it.
+
+That's the sharp edge worth remembering: the runbook's verification recipe was written against a `.aab`, where it works, and silently degrades to useless on a `.apk`. A step that outputs nothing looks a lot like a step that passed, especially at the end of a 17-minute build when you want to be done.
+
+### versionCode 12 — the first AAB built with the runbook instead of against it
+*2026-08-05 · Milestone*
+
+We cut a fresh production AAB, and the interesting part is how boring it was. The 2026-08-03 session took three failed attempts before an artifact appeared; this time `BUILD.md` turned the whole thing into a checklist we could clear in about a minute before committing to a 30-minute compile — JDK 17, Android SDK, EAS login, all five `EXPO_PUBLIC_*` vars in the production environment, `.easignore` still un-ignoring `google-services.json`, Gradle 8.14.3 already seeded in the wrapper cache. Every one of those has previously produced a build that compiles perfectly and is broken at runtime, which is exactly why they're worth checking *before* the wait rather than after. It finished in **17m 59s** — noticeably faster than the 31m the runbook predicts, because the Gradle and CMake caches were already warm from the last session rather than building every ABI from cold.
+
+Then we verified the artifact rather than trusting it. 76 MB, 1510 entries, all four ABIs present, and the signing fingerprint read straight off the file with `keytool`: `EB:23:27:…:C7`, the EAS upload key. That check is the cheap one that matters most — a debug-signed bundle looks identical until Google Sign-In fails on every device. We also cracked open `base/resources.pb` and confirmed `google_app_id`, `gcm_defaultSenderId` and `google_api_key` are compiled in, so this build can actually mint an FCM push token. That's the 2026-08-04 bug, checked positively instead of assumed. Worth noting our *first* attempt at that check was junk — it looked for `values.xml` in the zip listing, which doesn't exist in an AAB because resources are flattened into protobuf. A check that can only return "no" isn't evidence.
+
+One thing we deliberately did **not** fix mid-flight: `expo-doctor` fails on every build with "app.json is not being used by your app.config.js". It's wrong — `app.config.js` literally does `{ ...appJson.expo }` — and it's non-fatal, since EAS logs the non-zero exit and carries on. But it means there's a permanent red `Error:` line sitting in every build log, and a real config problem would blend right into it. Filed as a follow-up rather than a mid-build detour.
+
+### A refactor quietly deleted the spacing above "Already have an account?"
+*2026-08-05 · Bug*
+
+Shivam spotted that on both auth screens the "Don't have an account? Sign up" / "Already have an account? Log in" line was crammed right up against the Continue-with-Google button, and correctly remembered it used to look fine. It did. We traced it to commit `3db9cbe`, where we replaced each screen's hand-rolled Google button with the shared `GoogleSignInButton` component. The old markup wrapped that button in a `<View style={styles.socialButtons}>` carrying `marginBottom: 16` — swapping in the shared component removed the wrapper, and the gap it was silently providing went with it. The switch-account line never had a margin of its own; it had been leaning on a neighbour the whole time.
+
+The fix moves the spacing onto the element that actually needs it: a `switchButton` style with `marginTop: 20` and `paddingVertical: 8` on the `TouchableOpacity` itself — the padding doubling as a proper thumb-sized tap target for a 13px line of text. We also deleted the now-dead `socialButtons` / `socialButton` / `socialButtonText` styles left behind by that refactor, which had zero references but still *read* like they were providing layout — the exact thing that made this bug hard to see when scanning the stylesheet.
+
+### Got Expo Go onto the LAN without restarting WSL, using a Windows port proxy
+*2026-08-04 · Setup*
+
+Rather than wait on `wsl --shutdown` to activate mirrored networking, we punched a direct route through with a Windows **port proxy**: `netsh interface portproxy` makes Windows listen on `0.0.0.0:8081` and forward every connection into WSL's NAT address. It's the same idea as an `iptables -j DNAT` rule — Windows terminates the phone's TCP connection on its real Wi-Fi IP and opens a fresh one to WSL on the other side, so the phone never needs to know the `172.20.x.x` network exists. Paired it with `REACT_NATIVE_PACKAGER_HOSTNAME=192.168.29.250`, which is load-bearing: without it Metro advertises its *own* NAT address inside the manifest, and the phone dutifully tries to fetch the bundle from an IP that doesn't exist on its network.
+
+Two things bit us on the way. First, the elevated PowerShell one-liner silently created the port proxy but *not* the firewall rule — a `$env:TEMP` inside single quotes never expanded, so the elevated shell was handed a `-File` path that didn't exist, and `Start-Process -Verb RunAs` reports nothing when the thing it launched does nothing. Moved the commands into a real `.ps1` invoked by absolute path and verified the rule from the running system afterwards rather than trusting the command's silence. Second, this laptop's Wi-Fi is classified **Public** in Windows, where Defender blocks inbound by default — so the rule needs `-Profile Any`, not the default. Verified the whole chain end to end by hitting `http://192.168.29.250:8081/status` from the Windows side and getting `packager-status:running` back.
+
+Also learned to distrust one particular test: fetching the Windows LAN IP *from inside WSL* hangs forever. That's a hairpin — out of WSL, into Windows, back into WSL — and it failing says nothing about whether a real phone can connect. The honest check has to originate outside the WSL VM.
+
 ### Traced "Something went wrong" in Expo Go to a 14 MB bundle crawling through a free ngrok tunnel
 *2026-08-04 · Bug*
 
@@ -2032,3 +2066,97 @@ We pushed migration 027 to production and closed the delete-meal bug. The pre-fl
 The satisfying part is the verification. We reused the exact probe that originally *found* the bug — a `DO` block that deletes a real meal and then raises an exception to roll itself back. Before the migration it produced `ERROR 23503: violates foreign key constraint "chat_messages_meal_log_id_fkey"`. After, the same block reports `delete succeeded (cascaded 1 chat_messages, 1 food_entries)` and rolls back with nothing removed. Symmetric evidence: the same instrument, the same data, opposite results. That's a stronger claim than "the migration reported success", which only tells you SQL executed, not that behaviour changed.
 
 Notable that this fix, like the Google Sign-In one earlier today, needed **no rebuild** — `deleteMeal()` in the app was always correct, it was the database refusing. Two of the three critical bugs turned out to live entirely outside the app binary, which is a good argument for checking the runtime environment before reaching for the code.
+
+### Build 11: verified by interrogating the artifact, not by trusting the exit code
+*2026-08-04 · Milestone*
+
+Version code 11 built locally in about 25 minutes and carries thirteen fixes plus the FCM configuration. What made it worth writing down is the pre-flight catch: EAS selects the files it uploads using `.gitignore`, and we had gitignored `google-services.json` an hour earlier for perfectly good reasons. The build would have compiled cleanly, installed fine, and left push exactly as dead as before — no error anywhere to explain it. A `.easignore` (which EAS uses *instead of* `.gitignore`) fixed it, and we confirmed it by listing the actual tarball EAS was compiling before letting it run.
+
+That habit paid off twice more. Rather than trust "exit code 0", we asked the `.aab` four questions directly: the signing fingerprint is the EAS keystore (`EB:23:…`, so Play will accept the upload); `google_app_id` and `gcm_defaultSenderId` are present with the app ID `1:853928970205:android:c80c…` matching `google-services.json` exactly; the notification icon is now `channels=2, hasAlpha=true` where the previous build shipped `channels=3, hasAlpha=false` — the literal cause of the indigo-blob icon; and the launcher and splash images render as the STEADY wordmark and the bowl rather than Expo's scaffold chevron. Every one of those is a property of the file, answerable without a phone.
+
+One honest blemish: the adaptive launcher icon has a faint square seam, because the generator shrank the entire logo — its own gradient background included — to 71% and placed it over a separately synthesised gradient. The two don't match perfectly. It's cosmetic, it's in build 11, and it isn't worth a second 30-minute cycle on its own; it goes in the batch with whatever on-device testing turns up.
+
+### Half a keyboard fix: the dismiss bug died, a show bug took its place
+*2026-08-05 · Bug*
+
+Shivam installed build 11 from Play and reported the composer now returns cleanly to the bottom with no phantom padding — the original bug, fixed — but sits *behind* the keyboard when it opens. We'd traded a dismiss-side bug for a show-side one, which is its own kind of progress: the mechanism we replaced was genuinely broken, we just replaced it with something slightly wrong.
+
+The cause is a name that doesn't mean what it says. We lifted the composer by `event.endCoordinates.height`, on the reasonable assumption that this is the distance from the bottom of the screen to the top of the keyboard. React Native computes it (ReactRootView.java:902-904) as `imeInsets.bottom - barInsets.bottom` — the keyboard inset with the system bars *subtracted*. On a normal app that's the right number, because the root view stops above the navigation bar. We run edge-to-edge, so our root view extends underneath it, and the gap we actually have to clear is the full `imeInsets.bottom`. The shortfall is exactly the nav-bar height — about 48dp with 3-button navigation, which matches the sliver of composer left peeking above the keyboard in his screenshot.
+
+The fix adds `insets.bottom` back, gated on API 30+. That gate isn't defensive padding: the pre-Android-11 path (`checkForKeyboardEventsLegacy`) computes `heightPixels - visibleArea.bottom + notch`, which already *includes* the nav bar, so adding the inset there would over-lift by the same 48dp and leave a gap above the keyboard instead. Same symptom, opposite sign, different Android version — a nice reminder that "just add the inset" is only correct once you know which of two formulas produced the number you're adjusting.
+
+### The delete bug had a second half, and it was teaching the AI to re-log deleted food
+*2026-08-05 · Bug*
+
+Shivam confirmed meal deletion works now, then reported two things that turned out to be one bug: the user's own chat bubble survived the delete, and — much worse — his *next* food log came back merged with the food he'd just deleted. The second symptom is what made this interesting, because it looks like an AI problem and isn't one.
+
+`saveChatTurn()` wrote `meal_log_id` onto the assistant's confirmation row but not onto the user's own message, so migration 027's CASCADE deleted exactly half the pair. The stranded half then broke something subtle: `loadChatHistory()` decides "this user turn was a food log, don't replay it to the model" by checking whether the *next* row is a `food_log_confirmation`. Cascading that neighbour away flips the answer. The orphan gets replayed as a live user turn, the model receives two consecutive user messages with no assistant turn between them, reads them as a single continued utterance, and dutifully logs both. A referential-integrity gap manifesting as an AI hallucination.
+
+The fix is three layers: stamp `meal_log_id` on the user row in both Edge Functions so future deletes cascade cleanly; make the history filter ask the row about *itself* (`m.meal_log_id !== null`) rather than infer identity from a neighbour's continued existence; and migration 028 to repair rows already written. All of it is server-side, so it went live without a rebuild.
+
+The near-miss is worth recording. The obvious cleanup was "delete user rows that have no assistant partner" — and measuring first showed only 141 of 414 user rows share a timestamp with an assistant row. The other 273 aren't deleted meals at all; they predate the `userSentAt` change, when the pair was written with independent timestamps. Recent days pair almost perfectly (10/10, 12/12, 11/13), which is what made a backfill safe while the delete would have wiped months of legitimate history. We shipped the backfill, and cleaned up the two genuine orphans by ID after reading them.
+
+### Getting the full bowl illustration onto the splash, around an OS restriction
+*2026-08-05 · Feature*
+
+Shivam wanted the splash to show what the Welcome screen shows — the bowl ringed by six handwritten macro and micronutrient callouts — not just the bowl on its own. The native splash cannot do it, and it is worth being precise about why rather than treating it as a limitation of our config: Android 12+ renders the splash through `windowSplashScreenAnimatedIcon`, and the system masks that image to a circle exposing only the inner two-thirds of the canvas. Labels sitting at the edges of a 390×480 illustration are cropped by the OS before the app has any say. No `app.json` setting reaches that.
+
+So we built the splash in React instead. `AnimatedSplash` renders the wordmark, tagline and full illustration over the same `#FAFAFA`, with the bowl at the same position and scale as the native one — the handover reads as a single splash where the labels fade in, rather than two screens. It sits *above* the navigator rather than replacing it, so the real first screen mounts and settles behind it; when the fade completes there is a finished screen underneath instead of a flash of empty layout.
+
+The refactor mattered more than the component. The illustration's geometry — six arrows derived from compass angles, a shared cluster offset, hand-tuned label boxes — took seven rounds of on-device feedback to get right, and copying 150 lines of trigonometry into a second file would have guaranteed the two drifted apart the first time either was touched. It now lives in `BowlIllustration`, imported by both. We also swapped the bowl from a remote Unsplash URL to a bundled 76 KB asset: fatal for a splash (it would render an empty circle until the network answered) and merely bad for the Welcome screen, so both got better.
+
+### The first push that actually reached a phone — and the token that proved receipts matter
+*2026-08-05 · Milestone*
+
+We sent STEADY's first push notification to a real standalone build and it landed. Saket's device came back `status: ok` from Expo's receipts endpoint, which means the entire chain we spent the day assembling works end to end: `google-services.json` compiled into the binary → device mints an FCM token → token registered via the Edge Function → Expo's push service authenticates with the FCM V1 service account → FCM → phone. Every one of those links was broken this morning.
+
+The other device is the more instructive half. Shivam's token came back `DeviceNotRegistered` — "the recipient device is not registered with FCM" — even though it had been written to the database only hours earlier. That is FCM saying the app install the token belonged to no longer exists; a reinstall, an update, or cleared app data all invalidate one. And it is exactly the failure the ticket response cannot show you: both messages returned `status: ok` at send time, because a ticket only means "Expo accepted this for delivery". Had we stopped there, we'd have recorded a 100% success rate for a send that reached one of two phones.
+
+So we pruned it, which is what a `DeviceNotRegistered` receipt is *for*. That closes the loop on something the codebase still doesn't do automatically: `notification_log.status = 'sent'` records the ticket, not the receipt, and nothing anywhere deletes a dead token. Today that gap was invisible because there was only ever one token; with real users installing (a sixth appeared while we were testing) it becomes the difference between "reminders are working" and "reminders are silently going nowhere for a growing fraction of the fleet". Receipt-driven pruning is now the highest-value item left in the notification system.
+
+One small thing worth remembering from the same send: two of the accounts shared a single push token, because the token belongs to the *device install*, not the user. Signing two accounts into one phone and fanning out per-user would buzz that phone twice.
+
+### The port that was busy with nothing
+*2026-08-05 · Bug*
+
+Metro kept refusing port 8081 and offering 8082 instead, so we went looking for the process to kill — and found none. `lsof`, `ss` and `/proc/net/tcp` inside WSL all reported nothing listening, yet opening a socket to `127.0.0.1:8081` connected happily. That contradiction was the whole diagnosis: our `.wslconfig` sets `networkingMode=mirrored`, so WSL2 shares Windows' network namespace, and a Windows-side listener makes a port look occupied to Linux while remaining completely invisible to Linux tooling.
+
+Crossing over to the Windows side via `netstat.exe` pointed at PID 4984, which turned out to be `svchost.exe` hosting `iphlpsvc` — the IP Helper service. That was the tell. IP Helper is what implements `netsh interface portproxy`, and `netsh interface portproxy show all` produced the culprit: a forwarding rule sending `0.0.0.0:8081` to `172.20.248.127:8081`. That address is an old WSL VM IP from back when WSL ran in NAT mode, left behind by some earlier Metro-reachability workaround. It has been forwarding to a dead address ever since we switched to mirrored networking, which also makes the rule unnecessary — under mirrored mode Metro bound inside WSL is already reachable from Windows and the LAN.
+
+The cleanup is one elevated command (`netsh interface portproxy delete v4tov4 listenport=8081 listenaddress=0.0.0.0`), which we couldn't run from the agent since there's no way to raise a UAC prompt from inside WSL. Worth noting it was never actually blocking anything: on `--tunnel` the phone talks to the `exp.direct` hostname and ngrok forwards to whatever local port Metro settled on, so 8082 works exactly as well as 8081.
+
+### Picking the one email address STEADY will speak from
+*2026-08-05 · Decision*
+
+STEADY needed an address on `steady.chat` that could carry five jobs at once — OTP codes, newsletters, push-adjacent notifications, outreach, and support — and Shivam wanted a single name rather than a sprawl of them. We landed on `hello@steady.chat`. The reasoning is mostly about the OTP step: people have a learned pattern for where verification codes come from, and `hello@` sits squarely inside it, while candidates like `connect@` read as cold outreach and `no-reply@` fails the "actually talk to us" half of the brief outright. `support@` and `connect@` become free aliases into the same inbox, so we keep the warm front-door identity without giving up the specific ones.
+
+The part worth remembering is the split we deliberately did *not* make yet. Mailbox providers score transactional mail and marketing mail against the same domain reputation, so a newsletter people mark as spam can quietly start sinking the verification codes users are waiting on. The long-term shape is `hello@steady.chat` as the visible identity on everything, with bulk sending moved to a `mail.steady.chat` subdomain while OTP keeps the apex. We're not doing it today — volume doesn't justify it — but the address was chosen so that split stays possible without ever changing what users see.
+
+### Wiring Supabase Auth to Hostinger's SMTP
+*2026-08-05 · Setup*
+
+With the address settled we pointed Supabase Auth's custom SMTP at it: `smtp.hostinger.com` on port 465, username `hello@steady.chat`, sender name "Team Steady". Supabase's built-in email service is deliberately crippled — a handful of messages an hour, and only to project members — so custom SMTP isn't optional the moment a real user tries to sign up. The credentials live in hPanel under Emails → the domain → Manage → Configuration Settings → Manual Configuration.
+
+Two details we flagged before they became support tickets. The SMTP username has to be the full address rather than the local part, and the password is the mailbox's own, not the hPanel account login. And the DNS zone needs exactly one SPF record — `steady.chat` already has apex A records aimed at GitHub Pages for the legal pages, which doesn't collide with MX, but a second `v=spf1` entry would fail the domain outright per spec and send every OTP to spam.
+
+The known ceiling is send volume. Hostinger mailboxes are built for human correspondence and cap out hourly, which is invisible now and becomes a signup outage later. The escape hatch is cheap: swap these four fields for a transactional provider like Resend or SES and keep `hello@steady.chat` as the From, so nothing user-facing moves.
+
+### A confirmation email, and the discovery that nothing was going to send it
+*2026-08-05 · Feature*
+
+We designed STEADY's "Confirm sign up" email to match the app it lets people into — the same `#FAFAFA` canvas, white card, and indigo accent pulled straight from `src/theme/colors.ts` rather than eyeballed, so the first thing a new user sees in their inbox looks like the first thing they'll see on their phone. It greets them by the name they typed, via `{{ .Data.full_name }}`, which works because `signUp()` already writes `full_name` into user metadata; a Go-template `if` guards the case where it's missing so nobody gets "Welcome, ."
+
+Reading the auth code before writing the template turned out to matter more than the template did. `signUp()` in `authStore.ts` never passes `emailRedirectTo`, and `SignupScreen` has no "check your inbox" state — it just stops the spinner. Both are only survivable because **Confirm email is currently off**: Supabase hands back a live session immediately, `onAuthStateChange` fires, and the navigator moves. Which means the template we just wrote is inert, and the day we enable confirmation, signup breaks twice over — the user taps Create account and sees nothing happen, and the link in the email resolves to the web Site URL instead of `steady://`.
+
+So we've kept them as separate steps rather than shipping a half-flow. The email is written and committed; enabling it is a deliberate follow-up that comes with two app changes attached.
+
+We also put the file in the repo at `supabase/templates/confirm-signup.html`, which is less obvious than it sounds: Supabase auth templates live only in the dashboard UI and are in no migration or config file. Without a copy in git there is no record of what we send, no diff when it changes, and no way to recover it if someone edits the textarea badly. The file is now the source of truth and the dashboard is the paste target.
+
+### Email confirmation is off for v1, on purpose
+*2026-08-05 · Decision*
+
+We decided to ship v1 with Supabase's "Confirm email" setting disabled, and wrote the whole email story down in `.claude/plans/email.md` so the decision doesn't quietly become an accident. The case for leaving it off is mostly about the funnel: "go check your inbox, come back, find the app again" is a real cliff for a first-time install, and Google sign-in users skip confirmation entirely anyway, so it was only ever gating a subset of accounts. The case against is honest and recorded — anyone can register with an address they don't own, which means our user count includes typos and fakes, and password reset becomes the only email a user genuinely needs to receive. For a tracking-only v1, that's a trade we're happy to make.
+
+What we didn't want was a decision that ages badly in silence, so the plan names its own expiry: the moment we send anything a user is expected to *act* on — a newsletter, a weekly summary, real account recovery — confirmation has to come back on. And it captures the four changes that have to ship together when it does, because turning on the dashboard toggle alone is the one path that breaks signup outright.
+
+The pleasant surprise while writing it up was that the hardest-sounding piece is already built. `RootNavigator` wires both cold-start (`getInitialURL`) and warm (`url` event) deep links into `handleAuthDeepLink` for password resets; confirmation links arrive through exactly the same two doors, so v1.1 extends a handler rather than building a flow. The plan also inventories which auth templates are still Supabase defaults, which surfaced the thing worth doing next: reset-password is the one auth email that actually sends today, and it's going out unbranded from "Team Steady".

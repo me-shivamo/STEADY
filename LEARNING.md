@@ -3,6 +3,39 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### APK signature schemes — why `keytool` goes silent on a modern APK
+*2026-08-05 · Protocol*
+
+Android has signed APKs two different ways over its life. **v1 (JAR signing)** is the original: hashes of each file listed in `META-INF/`, inherited straight from Java's jar format — which is why `keytool -printcert -jarfile` can read it. **v2+ (APK Signature Scheme)** signs the whole archive as a contiguous block of bytes instead, stored in a dedicated section before the zip central directory, so it covers the file's structure and not just its contents. Modern Gradle with `minSdkVersion 24` emits v2 and skips v1 entirely, since every device that new understands it.
+
+The practical consequence bit us: `keytool` knows nothing about v2, so on a v2-only APK it prints *nothing* rather than complaining — indistinguishable from a passing check if you're skimming. The right tool is `apksigner verify --print-certs -v <apk>` from the SDK's `build-tools/`, which reports every scheme and the signer's SHA-1. For STEADY this matters because our whole signing sanity check rests on matching that fingerprint against the EAS upload key, and a check that can silently produce no output is worse than no check — see [a verification that can only return "no" isn't a verification](#a-verification-that-can-only-return-no-isnt-a-verification).
+
+### Ask the artifact, not the dashboard
+*2026-08-05 · Tool*
+
+A signed Android bundle carries its own signing certificate inside it, so `keytool -printcert -jarfile app.aab` answers "what key signed this?" from the file alone — no Play Console, no login, no trusting that the build did what you asked. The same idea extends to the rest of the bundle: the compiled resources live in `base/resources.pb`, so you can confirm the Firebase config was really baked in by looking for `google_app_id` in those bytes instead of assuming the Gradle task that reads `google-services.json` did its job.
+
+For STEADY this is the difference between catching a problem in ten seconds and catching it after a Play Store rollout. A debug-signed AAB and a correctly-signed one are byte-for-byte indistinguishable at a glance, and the symptom of getting it wrong — Google Sign-In failing on every device — looks nothing like a signing bug. The general habit: when a build pipeline claims something, verify it against the thing it produced, because that's the only artifact that can't lie about itself.
+
+### A verification that can only return "no" isn't a verification
+*2026-08-05 · Pattern*
+
+While checking the AAB we wrote a test for whether Firebase config made it into the bundle, by searching the zip's file listing for `values.xml`. It printed `False` — and that was meaningless, because an AAB has no `values.xml` at all; Android compiles every resource into a protobuf blob during packaging. The test was structurally incapable of ever printing `True`, so its "failure" carried exactly zero information.
+
+The trap is that a negative result *feels* like evidence, which is precisely when it's most dangerous — it either triggers a wild goose chase or, worse, gets shrugged off and trains you to ignore the check. The habit worth keeping: before believing a check that says no, confirm it can say yes — run it against a case you know is good, or reason through what a passing result would even look like.
+
+### Own your spacing — don't inherit it from a neighbour
+*2026-08-05 · Pattern*
+
+In React Native, a gap between two elements can come from either side: the top one's `marginBottom` or the bottom one's `marginTop`. That's fine until one of them is a wrapper `<View>` that exists for some other reason, because the day someone refactors that wrapper away the spacing vanishes with it and the *other* element — which was never touched — visibly breaks. Coming from CSS this is the familiar "action at a distance" problem; the difference in RN is there's no cascade or stylesheet to grep, so the dependency is invisible.
+
+The habit: put the margin on the element whose position you care about, and prefer a parent `gap` when you want uniform rhythm across a stack. Also treat unused entries in a `StyleSheet.create({...})` block as real debt — JS won't warn you that `styles.socialButtons` has no references, so a dead style sits there looking load-bearing and misleads the next person reading the file.
+
+### Port forwarding as a NAT escape hatch
+*2026-08-04 · Protocol*
+
+A machine behind NAT can dial out but cannot be dialled — its address is meaningless outside its private network, which is exactly why WSL's `172.20.x.x` is unreachable from a phone. A port proxy inverts the problem instead of solving it: something that *does* have a public-facing address (here, Windows on `192.168.29.250`) accepts the connection on the private machine's behalf and opens a second, separate connection inward. Two TCP connections stitched together, not one routed packet — which is why the client never needs a route to the private network, and also why a service must be told to advertise the *proxy's* address (`REACT_NATIVE_PACKAGER_HOSTNAME`) rather than the one it sees on its own interface.
+
 ### Config files that are read only at boot
 *2026-08-04 · Tool*
 
@@ -1488,3 +1521,98 @@ Google Play Services returns status code 10 when it cannot find an OAuth client 
 *2026-08-04 · Protocol*
 
 On Android, `@react-native-google-signin` is handed the **web** client ID and calls `GoogleSignInOptions.requestIdToken(webClientId)` — and `requestIdToken` is what determines the `aud` claim of the issued ID token. So despite running on Android, the token's audience is the *web* client, which is precisely what Supabase's Google provider is configured with. This is why our native sign-in works against Supabase without allow-listing the Android client IDs, and why a note in BUILD.md claiming the opposite was worth correcting: an inaccurate mental model of which credential ends up in `aud` sends you tuning the wrong dashboard.
+
+### `.easignore` — because EAS decides what to upload by reading `.gitignore`
+*2026-08-04 · Tool*
+
+EAS builds by uploading a copy of your project, and it selects files using `.gitignore` — so anything you've gitignored is invisible to the builder. That's correct for `.env` (its values live in the EAS environment store instead) but silently wrong for `google-services.json`, which is gitignored as per-environment config yet must be *compiled into* the binary for FCM push to work at all. Dropping a `.easignore` file into the repo overrides that selection: EAS then uses it **instead of** `.gitignore`, so ours is a near-copy with the `google-services.json` line neutralised. Two traps worth remembering — it replaces rather than extends (forget `node_modules/` and you upload a gigabyte), and the *service account key* must stay excluded in both files, because unlike `google-services.json` it is a genuine non-expiring secret that should never enter an artifact.
+
+### "It compiled" is not evidence that config reached the build
+*2026-08-04 · Pattern*
+
+Both of STEADY's silent-config failures share a shape: a value the build needs is absent, nothing errors, and the resulting binary is subtly broken at runtime. A missing `EXPO_PUBLIC_SUPABASE_URL` yields an app with no backend; a missing `google-services.json` yields an app that can never obtain a push token. Neither fails the build, because the build has no idea those values were supposed to be there. The defence is to verify the *artifact* rather than the process — `strings` the `.aab` for `google_app_id`, grep the bundle for the client ID — which is the same instinct that let us diagnose the notification-icon and Google Sign-In bugs without touching a phone.
+
+### `keyboardDidShow`'s `endCoordinates.height` is not the keyboard's on-screen height
+*2026-08-05 · Library*
+
+On Android (API 30+) React Native reports the keyboard height as `imeInsets.bottom - barInsets.bottom` — the IME inset minus the system bars. For a conventional app that's exactly right, because the root view already stops above the navigation bar, so the remaining gap to clear really is that difference. Under **edge-to-edge** the root view extends beneath the nav bar, so padding by the reported height under-lifts by precisely the nav-bar height and the input stays partly hidden; you need `height + insets.bottom`. The trap is that the correction is version-specific: the legacy pre-Android-11 code path measures from the display metrics and already includes the bar, so applying the same `+ insets.bottom` there over-lifts by the same amount. Before compensating for a number, find out which formula produced it.
+
+### Don't infer a row's identity from whether its neighbour still exists
+*2026-08-05 · Pattern*
+
+STEADY's chat history decided "this user message was a food log, so don't replay it to the model" by looking at whether the *next* row was a `food_log_confirmation`. That worked exactly as long as nothing was ever deleted — and the moment a CASCADE removed the confirmation, the same message silently re-classified itself as ordinary conversation and got fed back to the AI, which re-logged food the user had just deleted. The general rule: positional or adjacency-based tests encode an assumption that the neighbour is permanent, and deletion quietly violates it. Give the row its own attribute (here, `meal_log_id`) and ask it directly, so its meaning survives changes to everything around it.
+
+### Measure the population before writing a cleanup DELETE
+*2026-08-05 · Pattern*
+
+Repairing the orphaned chat rows, the obvious query was "delete every user row with no assistant partner at the same timestamp" — and it would have destroyed 273 rows of legitimate history. Counting first showed only 141 of 414 user rows pair on timestamp, because the field used to join them (`userSentAt`) was introduced partway through the project's life; everything older was written with independent timestamps and *looks* orphaned without being so. The recent-days breakdown (10/10, 12/12, 11/13) is what proved a backfill was safe while a delete was not. A `SELECT COUNT(*)` with the same `WHERE` clause costs seconds and is the difference between a repair and an incident.
+
+### The Android 12+ splash is an icon slot, not a canvas
+*2026-08-05 · Protocol*
+
+Since Android 12 the system, not your app, draws the launch screen: it reads `windowSplashScreenBackground` and `windowSplashScreenAnimatedIcon` from your theme and composites them itself, masking the icon to a circle that exposes only the inner ~2/3. That means anything wide, off-centre, or text-heavy is cropped before your code runs, and no Expo config option changes it — the old full-bleed `splashscreen.xml` approach simply isn't used any more. The pattern for a branded launch is therefore two-stage: a circle-safe mark in the native splash, then an in-app splash component rendered the moment JS boots, matched in background colour and element position so the handover is invisible.
+
+### Extract shared UI before the second copy exists, not after
+*2026-08-05 · Pattern*
+
+STEADY's bowl-and-callouts illustration carries about 150 lines of geometry — polar-coordinate arrow derivation, a shared cluster offset, per-label boxes — that took seven rounds of device feedback to settle. Needing the identical artwork on the splash made the choice concrete: duplicate it and accept that the two will silently diverge the first time either is nudged, or extract it into one component with `scale` as its only input. The tell for "extract now" is not line count but *tuning cost*: code that was expensive to get right is code where two copies guarantee one of them is eventually wrong.
+
+### `DeviceNotRegistered` is an instruction, not just an error
+*2026-08-05 · Protocol*
+
+When an Expo push receipt returns `DeviceNotRegistered`, FCM is reporting that the app installation behind that token is gone — uninstalled, reinstalled, or its data cleared — and the token will never work again. The documented contract is that you *stop sending to it*: keep it and every future send burns quota producing the same error, while your own logs happily record a ticket-level success. For STEADY this is now load-bearing rather than theoretical, because `notification_log` stores the ticket and nothing prunes tokens, so a device that reinstalls the app silently drops out of the reminder system while still looking reachable in the database.
+
+### A push token identifies a device install, not a user
+*2026-08-05 · Protocol*
+
+Two of STEADY's accounts turned out to share the same `ExponentPushToken` — not a bug, but the direct consequence of both being signed in on one phone: the token is minted per app installation, so it is a property of the device, not the person. Anything that fans out notifications per-user therefore has to deduplicate by token before sending, or one phone receives the same message once per account it has ever logged in with. The mirror-image case matters too: one user with two phones has two tokens, so `.limit(1)` per user reaches only whichever registered most recently.
+
+### A busy port with no process behind it means you're looking in the wrong OS
+*2026-08-05 · Tool*
+
+Under WSL2's `networkingMode=mirrored`, Linux and Windows share one network namespace, so anything listening on the Windows side occupies the port for WSL too — but `lsof`, `ss` and `/proc/net/tcp` only enumerate Linux sockets and will swear the port is free. The diagnostic that resolves it is the pair: if a connect to `127.0.0.1:PORT` succeeds while Linux reports no listener, the owner is a Windows process, and you find it with `netstat.exe -ano` plus `tasklist.exe /svc`. For STEADY this is a recurring shape rather than a one-off, because Metro, Supabase local and the Android tooling all bind well-known ports that Windows-side installs like to claim first.
+
+### `netsh portproxy` is a listener, and it outlives whatever it pointed at
+*2026-08-05 · Protocol*
+
+A `netsh interface portproxy` rule isn't a passive routing entry — the IP Helper service (`iphlpsvc`) genuinely binds and holds the listen port, which is why a stale rule shows up as a real `LISTENING` socket owned by an anonymous `svchost.exe`. Nothing ever invalidates one when its target disappears, so a forward added while WSL was in NAT mode keeps squatting on the port long after the VM IP it references is gone. Any port mystery on this machine is worth checking against `netsh interface portproxy show all` before hunting processes, and deleting a rule always requires an elevated shell.
+
+### iOS builds are macOS-only, but the *trigger* isn't
+*2026-08-05 · Tool*
+
+Compiling an iOS app requires `xcodebuild`, the iOS SDK and `codesign` — all of which ship only inside Xcode, and Xcode runs only on macOS, by license as much as by technology. That's why the `--local` flag that produces our Android `.aab` right here in WSL has no iOS equivalent: there is nothing on this machine that can emit Mach-O ARM64 or attach an Apple signature. EAS Build closes the gap by renting a macOS worker in the cloud — we run `eas build -p ios` from WSL, Expo runs `prebuild` + Xcode on their Mac, and we get a signed `.ipa` back — so for STEADY the practical constraint isn't "buy a Mac", it's "everything must be reproducible from `app.json` because no human will ever open the Xcode project".
+
+### `.ipa` is to the App Store what `.aab` is to Play — almost
+*2026-08-05 · Protocol*
+
+An `.ipa` is a zipped, code-signed app bundle, and unlike an `.aab` it *is* the installable artifact — Apple does no re-packaging, it just re-signs for distribution. The asymmetry that matters for STEADY: Android's signing key is ours to hold, while iOS signing depends on a certificate plus a provisioning profile issued by Apple and bound to a bundle identifier that can never be changed once shipped. Which means the one irreversible decision in the whole iOS pipeline — `ios.bundleIdentifier` — has to be made *before* the first build, exactly like `com.steadyapp.android` was on the Play side.
+
+### Transactional and marketing email share one reputation unless you split the domain
+*2026-08-05 · Protocol*
+
+Mailbox providers like Gmail score a sending domain on how recipients react to its mail, and they don't distinguish "verification code" from "newsletter" — both land on `steady.chat`'s single reputation. That's the trap: newsletters are the mail people mark as spam, and enough of those can start sinking the OTP codes users are actively waiting on, which fails signup rather than merely annoying someone. The standard defense is to send bulk mail from a subdomain (`mail.steady.chat`) while transactional mail keeps the apex, so the two reputations rise and fall independently — and because it's the *sending* domain that's split rather than the visible From address, users still only ever see `hello@steady.chat`.
+
+### SPF: exactly one record, or the domain fails
+*2026-08-05 · Protocol*
+
+SPF is a DNS TXT record listing which servers are allowed to send mail as your domain, and the receiving server checks it before deciding whether a message is forged. The rule that catches people is that the spec permits precisely one `v=spf1` record per domain — publishing two doesn't merge them, it produces a `permerror` and the domain fails authentication entirely. For STEADY this matters because `steady.chat`'s DNS zone is already doing double duty (apex A records for the GitHub Pages legal site, MX for Hostinger mail), so every future email provider we add has to *edit* the existing SPF record rather than add its own.
+
+### HTML email is HTML from 2003, and that's a constraint not a style choice
+*2026-08-05 · Protocol*
+
+Email clients don't run a modern browser engine — Outlook renders through Word's, and Gmail strips `<style>` blocks in several contexts — so flexbox, grid, CSS classes and external stylesheets are all unavailable. Layout is done with nested `<table>` elements and every rule is written inline on the element that uses it, which is why STEADY's confirmation email is 100 lines of markup for what would be a 10-line div on the web. The practical rules that follow: give every button a visible plain-text URL underneath (corporate scanners rewrite `href`s and some clients drop styled buttons entirely), and set `<meta name="color-scheme" content="light">` to stop Gmail auto-inverting a light palette into mud.
+
+### Supabase auth templates live nowhere but the dashboard
+*2026-08-05 · Tool*
+
+Unlike schema (migrations) or edge functions (files), Supabase's auth email templates exist only as rows behind the dashboard UI — no migration captures them, and `supabase/config.toml` doesn't either on a hosted project. That means an accidental edit to the textarea is unrecoverable and there's no diff showing what changed or when. For STEADY we keep the real copy at `supabase/templates/confirm-signup.html` in git and treat the dashboard purely as a paste target, so the version history lives somewhere we control.
+
+### Turning on email confirmation changes what `signUp()` returns
+*2026-08-05 · Architecture*
+
+With Supabase's "Confirm email" setting off, `auth.signUp()` returns a fully live session, so `onAuthStateChange` fires immediately and a React Native app can navigate straight into the signed-in stack. Flip it on and the same call returns a user with **no session** — nothing fires, and an app that relies on the auth listener to move screens simply appears to do nothing when the user taps the button. The lesson for STEADY is that email confirmation isn't a dashboard toggle, it's a client-side flow change: it needs an explicit "check your inbox" state after signup and an `emailRedirectTo` pointing at `steady://` so the link lands back in the app rather than on the web Site URL.
+
+### Mobile session replay is a native feature, not a dashboard switch
+*2026-08-05 · Tool*
+
+PostHog's "Record user sessions" toggle replays a user's screen as a video, but on React Native it works by taking a real screenshot roughly once a second on the device — which means it needs compiled native code, shipped in the optional `posthog-react-native-session-replay` package, plus `enableSessionReplay: true` in the client config. Flipping the toggle in the PostHog dashboard alone records nothing for STEADY, because that package isn't installed and the setting can't reach an app binary that has no recorder in it. The real cost isn't the toggle, it's that turning it on means a new store build, a battery/data hit on the user's phone, and screenshots of a health app leaving the device — which cuts against the rule that no raw health data ever does.
