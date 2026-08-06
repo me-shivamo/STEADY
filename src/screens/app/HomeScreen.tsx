@@ -273,9 +273,29 @@ export default function HomeScreen() {
 
   const isAndroid = Platform.OS === 'android';
   const keyboardOpen = keyboardHeight > 0;
-  // Lift the composer by exactly the keyboard height on Android; on iOS the
-  // KeyboardAvoidingView 'padding' behavior still does this correctly.
-  const androidKeyboardLift = isAndroid ? keyboardHeight : 0;
+
+  // Lift the composer clear of the keyboard on Android. The `+ insets.bottom` is
+  // not a fudge factor — `endCoordinates.height` genuinely is NOT the distance
+  // from the screen bottom to the top of the keyboard.
+  //
+  // React Native computes it in ReactRootView.java:902-904 as:
+  //     imeInsets.bottom - barInsets.bottom
+  // i.e. the keyboard inset with the system bars SUBTRACTED. Because we run
+  // edge-to-edge, our root view extends under the navigation bar, so the gap we
+  // actually need to clear is the full `imeInsets.bottom`. Lifting by the
+  // reported height alone leaves the composer short by exactly the nav-bar
+  // height — ~48dp with 3-button navigation, which is why it stayed tucked
+  // behind the keyboard on-device even though the dismiss side worked.
+  //
+  // Only true on API 30+. The legacy pre-Android-11 path
+  // (checkForKeyboardEventsLegacy) computes `heightPixels - visibleArea.bottom
+  // + notch`, which already includes the nav bar — adding the inset there would
+  // over-lift by the same 48dp and leave a gap above the keyboard. Hence the
+  // version gate rather than an unconditional addition.
+  const androidKeyboardLift =
+    isAndroid && keyboardOpen
+      ? keyboardHeight + (Number(Platform.Version) >= 30 ? insets.bottom : 0)
+      : 0;
   // The bottom safe-area inset now lives on the composer rather than on
   // SafeAreaView, so the composer's own card background fills the gesture/nav
   // bar strip instead of leaving a bare band in the page colour. It collapses
