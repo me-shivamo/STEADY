@@ -1,5 +1,5 @@
 import 'react-native-gesture-handler';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PostHogProvider } from 'posthog-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
@@ -14,6 +14,7 @@ import {
 import { Caveat_500Medium, Caveat_600SemiBold, Caveat_700Bold } from '@expo-google-fonts/caveat';
 import RootNavigator from './src/navigation/RootNavigator';
 import ToastHost from './src/components/common/ToastHost';
+import AnimatedSplash from './src/components/common/AnimatedSplash';
 import { posthog } from './src/utils/posthog';
 import { useAuthStore } from './src/store/authStore';
 import { registerForPushNotificationsAsync } from './src/lib/pushNotifications';
@@ -43,6 +44,11 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
+  // Our own splash stays up after the native one hides. The native splash can
+  // only show a circle-masked icon (Android 12+ masks windowSplashScreenAnimatedIcon),
+  // so the bowl-with-callouts artwork has to be rendered by React — see
+  // AnimatedSplash for the full explanation.
+  const [splashVisible, setSplashVisible] = useState(true);
   const [fontsLoaded] = useFonts({
     TikTokSans_400Regular,
     TikTokSans_500Medium,
@@ -88,6 +94,16 @@ export default function App() {
         <RootNavigator />
         {/* Last child = painted on top of every screen. */}
         <ToastHost />
+        {/* Rendered ABOVE the navigator rather than instead of it, so the real
+            first screen mounts and settles behind the splash. By the time this
+            fades out there is a finished screen underneath, not a flash of
+            empty layout. */}
+        {splashVisible && (
+          <AnimatedSplash
+            isAppReady={fontsLoaded}
+            onFinish={() => setSplashVisible(false)}
+          />
+        )}
       </PostHogProvider>
     </SafeAreaProvider>
   );
