@@ -100,6 +100,41 @@ Each profile in `eas.json` names its environment explicitly (`"environment":
 "production"` etc.), so you can answer "which vars does this build get?" by
 reading the repo instead of querying a remote service.
 
+### 3b. …and check that gitignored FILES the build needs are un-ignored
+
+The same "EAS respects `.gitignore`" rule bites a second way, and this one has no
+warning at all. `.env` is *meant* to be excluded (its values live in the EAS
+environment store instead). But **`google-services.json` is gitignored and the
+build genuinely needs it** — it is compiled into the binary and is the only thing
+that lets the app obtain an FCM push token. Excluded, the build compiles
+perfectly and push is silently dead. That is precisely the 2026-08-04 bug.
+
+The fix is `.easignore`. When that file exists, EAS uses it **instead of**
+`.gitignore` for deciding what to upload. Ours is a near-copy with one line
+neutralised:
+
+```
+# .gitignore          → google-services.json        (excluded)
+# .easignore          → # (deliberately not ignored) (included)
+```
+
+Two rules for it:
+
+- **Keep it in sync with `.gitignore`.** It replaces rather than extends, so a
+  rule you forget to copy across is a rule that stops applying — omit
+  `node_modules/` and you upload a gigabyte.
+- **Never un-ignore a credential.** The FCM *service account key*
+  (`steady-<project>-<keyid>.json`) stays excluded in both files. `google-services.json`
+  is safe to ship because it is already inside every copy of the APK; the service
+  account key is a non-expiring secret that must never enter an artifact.
+
+Verify before a 30-minute build, not after:
+
+```bash
+grep -n google-services .easignore     # expect comments only, no active rule
+grep -cE 'node_modules|^\.env$' .easignore   # expect these still present
+```
+
 > As of 2026-08-03: `production` and `preview` have all five.
 > `development` is missing both PostHog vars — deliberate, so debugging sessions
 > don't pollute analytics.
@@ -245,6 +280,20 @@ Google that an upload is genuinely ours. So:
   bug report, or a pastebin.
 - If you need to share one, strip any line containing
   `eas-cli-local-build-plugin ... eyJ` first.
+- **The log is not the only leak (learned the hard way, 2026-08-04).** The blob is
+  an *argv* of the helper process, so anything that prints command lines exposes
+  it too — `ps aux`, `pgrep -af`, `htop`, a crash reporter. Filtering the build's
+  stdout does nothing about those. To check whether a local build is alive, use a
+  form that hides arguments:
+
+  ```bash
+  pgrep -c eas-cli-local-build   # count only
+  ps -o etime= -p <PID>          # elapsed time, no argv
+  ```
+
+  General shape of the hazard: a secret passed *as an argument* is readable by any
+  process on the machine for as long as the process lives, which is why well-behaved
+  tools take credentials via stdin, a file, or an env var instead.
 
 General lesson: anything that serialises credentials to pass them between
 processes will eventually serialise them into an error message.
