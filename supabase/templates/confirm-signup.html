@@ -1,0 +1,118 @@
+<!--
+  STEADY — "Confirm sign up" auth email.
+
+  Paste the contents of this file into Supabase Dashboard →
+  Authentication → Emails → Confirm sign up → Body (Source tab).
+  Supabase templates are not version-controlled by Supabase, so this
+  file is the only record of what we actually send. Edit here first,
+  then paste, so the two never drift.
+
+  Go-template variables available in this template:
+    {{ .ConfirmationURL }}  full confirm link (what the button points at)
+    {{ .Token }}            6-digit code (unused — we are link-based)
+    {{ .Email }}            recipient address
+    {{ .SiteURL }}          project Site URL
+    {{ .Data.full_name }}   user_metadata, set by signUp() in authStore.ts
+
+  Layout is table-based and every style is inline on purpose: Outlook
+  renders through Word's engine and Gmail strips <style> blocks in
+  several contexts, so flexbox/grid/classes are not usable here.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Tells clients this design is light-only, which stops Gmail and
+         Outlook from auto-inverting our palette into muddy dark colours. -->
+    <meta name="color-scheme" content="light" />
+    <meta name="supported-color-schemes" content="light" />
+    <title>Confirm your email</title>
+  </head>
+  <body style="margin:0; padding:0; background-color:#FAFAFA;">
+    <!-- Preheader: the grey preview text next to the subject in the inbox
+         list. Hidden in the body itself by the zero size + hidden overflow. -->
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">
+      Confirm your email address to finish setting up STEADY.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FAFAFA; padding:32px 16px;">
+      <tr>
+        <td align="center">
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px; margin:0 auto;">
+
+            <!-- Wordmark -->
+            <tr>
+              <td align="center" style="padding-bottom:28px;">
+                <span style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:18px; font-weight:700; letter-spacing:3px; color:#1D1D1F;">
+                  STEADY
+                </span>
+              </td>
+            </tr>
+
+            <!-- Card -->
+            <tr>
+              <td style="background-color:#FFFFFF; border:1px solid #E8E8E8; border-radius:16px; padding:40px 32px;">
+
+                <p style="margin:0 0 20px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:22px; line-height:30px; font-weight:600; color:#1D1D1F;">
+                  {{ if .Data.full_name }}Welcome, {{ .Data.full_name }}.{{ else }}Welcome to STEADY.{{ end }}
+                </p>
+
+                <p style="margin:0 0 28px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; line-height:26px; color:#6E6E73;">
+                  Confirm your email address and your account is ready. From there it's a photo of your plate, and we'll handle the numbers.
+                </p>
+
+                <!-- Button. The nested table is what gives Outlook a
+                     background colour it will actually render. -->
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px 0;">
+                  <tr>
+                    <td align="center" bgcolor="#6366F1" style="border-radius:12px;">
+                      <a href="{{ .ConfirmationURL }}"
+                         style="display:inline-block; padding:15px 32px; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:16px; font-weight:600; color:#FFFFFF; text-decoration:none; border-radius:12px;">
+                        Confirm email address
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Plain-text fallback. Mail scanners rewrite hrefs and some
+                     clients drop styled buttons entirely; without a visible
+                     URL underneath, those users have no way through. -->
+                <p style="margin:0 0 10px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:20px; color:#A1A1A6;">
+                  If the button doesn't work, paste this into your browser:
+                </p>
+                <p style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:20px; word-break:break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#6366F1; text-decoration:underline;">{{ .ConfirmationURL }}</a>
+                </p>
+
+                <hr style="border:none; border-top:1px solid #E8E8E8; margin:28px 0;" />
+
+                <p style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:13px; line-height:22px; color:#A1A1A6;">
+                  This link expires in 24 hours. If you didn't create a STEADY account, you can ignore this email — nothing will happen.
+                </p>
+
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td align="center" style="padding-top:24px;">
+                <p style="margin:0 0 6px 0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:20px; color:#A1A1A6;">
+                  Sent to {{ .Email }} because someone signed up for STEADY.
+                </p>
+                <p style="margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:12px; line-height:20px; color:#A1A1A6;">
+                  <a href="mailto:hello@steady.chat" style="color:#6E6E73; text-decoration:none;">hello@steady.chat</a>
+                  &nbsp;·&nbsp;
+                  <a href="https://steady.chat/privacy.html" style="color:#6E6E73; text-decoration:none;">Privacy</a>
+                </p>
+              </td>
+            </tr>
+
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
