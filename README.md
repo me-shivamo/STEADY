@@ -113,14 +113,21 @@ STEADY learns from your edits. Correct a portion size once, it remembers for nex
 ```
 src/
 ├── screens/
-│   ├── app/          # Home, Journal, AI Chat, Profile
-│   ├── auth/         # Login, Sign Up
-│   └── onboarding/   # 7-step conversational setup
+│   ├── app/          # Home, Progress, Water, Weight, Body, Reminders, Groups, Settings
+│   ├── auth/         # Welcome, Login, Sign Up, Set New Password
+│   └── onboarding/   # 6-step conversational setup
 ├── components/
-│   └── nutrition/    # MealCard and food UI components
-├── api/              # Supabase + AI API calls
-├── store/            # Zustand global state slices
-├── navigation/       # Tab + stack navigator config
+│   ├── nutrition/    # MealCard, CalorieRing, saved entries
+│   ├── groups/       # Leaderboard, activity feed, invite code
+│   ├── profile/      # Drawer, header card, stat strip
+│   ├── onboarding/   # Chat bubbles, selectable cards
+│   └── common/       # Sheets, pickers, toasts, illustrations
+├── api/              # Supabase client + Google Sign-In
+├── store/            # Zustand global state slices (12)
+├── lib/              # Push notifications, navigation ref
+├── navigation/       # Stack navigators (auth / onboarding / app)
+├── hooks/            # Streaks, screen chrome
+├── utils/            # TDEE, units, insights, analytics, errors
 ├── theme/            # Colors, typography, design tokens
 └── types/            # TypeScript interfaces
 ```
@@ -177,16 +184,21 @@ AI keys live in Supabase Edge Function secrets — they never touch the client.
 
 ## Roadmap
 
+> Live status, including known bugs and release blockers, is tracked in **[`STATUS.md`](STATUS.md)**.
+
 - [x] Conversational onboarding
 - [x] User profile & settings
 - [x] Home dashboard with calorie ring
 - [x] PostHog analytics integration
-- [ ] AI photo scanning (in progress)
-- [ ] AI Nutritionist chat
-- [ ] Journal feed with meal cards
-- [ ] Barcode scanner (Open Food Facts)
-- [ ] Weekly nutrition charts
-- [ ] RevenueCat IAP for premium tier
+- [x] AI photo scanning
+- [x] AI chat logging with tool use
+- [x] Water, weight and body measurement tracking
+- [x] Weekly nutrition charts + adaptive TDEE
+- [x] Accountability groups
+- [x] Event-driven push notifications
+- [ ] AI Nutritionist chat (v1.1)
+- [ ] Manual food search (v1.1)
+- [ ] RevenueCat IAP for premium tier (deferred — v1 is free)
 
 ---
 

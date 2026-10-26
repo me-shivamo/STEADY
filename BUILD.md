@@ -377,6 +377,8 @@ processes will eventually serialise them into an error message.
 | Play: *"completely shadowed by one or more APKs with higher version codes"* | The release draft still contains the **previous** release's bundle alongside the new one — Play pre-fills new drafts with what's already on that track | On the Create release page, scroll to **App bundles** and remove the older version code. Only the newest should remain |
 | Play: *"no deobfuscation file associated with this App Bundle"* | Harmless — `minifyEnabled` is false, so nothing is obfuscated and there's no mapping file to upload | Ignore. Enabling R8 would shrink the ~75 MB, but needs ProGuard keep-rules for the RN bridge — don't attempt it just before a release |
 | Play: *"Version code N has already been used. Try another version code."* | Play burns a version code **permanently** the moment a bundle carrying it is uploaded — discarding the draft does **not** release it | Don't rebuild first: the bundle is already in your library, so **Upload app bundles → "Add from library"** and pick that version code. Only rebuild (which auto-bumps) if you actually need changed code |
+| `expo doctor`: *"You have an app.json ... but your app.config.js is not using the values from it"* | **False positive** when `app.config.js` spreads `app.json` (ours does — `require('./app.json')` then `{...appJson.expo}`). Doctor's check is static and can't see through the spread | Ignore, but verify once: the generated `android/app/build.gradle` should show your `versionName`. Non-fatal — the build continues |
+| `build.gradle` shows `versionCode 1` and `signingConfig signingConfigs.debug` | Not the final config. Prebuild regenerates `android/`, so EAS never edits that file — it writes sidecar scripts (`eas-build-configure-version.gradle`, `eas-build-inject-android-credentials.gradle`) that Gradle applies afterward and that override both | Ignore the generated file; verify the **artifact** per §6. `grep versionCodeVal android/app/eas-build-configure-version.gradle` shows the real code |
 
 ---
 
@@ -392,7 +394,8 @@ processes will eventually serialise them into an error message.
 | Expo SDK / RN | 54.0.0 / 0.81.5 |
 | Gradle | 8.14.3 |
 | Typical AAB size | ~75 MB |
-| Typical build time | ~31 min local |
+| Typical build time | ~18-31 min local (18m with a warm Gradle cache, 2026-09-02) |
 
-Related: `DEVLOG.md` (the story of the 2026-08-03 session), `LEARNING.md`
-(the concepts), `WHATTODO.md` (open pre-upload items).
+Related: `STATUS.md` (what's built, pending and broken — including open
+pre-upload items), `DEVLOG.md` (the story of the 2026-08-03 session),
+`LEARNING.md` (the concepts).
