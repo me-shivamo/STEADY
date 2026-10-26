@@ -3,6 +3,132 @@
 > Concepts explained and understood while building STEADY.
 > Each entry is a mental model, not just a definition.
 
+### Half-open time windows: a scheduler's ticks must tile time, not overlap it
+*2026-10-16 · Pattern*
+
+A job that runs every N minutes and asks "is anything due in the last N minutes?" must use a half-open window, `(now − N, now]`, so each instant belongs to exactly one tick, like `range(a, b)` in Python excluding `b`. SQL's `BETWEEN` is closed on both ends, so `BETWEEN t − 5min AND t` with a 5-minute cron puts every round time (22:00, 13:30) inside two consecutive windows, and the event fires twice. For STEADY this is why clock reminders need either a strict lower bound (`> t − 5min AND <= t`) or a de-dup key like `(user, reminder_type, local_time, local_date)`. With neither, any rule that happens to suppress the second send, like the old 90-minute gap, hides the bug until someone removes it.
+
+### EAS configures a build with sidecar Gradle files, not by editing the ones you read
+*2026-09-02 · Tool*
+
+In a managed Expo workflow the whole `android/` directory is disposable — `prebuild` regenerates it from `app.json` on every build, so anything EAS wrote directly into `android/app/build.gradle` would be destroyed on the next run. Instead EAS emits separate files alongside it (`eas-build-configure-version.gradle`, `eas-build-inject-android-credentials.gradle`) which Gradle *applies* after the main script, overriding values at evaluation time. This is why `build.gradle` can honestly say `versionCode 1` and `signingConfig signingConfigs.debug` while the artifact is stamped 13 and signed with the real upload key.
+
+The general shape is last-write-wins config layering, and STEADY hits it in three places: `.easignore` replaces `.gitignore` for uploads, `app.config.js` wraps and extends `app.json`, and these sidecars override the generated Gradle. In each case the file you'd naturally open is not the file that decides. The practical rule is to verify the *output* rather than the input — `keytool -printcert -jarfile` on the finished `.aab` answers "what is this signed with?" in a way that no amount of reading config can, because it reflects every layer at once.
+
+### SECURITY DEFINER is an RLS bypass, so the function must do the check itself
+*2026-09-02 · Pattern*
+
+Row Level Security works by attaching a `WHERE` clause to every query based on who is asking — `auth.uid() = user_id` means you only ever see your own rows. A function marked `SECURITY DEFINER` runs with the *definer's* privileges instead of the caller's, which is how a trigger can update a table the user can't touch directly. The catch is that this switches RLS off for everything inside the function body: it is the SQL equivalent of a `setuid` binary in Unix, and it inherits the same responsibility. If a `setuid` program takes a filename argument and doesn't check who's asking, it will happily read `/etc/shadow` for anyone.
+
+The rule that follows is mechanical: **any `SECURITY DEFINER` function that takes a user id as a parameter must verify that parameter against `auth.uid()`, or it is an RLS bypass with a friendly signature.** STEADY has both kinds. `build_user_state`, `mark_notification_opened` and `mark_group_opened` all check, and are safe. `medicines_due_at(p_user, p_time)` and `enqueue_event(p_user, …)` don't — so one leaks other people's medicine names and the other lets anyone push a notification to anyone. Postgres also grants `EXECUTE` to `PUBLIC` by default and PostgREST exposes every `public` function as an RPC, so "nothing in our app calls it with someone else's id" is not a defence; the attacker isn't using our app.
+
+Two habits close this off. Guard inside the body (`IF p_user <> auth.uid() THEN RAISE EXCEPTION`), and default to `REVOKE EXECUTE ON FUNCTION … FROM PUBLIC` then grant deliberately — there is currently not a single `REVOKE` across all 47 migrations, which means every helper we ever wrote is callable by every signed-in user.
+
+### Write copy that survives an unknown count
+*2026-09-02 · Pattern*
+
+Any template holding a variable that might render one item or several has a grammar problem waiting in it. "{{medicine_name}} is due now" is correct for one medicine and wrong for two, and the count is only known at send time. The obvious fix is to pluralise from a runtime count, which means every template needs branching logic and every writer needs to remember it exists.
+
+The cheaper fix is to write around the verb: "{{medicine_name}}. Due now ⏰" is correct for any number, forever, with no logic at all. For STEADY this generalises to a copy rule worth holding onto: **when a variable's cardinality is unknown, prefer a sentence break to a conjugated verb.** Full stops do not have to agree with anything.
+
+### Not all notifications are worth the same, so they cannot share one rate limit
+*2026-09-02 · Architecture*
+
+A frequency cap treats every message as interchangeable: it counts them and refuses the ones over the line, with no notion of what any of them were *for*. That is fine while everything in the queue is a nudge. It stops being fine the moment the same pipeline carries something with real consequences, because a first-come-first-served limiter will happily spend the day's budget on two reminders about lunch and then refuse a medication reminder at 22:00.
+
+STEADY hit exactly that, nine nights running. The fix has two halves worth separating. The narrow one is that medicine now bypasses the frequency rules entirely. The general one is that **any rate limiter over a mixed-importance stream needs a notion of priority or exemption**, otherwise the limit is enforced by clock order rather than by value, and the least important message wins simply by arriving first. Our event queue already had `priority` and `bypasses_cap` for this reason; the older clock-reminder path predated that idea and had neither.
+
+### A silent skip is indistinguishable from a feature nobody turned on
+*2026-09-02 · Pattern*
+
+When code declines to act, it faces the same choice as when it fails: say so, or move on quietly. `capped++; continue` moves on quietly, and the result is that nine consecutive suppressions of a medication reminder produced a delivery log showing zero rows for that reminder type. Zero rows is what an unconfigured feature looks like, so the evidence actively pointed away from the bug.
+
+The rule this reinforces for STEADY, which has now been bitten by variations of it repeatedly: **record the decision, not just the action.** A row saying "refused, reason: too_soon" turns an invisible nine-day outage into something a single query would have surfaced. Counters in memory vanish when the function returns; only what reaches the database can be noticed later.
+
+### Server deploys to everyone; app updates reach only who updates
+*2026-08-07 · Architecture*
+
+A mobile product is really two programs on different release cycles. Push an Edge Function or a migration and every user is running it within seconds, with no say in the matter. Ship app code and it arrives per-device, whenever each person happens to update, which on Android is a tail measured in weeks and for some users is never. Anything crossing between the two, and a push notification payload is exactly that, is a **version-compatibility problem** even when it looks like a small config value.
+
+STEADY learned this the expensive way with `channelId`. Naming an Android notification channel the device has not created makes the OS discard the notification silently, and channels are created by app code. So a one-word server-side field could have muted 21 users while the delivery log kept reporting success. The fix is the standard one for this class: **capability negotiation**. The client reports what it can do (`channels_version`), the server only uses features the client has claimed, and the system heals itself as people update. The general rule: before adding a field to any client-bound payload, ask what the *oldest* app version still in the wild does when it receives it, and remember that "ignores it harmlessly" and "silently breaks" look identical from the server.
+
+### Send-time optimisation: a heatmap, a band, and a mandatory fallback
+*2026-08-07 · Architecture*
+
+The technique is simpler than it sounds. Count every action a user has ever taken into 24 buckets by local hour, and the fullest bucket is when they're most reachable. That's the whole model — no ML required to get most of the value, which matters because Duolingo's far more sophisticated bandit bought them only +0.5% DAU on top of an already-tuned baseline.
+
+Two rules make it safe rather than merely clever. **Constrain to a band**: optimising freely would let a lunch reminder drift to whenever the user happens to be most active, destroying the message's meaning, so callers pass the window in which the message still makes sense and the peak is found inside it. **Always have a fallback ladder**: personal peak → population prior → fixed default, with a minimum sample at each tier, because a mode drawn from three data points is noise wearing a preference's clothing. For STEADY the neat consequence is that the fallback is evaluated *per window*, so one user can be personalised for their evening message and cold-started for their lunch one.
+
+### Push tickets are a receipt for posting the letter, not for delivering it
+*2026-08-07 · Protocol*
+
+Expo's push API answers in two stages and it's easy to mistake the first for success. A **ticket** comes back immediately and only means Expo accepted the message into its queue. The **receipt**, fetched separately afterwards, is FCM's or APNs' actual verdict on whether the device got it. STEADY has only ever checked tickets, so anything that failed after handoff has been recorded as `sent`.
+
+The most important thing hiding in receipts is `DeviceNotRegistered`, which is what you get when the app has been uninstalled. Expo's guidance is to stop sending to that token entirely, and since nothing prunes them, dead tokens accumulate forever, inflate the "sent" numbers, and make delivery-rate metrics steadily more optimistic than reality. The general lesson travels beyond push: when an API acknowledges in two stages, the first acknowledgement is about *your* request being accepted, and only the second is about the outcome you actually care about.
+
+### Derive from the event table, not the cache built on top of it
+*2026-08-07 · Architecture*
+
+Most schemas end up with two kinds of table: **event tables** that record what actually happened (`meal_logs`, `water_logs`, one row per real action), and **derived tables** that cache an answer computed from them (`streaks.current_streak`, `daily_summaries.total_calories`). Derived values are maintained by triggers or jobs, and anything maintained can stop being maintained. Events cannot drift, because the event *is* the fact.
+
+STEADY has a live example. One user's `streaks` row is frozen with `last_logged_date` weeks behind reality and `updated_at` stuck a month further back, while `meal_logs` shows them logging almost daily. Reading "when did they last log?" from the cache classified an actively engaged user as lapsed. The rule to carry: when a decision matters, compute it from the event table even though the cache is right there and cheaper; use the cache for display, where being briefly wrong is survivable. And when you must read a cache, expose a staleness flag (we added `streak_stale`) so downstream code can decline to use it, rather than confidently printing a number it can't stand behind.
+
+### One column doing two jobs will eventually make them fight
+*2026-08-07 · Pattern*
+
+`notification_log.status` records both *delivery outcome* ('sent' / 'failed') and *engagement* ('opened'). They look like one dimension and aren't: opening a notification does not un-send it. Because the column can only hold one value, marking something opened erases the record that it was sent.
+
+That stayed harmless only while nothing ever wrote 'opened'. The moment tap tracking shipped, every `WHERE status = 'sent'` query would quietly start under-counting, and the one we had was the frequency cap's daily budget — so each tap would have refunded a push, and the users who engage most would have been messaged most. The immediate fix is to read `status IN ('sent','opened')`, but the real lesson is the smell: when you find yourself writing an `IN (...)` list to reconstruct a fact that used to be a single value, that's a column carrying two independent facts, and the honest shape is a separate boolean.
+
+### A friend observes, a system instructs
+*2026-08-06 · Pattern*
+
+The single clearest lesson from studying Zomato, Blinkit and Swiggy's push copy is that their best lines contain **no call to action at all**. "Dinner plans? Let's be real, it's you and your couch again" doesn't ask for anything; it states an observation about the reader, and the reader decides what to do with it. Compare that to "Don't forget to log your meal", which is a command issued by software.
+
+The mental model: imperative mood is the grammar of machines, because a machine's only relationship to you is to make you do things. Observational mood implies a *someone* who noticed. For STEADY this reframed 225 messages, because a calorie tracker naturally reaches for commands (log this, snap that, drink water) and every one of them quietly reinforces that you're being processed by a system rather than kept company. Three supporting techniques travel with it: the two-beat turn where the joke lands in the swerve between title and body, specific nouns over categories ("biryani" is funny, "food" is not), and never explaining the joke.
+
+### Rage bait buys engagement with trust, and the exchange rate is bad
+*2026-08-06 · Pattern*
+
+Rage bait works in the narrow sense: deliberately provocative content earns up to 63% more engagement, because anger makes people stop, comment and share. The catch shows up one layer down. 73% of consumers report decreased trust in brands associated with inflammatory content, and American Eagle's 2025 rage-bait campaign spiked Amazon searches 280% while its brand connection score dropped and never recovered, with sales landing under forecast. High engagement, damaged brand.
+
+For STEADY the useful distinction is **what the provocation targets**. Aimed at someone's competitive instinct ("Bet you won't log dinner", "Everyone logged. Except one person"), it's a dare and it makes people open the app to prove you wrong. Aimed at their body or their eating, in an app where a meaningful share of users have a complicated relationship with food, it's a trigger dressed as a joke. Same technique, opposite outcome, and the line is drawn by the target rather than by the intensity. Duolingo's "These reminders don't seem to be working. We'll stop sending them for now" is the best version we found precisely because it provokes by withdrawing rather than by attacking.
+
+### Android notification channels are the user's volume knob, not ours
+*2026-08-06 · Architecture*
+
+Since Android 8, every notification must belong to a **channel** — a named category the app declares once at install time. The channel name is printed in the notification header (that "Healthify • Reminder" you see next to the app name), and crucially the *user* controls each channel independently in system settings: importance, sound, vibration, or silence it entirely. The app cannot override those choices, which is the whole design intent.
+
+The mental model that matters: a channel is not a technical detail, it's the granularity at which a user is allowed to be annoyed with you. STEADY currently declares one channel called `default`, so the only choice a user has is all of STEADY or none of it, and one badly-timed nudge costs us every celebration and streak alert too. Splitting into seven channels (celebrations, reminders, nudges, groups, tips, progress, onboarding) means the cheeky "are you avoiding me?" messages can be silenced on their own. Worth knowing: channels are **immutable after creation** — you cannot change a channel's importance in a later app update, only delete it and create a new id — so the split is much cheaper to get right now than after release.
+
+### Measure the rendered string, not the template
+*2026-08-06 · Pattern*
+
+When copy contains placeholders, the length you wrote is not the length the user sees. `"{{streak_days}} DAYS, {{first_name}}"` is 36 characters as written and 19 once it becomes "100 DAYS, Shivam" — so a naive length check flags a line that's fine. The reverse is far more dangerous: `{{group_name}}` is 14 characters in the template but *unbounded* at runtime, because a user typed it.
+
+For STEADY this produced a rule we'd never have reached by proofreading: validate copy by substituting realistic **worst-case** values and measuring that, then cap user-supplied variables at interpolation time rather than trying to write around them. A checker script found seven titles and three bodies that overflow on a 30-character group name; no amount of careful copywriting would have prevented it, because the overflow comes from data, not from prose.
+
+### `undefined` is JavaScript's silent `KeyError`
+*2026-08-06 · Pattern*
+
+In Python, `row['local_date']` on a dict that lacks the key raises `KeyError` and stops the program — the mistake announces itself at the exact line that made it. JavaScript instead evaluates `row.local_date` to `undefined` and keeps running, so a wrong assumption travels downstream and only surfaces (if ever) as strange behaviour somewhere unrelated. Here it travelled all the way into a database query as the literal string `"undefined"`.
+
+The companion habit that made it worse is Supabase's `const { data } = await ...`. That destructuring pattern is idiomatic and everywhere in our codebase, but it *discards the `error` half of the response*, and on failure `data` is `null` — which is indistinguishable from a genuine empty result. For STEADY the rule to take away is: whenever a query's emptiness means something ("they haven't logged today"), you must read `error` too, otherwise a broken query silently becomes a confident business decision. TypeScript can't save you here — the RPC's return type is declared by hand in the Edge Function, so it described a column the database had stopped returning and the compiler happily agreed.
+
+### Fail open vs fail closed — decide it deliberately, and log it either way
+*2026-08-06 · Architecture*
+
+When a supporting check breaks, the code has to pick a side. **Fail open** means proceed as if the check passed (send the reminder anyway); **fail closed** means refuse to proceed (send nothing). Neither is universally right — it depends on which wrong outcome you'd rather have, and the trap is picking one *by accident*, which is what happens when an error path is never written at all.
+
+For STEADY's reminder guard we chose fail open on purpose: sending one redundant nudge is mildly annoying, whereas failing closed would silently switch off every user's reminders across the whole fleet — a far bigger failure that looks like nothing happening, which is exactly the kind of outage that goes unnoticed for weeks. The essential second half is that a fail-open path *must* be loud: it now writes a `console.error` into the Edge Function logs, so the system degrades visibly instead of pretending to work.
+
+### Postgres won't let you change a function's output shape in place
+*2026-08-06 · Protocol*
+
+`CREATE OR REPLACE FUNCTION` refuses to run if the new `RETURNS TABLE(...)` differs from the existing one — you get `SQLSTATE 42P13, "cannot change return type of existing function"` — because other database objects may depend on that signature. The only way through is `DROP FUNCTION` followed by `CREATE FUNCTION`, which is why three of our migrations recreate `find_due_reminders()` wholesale rather than patching it.
+
+That workaround has a sharp edge worth internalising: every recreation rewrites the function from scratch, so whichever older copy you paste as your starting point becomes the new truth — including any column that copy was missing. We lost `local_date` twice this way, silently, because 021 and 022 were both seeded from migration 013's body instead of 018's. For STEADY the working rule is: when recreating a SQL function, always copy from the *most recent* migration that defines it, and treat the consuming Edge Function's TypeScript interface as the contract that says how many columns there are supposed to be.
+
 ### APK signature schemes — why `keytool` goes silent on a modern APK
 *2026-08-05 · Protocol*
 
@@ -1616,3 +1742,13 @@ With Supabase's "Confirm email" setting off, `auth.signUp()` returns a fully liv
 *2026-08-05 · Tool*
 
 PostHog's "Record user sessions" toggle replays a user's screen as a video, but on React Native it works by taking a real screenshot roughly once a second on the device — which means it needs compiled native code, shipped in the optional `posthog-react-native-session-replay` package, plus `enableSessionReplay: true` in the client config. Flipping the toggle in the PostHog dashboard alone records nothing for STEADY, because that package isn't installed and the setting can't reach an app binary that has no recorder in it. The real cost isn't the toggle, it's that turning it on means a new store build, a battery/data hit on the user's phone, and screenshots of a health app leaving the device — which cuts against the rule that no raw health data ever does.
+
+### A Google OAuth client ID has a forward form and a reversed form, and they go in different places
+*2026-08-06 · Protocol*
+
+Google issues an iOS OAuth client as `<number>-<hash>.apps.googleusercontent.com`, and iOS needs it twice in two different shapes: the forward form goes to the SDK as `iosClientId` so it knows which client is asking, while the *reversed* form (`com.googleusercontent.apps.<number>-<hash>`) is registered as a custom URL scheme so the OS can route the browser callback back into the app. They are the same identifier written two ways, which makes them very easy to swap by accident. For STEADY the split is physical — the reversed one lives in `app.json` where the config plugin writes it into `Info.plist`, and the forward one lives in EAS environment variables where Metro inlines it into the bundle.
+
+### An ID token's `aud` claim is what Supabase actually checks
+*2026-08-06 · Protocol*
+
+`signInWithIdToken()` doesn't trust the app; it verifies the JWT's signature against the provider's public keys and then checks the `aud` ("audience") claim against the client IDs configured in the Supabase dashboard. That's why STEADY passes the *web* client ID on Android — it sets the audience to something Supabase recognises — and it's why native Apple sign-in is a separate trap: Apple audiences its token to the **bundle identifier**, so `com.steadyapp.steady` has to be added to Supabase's Apple provider before the first iOS build, or every Apple sign-in comes back as an audience mismatch.
