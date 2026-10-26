@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_prior: {
+        Row: {
+          actions: number
+          local_hour: number
+          updated_at: string
+        }
+        Insert: {
+          actions?: number
+          local_hour: number
+          updated_at?: string
+        }
+        Update: {
+          actions?: number
+          local_hour?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       admin_pings: {
         Row: {
           count: number
@@ -179,6 +197,7 @@ export type Database = {
       }
       device_push_tokens: {
         Row: {
+          channels_version: number
           created_at: string
           expo_push_token: string
           id: string
@@ -187,6 +206,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          channels_version?: number
           created_at?: string
           expo_push_token: string
           id?: string
@@ -195,6 +215,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          channels_version?: number
           created_at?: string
           expo_push_token?: string
           id?: string
@@ -317,6 +338,7 @@ export type Database = {
           last_used_at: string | null
           name: string
           normalized_name: string | null
+          portions: Json | null
           protein_g: number | null
           protein_per_100g: number | null
           serving_size_description: string | null
@@ -344,6 +366,7 @@ export type Database = {
           last_used_at?: string | null
           name: string
           normalized_name?: string | null
+          portions?: Json | null
           protein_g?: number | null
           protein_per_100g?: number | null
           serving_size_description?: string | null
@@ -371,6 +394,7 @@ export type Database = {
           last_used_at?: string | null
           name?: string
           normalized_name?: string | null
+          portions?: Json | null
           protein_g?: number | null
           protein_per_100g?: number | null
           serving_size_description?: string | null
@@ -509,6 +533,7 @@ export type Database = {
           group_id: string
           id: string
           joined_at: string
+          last_opened_at: string | null
           role: string
           user_id: string
         }
@@ -516,6 +541,7 @@ export type Database = {
           group_id: string
           id?: string
           joined_at?: string
+          last_opened_at?: string | null
           role?: string
           user_id: string
         }
@@ -523,6 +549,7 @@ export type Database = {
           group_id?: string
           id?: string
           joined_at?: string
+          last_opened_at?: string | null
           role?: string
           user_id?: string
         }
@@ -622,35 +649,155 @@ export type Database = {
           },
         ]
       }
+      notification_event_types: {
+        Row: {
+          active: boolean
+          bypasses_cap: boolean
+          channel: string
+          created_at: string
+          deep_link: string
+          description: string | null
+          event_key: string
+          immediate: boolean
+          priority: number
+          ttl_hours: number
+          window_end: number
+          window_start: number
+        }
+        Insert: {
+          active?: boolean
+          bypasses_cap?: boolean
+          channel: string
+          created_at?: string
+          deep_link?: string
+          description?: string | null
+          event_key: string
+          immediate?: boolean
+          priority?: number
+          ttl_hours?: number
+          window_end?: number
+          window_start?: number
+        }
+        Update: {
+          active?: boolean
+          bypasses_cap?: boolean
+          channel?: string
+          created_at?: string
+          deep_link?: string
+          description?: string | null
+          event_key?: string
+          immediate?: boolean
+          priority?: number
+          ttl_hours?: number
+          window_end?: number
+          window_start?: number
+        }
+        Relationships: []
+      }
+      notification_events: {
+        Row: {
+          created_at: string
+          dedupe_key: string
+          event_key: string
+          expires_at: string
+          id: string
+          log_id: string | null
+          payload: Json
+          send_after: string
+          sent_at: string | null
+          skip_reason: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key: string
+          event_key: string
+          expires_at: string
+          id?: string
+          log_id?: string | null
+          payload?: Json
+          send_after?: string
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string
+          event_key?: string
+          expires_at?: string
+          id?: string
+          log_id?: string | null
+          payload?: Json
+          send_after?: string
+          sent_at?: string | null
+          skip_reason?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_events_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "notification_event_types"
+            referencedColumns: ["event_key"]
+          },
+          {
+            foreignKeyName: "notification_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_log: {
         Row: {
           error_message: string | null
           id: string
           opened_at: string | null
+          receipt_checked_at: string | null
+          receipt_error: string | null
+          receipt_status: string | null
           reminder_type: string
           sent_at: string
           status: string
           template_id: string | null
+          ticket_id: string | null
           user_id: string
         }
         Insert: {
           error_message?: string | null
           id?: string
           opened_at?: string | null
+          receipt_checked_at?: string | null
+          receipt_error?: string | null
+          receipt_status?: string | null
           reminder_type: string
           sent_at?: string
           status: string
           template_id?: string | null
+          ticket_id?: string | null
           user_id: string
         }
         Update: {
           error_message?: string | null
           id?: string
           opened_at?: string | null
+          receipt_checked_at?: string | null
+          receipt_error?: string | null
+          receipt_status?: string | null
           reminder_type?: string
           sent_at?: string
           status?: string
           template_id?: string | null
+          ticket_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -717,29 +864,52 @@ export type Database = {
       notification_templates: {
         Row: {
           active: boolean
+          channel: string | null
           created_at: string
+          deep_link: string | null
+          event_key: string | null
           id: string
           is_ai_generated: boolean
-          reminder_type: string
+          reminder_type: string | null
+          title: string | null
+          tone: string | null
           variant_text: string
         }
         Insert: {
           active?: boolean
+          channel?: string | null
           created_at?: string
+          deep_link?: string | null
+          event_key?: string | null
           id?: string
           is_ai_generated?: boolean
-          reminder_type: string
+          reminder_type?: string | null
+          title?: string | null
+          tone?: string | null
           variant_text: string
         }
         Update: {
           active?: boolean
+          channel?: string | null
           created_at?: string
+          deep_link?: string | null
+          event_key?: string | null
           id?: string
           is_ai_generated?: boolean
-          reminder_type?: string
+          reminder_type?: string | null
+          title?: string | null
+          tone?: string | null
           variant_text?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_event_key_fkey"
+            columns: ["event_key"]
+            isOneToOne: false
+            referencedRelation: "notification_event_types"
+            referencedColumns: ["event_key"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -760,6 +930,7 @@ export type Database = {
           id: string
           is_admin: boolean
           onboarding_complete: boolean | null
+          preferred_tone: string | null
           protein_goal_g: number | null
           sex: string | null
           subscription_tier: string | null
@@ -787,6 +958,7 @@ export type Database = {
           id: string
           is_admin?: boolean
           onboarding_complete?: boolean | null
+          preferred_tone?: string | null
           protein_goal_g?: number | null
           sex?: string | null
           subscription_tier?: string | null
@@ -814,6 +986,7 @@ export type Database = {
           id?: string
           is_admin?: boolean
           onboarding_complete?: boolean | null
+          preferred_tone?: string | null
           protein_goal_g?: number | null
           sex?: string | null
           subscription_tier?: string | null
@@ -1046,6 +1219,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      build_user_state: { Args: { p_user_id: string }; Returns: Json }
       compute_group_streak: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: number
@@ -1069,6 +1243,27 @@ export type Database = {
         }
       }
       delete_group: { Args: { p_group_id: string }; Returns: undefined }
+      enqueue_due_events: {
+        Args: never
+        Returns: {
+          considered: number
+          queued: number
+        }[]
+      }
+      enqueue_event: {
+        Args: {
+          p_dedupe: string
+          p_event: string
+          p_payload?: Json
+          p_user: string
+        }
+        Returns: boolean
+      }
+      enqueue_group_never_opened: { Args: never; Returns: number }
+      event_still_valid: {
+        Args: { p_event: string; p_user: string }
+        Returns: boolean
+      }
       find_due_reminders: {
         Args: { window_minutes: number }
         Returns: {
@@ -1149,15 +1344,30 @@ export type Database = {
         }
       }
       leave_group: { Args: { p_group_id: string }; Returns: undefined }
+      mark_group_opened: { Args: { p_group_id: string }; Returns: boolean }
+      mark_notification_opened: { Args: { p_log_id: string }; Returns: boolean }
+      pick_send_hour: {
+        Args: { p_earliest?: number; p_latest?: number; p_user_id: string }
+        Returns: Json
+      }
+      recompute_streak: { Args: { p_user: string }; Returns: undefined }
       record_group_milestone: {
         Args: { p_event_type: string; p_group_id: string; p_meta?: Json }
         Returns: undefined
       }
+      refresh_activity_prior: { Args: never; Returns: undefined }
       remove_member: {
         Args: { p_group_id: string; p_user_id: string }
         Returns: undefined
       }
       reset_daily_usage_limits: { Args: never; Returns: undefined }
+      user_activity_by_hour: {
+        Args: { p_user_id: string }
+        Returns: {
+          actions: number
+          local_hour: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
