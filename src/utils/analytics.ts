@@ -165,6 +165,16 @@ export interface AnalyticsEvents {
   push_permission_result: { granted: boolean };
   push_token_registered: { platform: string };
   push_registration_failed: { reason: ErrorReason; stage: 'permission' | 'token' | 'server' };
+  // The engagement half of the loop. `recorded` is whether the server accepted
+  // the open (false means the payload carried no log id, e.g. a notification
+  // sent before tap tracking shipped), so a gap between opens here and opens in
+  // notification_log is visible rather than a silent undercount.
+  notification_opened: {
+    channel: string;
+    deep_link: string;
+    cold_start: boolean;
+    recorded: boolean;
+  };
 
   // ── Groups ──────────────────────────────────────────────────────────────
   group_created: { category: string };

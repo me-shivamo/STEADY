@@ -17,7 +17,10 @@ import ToastHost from './src/components/common/ToastHost';
 import AnimatedSplash from './src/components/common/AnimatedSplash';
 import { posthog } from './src/utils/posthog';
 import { useAuthStore } from './src/store/authStore';
-import { registerForPushNotificationsAsync } from './src/lib/pushNotifications';
+import {
+  registerForPushNotificationsAsync,
+  attachNotificationTapListener,
+} from './src/lib/pushNotifications';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -78,6 +81,19 @@ export default function App() {
     if (session?.user) {
       registerForPushNotificationsAsync().catch(() => {});
     }
+  }, [session?.user]);
+
+  // Records notification taps (notification_log.opened) and deep-links to the
+  // relevant screen. Gated on a session because the RPC that records the open
+  // is authenticated — a tap while logged out has no user to attribute it to.
+  //
+  // Kept separate from the registration effect above on purpose: registration
+  // needs push *permission* to have been granted, while tap handling only needs
+  // a session. Someone who denied permission but still gets a local
+  // notification should have that tap navigate correctly.
+  useEffect(() => {
+    if (!session?.user) return;
+    return attachNotificationTapListener();
   }, [session?.user]);
 
   if (!fontsLoaded) {

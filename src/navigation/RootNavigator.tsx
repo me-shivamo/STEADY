@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import * as Linking from 'expo-linking';
+import { navigationRef } from '../lib/navigationRef';
 import { useAuthStore } from '../store/authStore';
 import AuthNavigator from './AuthNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
@@ -13,7 +14,6 @@ import { trackScreen } from '../utils/analytics';
 export default function RootNavigator() {
   const { session, profile, isLoading, initialize, passwordRecovery } = useAuthStore();
   const handleAuthDeepLink = useAuthStore((s) => s.handleAuthDeepLink);
-  const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
   useEffect(() => {
     initialize();
