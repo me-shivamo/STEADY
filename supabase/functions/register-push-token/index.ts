@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     )
     if (authError || !user) return json({ error: 'Unauthorized' }, 401)
 
-    const { expo_push_token, platform } = await req.json()
+    const { expo_push_token, platform, channels_version } = await req.json()
     if (!expo_push_token || typeof expo_push_token !== 'string') {
       return json({ error: 'expo_push_token is required' }, 400)
     }
@@ -41,6 +41,13 @@ Deno.serve(async (req) => {
           user_id: user.id,
           expo_push_token,
           platform,
+          // Which Android notification channels this build has created. Old
+          // clients don't send the field at all and correctly fall back to 0,
+          // meaning "only 'default' exists" -- so the sender keeps using
+          // 'default' for them. Naming a channel a device has not created makes
+          // Android silently discard the notification, so this value is what
+          // stands between an un-updated phone and total silence.
+          channels_version: Number.isInteger(channels_version) ? channels_version : 0,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,expo_push_token' }
