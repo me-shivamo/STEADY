@@ -1777,3 +1777,23 @@ A Postgres function marked `SECURITY DEFINER` runs with its owner's permissions,
 *2026-11-12 · Pattern*
 
 In SQL, `NULL NOT IN ('a','b')` evaluates to NULL, not TRUE. An `IF` treats NULL as false, so a guard meant to stop unknown values silently waves NULL through. The mirror trap was `IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN refuse`: it was written to let the server (no uid) through, but logged-out users have no uid either. For STEADY, every guard now names NULL explicitly (`v_goal IS NULL OR …`), and "who may call this" is enforced with grants, not by inspecting a value that can be missing.
+
+### A BEFORE INSERT trigger runs before ON CONFLICT is checked
+*2026-11-12 · Protocol*
+
+In Postgres, a BEFORE INSERT trigger can rewrite the row before the database checks the unique index that `ON CONFLICT` relies on. Migration 050's guard uses this. When server code tries to save a row under a shared name, the guard first moves the name into `parked_normalized_name`. The insert then hits no conflict and adds a new private row instead of overwriting the shared one. For STEADY, this means the old Edge Functions stay safe even if they run after the migration, because their writes quietly turn into harmless private inserts.
+
+### Store a pointer, not a copy, when the source of truth can change
+*2026-11-12 · Architecture*
+
+`user_food_memory` stores only a user, a phrase and a `food_item_id`, like a foreign key or a reference in Java. It doesn't store the calories. The numbers live in one place, `food_items`, so when a migration quarantines or fixes a row, every user's memory follows at once, and the resolver re-checks the row on every read. If memory held copies, a fixed row would stay wrong for every user who had already "learned" it. For STEADY, this is what lets us clean up the food database without hunting down stale copies.
+
+### One rule set, two languages, one shared fixture list
+*2026-11-12 · Pattern*
+
+The nutrition rules run in TypeScript on the server and in SQL in the database, and two copies of the same logic will drift apart unless something forces them to agree. We keep one list of 32 test meals. Jest runs the TypeScript version against it, and the audit script runs the database's SQL version against the same list, so a change to only one side fails one of the two checks. For STEADY, the subtle parts were that JavaScript's `\b` word boundary only understands ASCII, and that its floating-point numbers sit slightly off from SQL's exact decimals at a boundary like 100.5. So the TypeScript side uses Unicode lookarounds and a tiny tolerance to match what Postgres sees.
+
+### Deadlocks come from taking the same locks in opposite orders
+*2026-11-12 · Protocol*
+
+Postgres deadlocks when transaction A holds table X and waits for Y while B holds Y and waits for X; after a second it aborts one of them. Deleting an account locks `profiles` and then `food_items` (the foreign-key actions on `auth.users` fire in trigger-name order), while migration 050 first locked `food_items` and only later `profiles`, through a new foreign key. The fix is the one you'd use for mutexes in Java or C++: take the shared locks in one global order, so 050 now creates the table whose foreign keys lock `profiles` before it touches `food_items`, and a concurrent deletion simply waits instead of being killed.
