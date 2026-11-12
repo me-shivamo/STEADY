@@ -1807,3 +1807,13 @@ Calories per 100 g depend heavily on how much water a cooked food holds: the sam
 *2026-11-12 · Pattern*
 
 Adding up raw ingredients gives the nutrients of the whole pot, not of the food on the plate. FAO/INFOODS recipe calculation divides by the *cooked* weight (the yield factor) and, for fried foods, counts only the oil actually absorbed, not the whole pan. INDB skipped both steps. That's why its roti looks like dough and its poori looks like oil, and why STEADY recalculates those dishes instead of trusting the raw rows.
+
+### Trigram similarity for fuzzy food names
+*2026-11-12 · Library*
+
+The Postgres `pg_trgm` extension splits text into three-letter chunks ("cha", "hap", "apa"…) and scores two strings by how many chunks they share. That makes "chapatti", "chapathi" and "chapati" close without any language rules, and punctuation like "/" counts as a word break. For STEADY it replaces the English stemmer that turned "idli" into "id". A fixed tie-break (score, then head-noun match, then source, then id) makes the same words always return the same food.
+
+### Transaction-local settings vanish in autocommit
+*2026-11-12 · Tool*
+
+`set_config('lock_timeout', '5s', true)` (or `SET LOCAL`) only lasts until the current transaction ends. When `psql -f` runs a script without `BEGIN`, every statement is its own transaction, so the timeout covers one line and the next `DROP` can wait forever while holding up every food log behind it. For STEADY that's why every hand-run rollback script wraps itself in `BEGIN … COMMIT`: it either finishes completely or changes nothing.
