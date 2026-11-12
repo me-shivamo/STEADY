@@ -1767,3 +1767,13 @@ A calorie app's *bias* is whether its errors lean high or low on average, and wh
 *2026-11-11 · Protocol*
 
 When a subscription unlocks features inside a mobile app, Apple requires its own In-App Purchase and Google requires Play Billing. Each store takes a cut, 15% for small developers. A payment gateway like Razorpay or Stripe is allowed only in narrow cases (some regions and programmes), so putting one straight into the app risks rejection. For STEADY, that's why RevenueCat sits on top of both stores. It acts as one translator for Apple's and Google's billing, then tells our Supabase backend through a webhook which users have an active subscription.
+
+### SECURITY DEFINER and default EXECUTE grants
+*2026-11-12 · Architecture*
+
+A Postgres function marked `SECURITY DEFINER` runs with its owner's permissions, the way a setuid binary runs as root, so it skips row-level security. On Supabase every new function is executable by `PUBLIC`, `anon` and `authenticated` unless a migration revokes that. So any definer function that takes a user id and doesn't check `auth.uid()` is an open door for anyone holding the app's public key. For STEADY, server-only functions are now granted to `service_role` alone, and `ALTER DEFAULT PRIVILEGES` makes new functions private until a migration grants them explicitly. A forgotten grant now fails loudly instead of leaking quietly.
+
+### NULL breaks `NOT IN` and "is not null and" guards
+*2026-11-12 · Pattern*
+
+In SQL, `NULL NOT IN ('a','b')` evaluates to NULL, not TRUE. An `IF` treats NULL as false, so a guard meant to stop unknown values silently waves NULL through. The mirror trap was `IF auth.uid() IS NOT NULL AND auth.uid() <> p_user_id THEN refuse`: it was written to let the server (no uid) through, but logged-out users have no uid either. For STEADY, every guard now names NULL explicitly (`v_goal IS NULL OR …`), and "who may call this" is enforced with grants, not by inspecting a value that can be missing.

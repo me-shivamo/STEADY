@@ -28,11 +28,11 @@ Every table below uses the same four columns: **Item · Status · Where · Next 
 | Release stage | 🟡 | Play closed test | Production-access questionnaire submitted 2026-08-20 — **outcome not recorded anywhere** |
 | Users | ✅ | ~36 accounts, ~21 with real devices | — |
 | Notification reach | ✅ | 21 users reachable (token + timezone) | — |
-| TypeScript (`npx tsc --noEmit`) | ✅ | `src/` is 100% clean | 60 errors exist, all Deno code in `supabase/functions/**` — see row below |
+| TypeScript (`npx tsc --noEmit`) | ✅ | Exits 0 (2026-11-12) | — Deno functions and `scripts/` are excluded; shared server code imported by unit tests is still checked |
 | Tests (`npx jest`) | ✅ | 215 pass · 1 skip · 1 fail | The 1 failure is a known flake (`SettingsScreen` §1.5.2, timeout under parallel load, passes standalone) |
 | Database | ✅ | 47 migrations · 26 tables · 41 functions · 12 triggers · 4 cron jobs · 0 views | — |
 | RLS coverage | ✅ | All 26 tables have RLS enabled | Table-level RLS is solid; **the gap is function `EXECUTE` grants** — see P0 #1 and #2 |
-| **Uncommitted work** | 🔴 | Last commit 2026-08-06, newest work 2026-09-02 | **~4 weeks unversioned**: 19 migrations (029–047), the +702-line notification rewrite, 4 never-committed MD files. Commit this. |
+| Uncommitted work | ✅ | Committed and pushed 2026-10-26 and 2026-11-12 | — v1.2 work is on branch `v1.2-accuracy` |
 
 ---
 
@@ -144,14 +144,16 @@ Every table below uses the same four columns: **Item · Status · Where · Next 
 ## 3 · Broken — P0 · fix before the next release
 
 **All five are server-side only. No app rebuild needed.**
+**2026-11-12: all five fixed by migrations `048` and `049`.** Verified live: logged-out probes are refused (`42501`), `ai_logs` exists, and cron and the sender run clean. One check is still open: confirm that a due medicine reminder still renders names, because no reminder was due at verification time.
 
 | # | Item | Status | Where | Next action |
 |---|---|---|---|---|
-| 1 | **`medicines_due_at` leaks other users' medicine names** | 🔴 | `046:20-43` | `SECURITY DEFINER`, takes an arbitrary `p_user`, no `auth.uid()` check, and explicitly `GRANT … TO authenticated`. Any signed-in user can read anyone's medicine list — health data, with `notification_preferences` RLS bypassed by the DEFINER context. Add a caller check or revoke the grant. |
-| 2 | **`enqueue_event` lets anyone notify anyone** | 🔴 | `038:27-75` | Same shape, default `PUBLIC` execute. **There is not one `REVOKE` in all 47 migrations.** Audit every `SECURITY DEFINER` function that takes a user id; the correct pattern is already used by `build_user_state` (`045:71-73`), `mark_notification_opened` (`032:36-38`) and `mark_group_opened` (`043:134-136`). |
-| 3 | **`{{weight_change}}` has no producer** | 🔴 | `036:272-277` | 6 templates interpolate it; `build_user_state` never emits it and the drainer never reads `notification_events.payload` (`send-scheduled-notifications:379`). Missing keys pass through unchanged (`:558-564`), so **the first whole-kg milestone ships a push titled literally `{{weight_change}} 🎉`.** The trigger already computes the value into the payload — merge it into the interpolation vars. |
-| 4 | **`on_weight_logged` treats a NULL goal as "gaining"** | 🔴 | `043:78-80` | `IF v_goal NOT IN ('lose_weight','gain_weight')` — with a NULL goal that expression is NULL, the guard doesn't fire, and `CASE … ELSE` computes gain. Contradicts its own comment 3 lines above (`:58-60`). Use `COALESCE(v_goal,'')` or an explicit `IS NULL` check. |
-| 5 | **`ai_logs` may never have been applied** | 🔴 | `015` vs `src/types/database.ts` | It is the **only one of 27 migration-created tables missing** from the types dump, which includes deny-all-RLS tables like `notification_log`. If the table doesn't exist, every `logAiCall` insert has been swallowed by its own catch (`aiLogger.ts:83-87`) — meaning zero AI cost/latency observability, ever. Verify: `SELECT to_regclass('public.ai_logs');` |
+| 1 | **`medicines_due_at` leaked other users' medicine names** (live check: callable even when **logged out**) | ✅ | `048` | — Now `service_role` only. |
+| 2 | **`enqueue_event` let anyone notify anyone** | ✅ | `048` | — Ten server-only definer functions now `service_role` only, including `pick_send_hour` / `user_activity_by_hour`, which leaked any user's active hours. New functions no longer default to public. |
+| 2b | **`build_user_state` readable by logged-out callers** (found while verifying 048: the `auth.uid() IS NOT NULL AND …` guard lets NULL through) | ✅ | `049` | — Now `service_role` only. No app function is callable logged-out. Known minor leak left: `is_group_member` / `is_group_admin` (RLS needs them; revisit with Groups). |
+| 3 | **`{{weight_change}}` has no producer** | 🟡 | `048` | `weight_milestone` switched off, so nothing broken ships. **v2.0 notification rework:** render `notification_events.payload` into the template vars, then turn it back on. |
+| 4 | **`on_weight_logged` treated a NULL goal as "gaining"** | ✅ | `048` | — Also noted: `build_muscle` users (14 of 36) never get weight milestones. Decide in the v2.0 notification rework. |
+| 5 | **`ai_logs` never existed** (history said 015 was applied; `to_regclass` returned NULL) | ✅ | `048` | — Created, with 30-day retention (`ai-logs-retention` cron). Every AI call is now logged for cost, latency and errors. |
 
 ---
 
@@ -212,8 +214,8 @@ Seven fixes from the 2026-08-04 round are marked 🧪 in the archived `BUG.md` �
 | `notification_events.payload` | 🔴 | `034:108` | Written by two triggers, never selected — this is the direct cause of P0 #3 |
 | `notification_preferences.quiet_hours_*` | 🔴 | `013:39-40` | Never written by the client; the real protection is hardcoded 08–21 |
 | Duplicate streak hooks | 🟡 | `useStreak.ts` / `useStreaks.ts` | Identical 366-row query; both mount at once, so opening Progress from the drawer fires it up to 3× |
-| `tsconfig.json` has no `exclude` | 🟡 | `tsconfig.json` | Add `supabase/functions` + `scripts` so `tsc --noEmit` becomes a usable green gate |
-| Generated types are 2 migrations stale | 🟡 | `src/types/database.ts` | Re-run `supabase gen types` — missing `medicines_due_at` (046/047) and `ai_logs` (015) |
+| `tsconfig.json` exclude | ✅ | `tsconfig.json` | — Added 2026-11-12; `tsc --noEmit` is now a green gate |
+| Generated types | ✅ | `src/types/database.ts` | — Regenerated 2026-11-12, after `049` |
 
 ---
 
