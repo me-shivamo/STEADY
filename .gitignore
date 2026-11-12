@@ -41,6 +41,10 @@ scripts/eval/results-v2.json
 scripts/eval/results-dataset-*.json
 scripts/eval/.eval-session*.json
 
+# food_items audit raw output (row ids + usage; the markdown report in
+# docs/audits/ is the reviewed, names-and-counts-only version)
+scripts/audit/out/
+
 # Firebase / FCM credential (per-environment, never committed)
 google-services.json
 GoogleService-Info.plist

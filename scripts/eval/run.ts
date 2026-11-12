@@ -39,7 +39,10 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 // A throwaway UUID — not a real profiles row. Only used as ai_logs.user_id,
 // and aiLogger.ts swallows insert failures (best-effort logging), so an FK
-// mismatch there is harmless. Never used for RLS-gated food_items reads/writes.
+// mismatch there is harmless. The resolver runs with persist:false and
+// memory:'off' (see runExample), so this id never owns a food_items row or a
+// user_food_memory pointer: the eval reads the shared verified base and writes
+// nothing to production.
 const EVAL_USER_ID = '00000000-0000-0000-0000-0000000eeeee'
 
 interface DatasetExample {
@@ -64,6 +67,10 @@ interface ExampleResult {
   expected?: DatasetExample['expected']
   offFields: string[]
   macroSources: string[]
+  // Foods the resolver could not put a single usable number on (left out of
+  // the log) and foods logged as flagged rough estimates — founder decision D5.
+  unresolved?: string[]
+  roughEstimates?: string[]
   parsedFoods?: ParsedFood[]
   error?: string
 }
@@ -114,16 +121,23 @@ function inRange(value: number, [lo, hi]: [number, number]): boolean {
 async function runExample(example: DatasetExample): Promise<ExampleResult> {
   try {
     const parsedFoods = await parseFoods(example.text)
-    const { totals, foods } = await resolveFoods(supabase, parsedFoods, {
+    const { totals, foods, unresolved } = await resolveFoods(supabase, parsedFoods, {
       openRouterKey: OPENROUTER_API_KEY!,
       fdcApiKey: FDC_API_KEY,
       userId: EVAL_USER_ID,
+      // Never write to production from an eval, and start every case cold:
+      // memory would make the second run of a food measure the first one.
+      persist: false,
+      memory: 'off',
     })
 
     const offFields: string[] = []
     for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
       if (!inRange(totals[field], example.expected[field])) offFields.push(field)
     }
+    // A food left out of the meal is a failure even if the remaining total
+    // happens to land in the band: the user would have to add it by hand.
+    if (unresolved.length > 0) offFields.push('unsure')
 
     return {
       id: example.id,
@@ -138,7 +152,9 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
       },
       expected: example.expected,
       offFields,
-      macroSources: foods.map((f) => `${f.name} [${f.macro_source}] ${f.quantity_g}g`),
+      macroSources: foods.map((f) => `${f.name} [${f.macro_source}] ${f.quantity_g}g (${f.resolution ?? '?'})`),
+      unresolved: unresolved.map((u) => `${u.name} (${u.reason})`),
+      roughEstimates: foods.filter((f) => f.resolution === 'rough_estimate').map((f) => f.name),
       parsedFoods,
     }
   } catch (err) {
@@ -187,6 +203,7 @@ async function main() {
         console.log(`       expected:  ${JSON.stringify(result.expected)}`)
         console.log(`       off: ${result.offFields.join(', ')}`)
         console.log(`       sources: ${result.macroSources.join(' | ')}`)
+        if (result.unresolved?.length) console.log(`       left out: ${result.unresolved.join(' | ')}`)
       }
     }
   }
@@ -203,6 +220,9 @@ function writeReport(results: ExampleResult[]) {
   console.log('\n' + '─'.repeat(60))
   console.log(`RESULTS: ${passed}/${total} passed (${((passed / total) * 100).toFixed(1)}%)`)
   console.log(`         ${failed} failed, ${errored} errored`)
+  const unsure = results.filter((r) => r.unresolved?.length).length
+  const rough = results.filter((r) => r.roughEstimates?.length).length
+  console.log(`         ${unsure} with a food left out (unsure), ${rough} with a rough estimate`)
   console.log('─'.repeat(60))
 
   // By category

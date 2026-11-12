@@ -21,6 +21,17 @@
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync } from 'node:fs'
 
+// ── FROZEN since migration 050 (v1.2 Phase 3) ────────────────────────────────
+// This script writes food_items directly with the service role. Since 050 the
+// shared base changes only through reviewed migrations, and the food_items
+// guard enforces it: an upsert keyed on normalized_name would have its key
+// parked (the row becomes a private, key-less duplicate) and an UPDATE of any
+// number is silently reverted to the old value. Running it would "succeed"
+// while doing nothing useful. Reference data now arrives as a migration that
+// backs up the rows it touches first (the Phase 7 importer emits those).
+// The code below is kept for reference only. (Founder decision D8.)
+throw new Error('seed-ifct.ts is frozen since migration 050: food_items changes ship as reviewed migrations now (see the comment at the top of this file).')
+
 const url = process.env.SUPABASE_URL
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 const csvPath = process.argv[2]

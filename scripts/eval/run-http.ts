@@ -6,11 +6,20 @@
 // Run:
 //   npx tsx scripts/eval/run-http.ts [--dataset=dataset-v4.json] [--ids=a,b,c]
 //                                    [--function=log-food-from-text] [--repeat=1]
+//                                    [--memory=cold|warm]
 //
 //   --function  which deployed function to test, so the new pipeline
 //               (log-food-v2) can be scored against the old one on the same data
 //   --repeat    run every case N times; reports how many give the identical
 //               number every time (the "same meal, same number" promise)
+//   --memory    cold (default): delete the eval user's user_food_memory rows
+//               before every request, so each one measures the pipeline the way
+//               a new user meets it and stays comparable with the pre-050
+//               baseline. Needs SUPABASE_SERVICE_ROLE_KEY in .env.local.
+//               warm: keep memory, to measure what returning users get.
+//               (With 4 workers a concurrent case can still write a pointer
+//               another case reads; the RESOLUTION tally shows any 'memory'
+//               hits in a cold run, so leakage is visible, not silent.)
 //
 // Methodology notes (learned the hard way in earlier rounds):
 // - Every request gets its OWN logged_date, so chat history never leaks between
@@ -67,6 +76,17 @@ function arg(name: string): string | undefined {
 
 const FUNCTION_NAME = arg('function') ?? 'log-food-from-text'
 const REPEAT = Math.max(1, Number(arg('repeat') ?? 1))
+const MEMORY = arg('memory') ?? 'cold'
+if (MEMORY !== 'cold' && MEMORY !== 'warm') {
+  console.error(`--memory must be cold or warm (got "${MEMORY}")`)
+  process.exit(1)
+}
+// Read once (also used for the ai_logs cost query). Never printed.
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+if (MEMORY === 'cold' && !SERVICE_KEY) {
+  console.error('--memory=cold needs SUPABASE_SERVICE_ROLE_KEY in scripts/eval/.env.local (to clear the eval user\'s memory). Use --memory=warm to run without it.')
+  process.exit(1)
+}
 
 // Sequential requests took ~8 min for 50 cases; 4 workers keeps a 100-case run
 // inside a sane wall clock without hammering OpenRouter/USDA rate limits.
@@ -87,6 +107,10 @@ interface RunResult {
   latencyMs: number
   responseType?: string
   totals?: Totals
+  // foods[].resolution for this run (memory, verified_exact, ai_estimate, …)
+  resolutions?: string[]
+  // foods the function left out of the log (founder decision D5)
+  leftOut?: string[]
   error?: string
 }
 
@@ -106,6 +130,9 @@ interface HttpResult {
   error?: string
   runs: RunResult[]
   consistent?: boolean
+  // First run asked for clarification instead of logging, or logged with a
+  // food left out. Either way the user had to do something by hand.
+  unsure?: boolean
 }
 
 // Unique past date per request (2025-01-01 + index). Each case owns REPEAT
@@ -151,20 +178,48 @@ async function callEdgeFunction(text: string, loggedDate: string): Promise<Recor
   return body
 }
 
+// Cold memory: wipe the eval user's user_food_memory pointers (and only
+// theirs — the filter is the eval session's own user id) before a request.
+async function clearEvalMemory(): Promise<void> {
+  if (!userId) {
+    console.error('No userId in .eval-session.json; refusing to clear memory without a user filter.')
+    process.exit(1)
+  }
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/user_food_memory?user_id=eq.${userId}`, {
+    method: 'DELETE',
+    headers: { apikey: SERVICE_KEY!, Authorization: `Bearer ${SERVICE_KEY}`, Prefer: 'return=minimal' },
+  })
+  if (!res.ok) {
+    console.error(`Could not clear the eval user's memory (HTTP ${res.status}); a cold run would not be cold.`)
+    process.exit(1)
+  }
+}
+
+// A text log with nothing loggable comes back as a chat answer flagged
+// needs_clarification; a photo uses the same flag as its type.
+function responseKind(response: Record<string, unknown>): string {
+  return response.needs_clarification === true ? 'needs_clarification' : (response.type as string)
+}
+
 async function runExample(example: DatasetExample, caseIndex: number): Promise<HttpResult> {
   const base = { id: example.id, text: example.text, type: example.type, category: example.category }
   const runs: RunResult[] = []
   let first: Record<string, unknown> | undefined
 
   for (let r = 0; r < REPEAT; r++) {
+    if (MEMORY === 'cold') await clearEvalMemory()
     const started = Date.now()
     try {
       const response = await callEdgeFunction(example.text, dateFor(caseIndex * REPEAT + r))
       const t = response.totals as Totals | undefined
+      const runFoods = (response.foods as Array<Record<string, unknown>> | undefined) ?? []
+      const leftOut = (response.unresolved as Array<{ name: string }> | undefined) ?? []
       runs.push({
         latencyMs: Date.now() - started,
-        responseType: response.type as string,
+        responseType: responseKind(response),
         totals: t && { calories: t.calories, protein_g: t.protein_g, carbs_g: t.carbs_g, fat_g: t.fat_g },
+        resolutions: runFoods.map((f) => String(f.resolution ?? 'unknown')),
+        leftOut: leftOut.map((u) => u.name),
       })
       if (r === 0) first = response
     } catch (err) {
@@ -176,10 +231,17 @@ async function runExample(example: DatasetExample, caseIndex: number): Promise<H
     return { ...base, status: 'error', offFields: [], error: runs[0].error, runs }
   }
 
-  const responseType = first.type as string
+  const responseType = responseKind(first)
   if (example.type === 'negative') {
     const passed = responseType !== 'log'
     return { ...base, status: passed ? 'pass' : 'fail', responseType, offFields: passed ? [] : ['intent'], runs }
+  }
+
+  if (responseType === 'needs_clarification') {
+    return {
+      ...base, status: 'fail', responseType, offFields: ['unsure'], runs, unsure: true,
+      error: `Asked for clarification instead of logging: ${String(first.reply ?? first.message ?? '')}`,
+    }
   }
 
   if (responseType !== 'log') {
@@ -196,6 +258,10 @@ async function runExample(example: DatasetExample, caseIndex: number): Promise<H
     const band = example.expected?.[field]
     if (band && !inBand(totals[field], band)) offFields.push(field)
   }
+  // D5: a log with a food left out still counts as unsure, even when the
+  // remaining total happens to land in the band.
+  const leftOut = runs[0].leftOut ?? []
+  if (leftOut.length > 0) offFields.push('unsure')
 
   // Consistency only means something when every repeat actually logged.
   const loggedCalories = runs.filter((x) => x.responseType === 'log' && x.totals).map((x) => x.totals!.calories)
@@ -214,10 +280,12 @@ async function runExample(example: DatasetExample, caseIndex: number): Promise<H
     // built, THIS is the number that would trigger it, so we capture it to
     // check whether it actually correlates with being wrong.
     minConfidence: foods.length ? Math.min(...foods.map((f) => Number(f.confidence ?? 1))) : undefined,
-    foodNames: foods.map((f) => `${f.name}(${f.quantity_g}g)[${f.macro_source}]conf=${f.confidence}`),
+    foodNames: foods.map((f) => `${f.name}(${f.quantity_g}g)[${f.macro_source}/${f.resolution ?? '?'}]conf=${f.confidence}`)
+      .concat(leftOut.map((n) => `${n}(LEFT OUT)`)),
     mealLogId: first.meal_log_id as string | undefined,
     runs,
     consistent,
+    unsure: leftOut.length > 0,
   }
 }
 
@@ -268,7 +336,7 @@ async function main() {
 // Token usage comes from ai_logs (every OpenRouter call writes one row). The
 // inserts are fire-and-forget on the server, so give them a moment to land.
 async function fetchCost(since: string): Promise<{ rows: number; usd: number; unpriced: string[] } | null> {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const serviceKey = SERVICE_KEY
   if (!serviceKey) return null
   await new Promise((r) => setTimeout(r, 3000))
   const url = `${SUPABASE_URL}/rest/v1/ai_logs?select=model,prompt_tokens,completion_tokens` +
@@ -310,7 +378,7 @@ function writeReport(
   const logRequests = results.flatMap((r) => r.runs).filter((x) => x.responseType === 'log').length
 
   console.log('\n' + '─'.repeat(72))
-  console.log(`FUNCTION:                    ${FUNCTION_NAME}   (repeat ${REPEAT})`)
+  console.log(`FUNCTION:                    ${FUNCTION_NAME}   (repeat ${REPEAT}, memory ${MEMORY})`)
   console.log(`STRICT (all declared bands): ${logsPassed}/${logs.length} logs passed (${pct(logsPassed / logs.length)})`)
   console.log(`CALORIES IN BAND:            ${inCalBand}/${scored.length} (${pct(inCalBand / scored.length)})`)
   console.log(`CALORIES WITHIN ±25% OF MID: ${within25}/${scored.length} (${pct(within25 / scored.length)})  [literature-comparable]`)
@@ -332,6 +400,13 @@ function writeReport(
   } else {
     console.log('AI COST:                     unavailable (needs SUPABASE_SERVICE_ROLE_KEY in .env.local and the ai_logs table)')
   }
+  const unsure = logs.filter((r) => r.unsure).length
+  console.log(`UNSURE (asked, or left a food out): ${unsure}/${logs.length} (${pct(unsure / Math.max(logs.length, 1))})`)
+  // Which tier every logged food took, across all runs (a cold run should show
+  // no 'memory'; rough_estimate is D5's flagged repair).
+  const tally = new Map<string, number>()
+  for (const r of results) for (const run of r.runs) for (const res of run.resolutions ?? []) tally.set(res, (tally.get(res) ?? 0) + 1)
+  console.log(`RESOLUTION:                  ${[...tally].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · ') || 'n/a'}`)
   console.log(`NEGATIVES (no phantom log):  ${negPassed}/${negatives.length}`)
   console.log(`ERRORS: ${errored}`)
   console.log('─'.repeat(72))
