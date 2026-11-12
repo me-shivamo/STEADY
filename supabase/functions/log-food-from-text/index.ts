@@ -1,5 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { resolveFoods, normalizeName, type ParsedFood, type ResolvedFood, type MacroSource } from '../_shared/macroResolver.ts'
+import {
+  resolveFoods, normalizeName, placeFoods, memoryModeFromEnv, unsureReply, estimateNote,
+  capRoughConfidence, entryQuantityLabel, stripRoughMarker,
+  type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood,
+} from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
 import { SYSTEM_PROMPT } from '../_shared/foodParsePrompt.ts'
 
@@ -255,10 +259,32 @@ Deno.serve(async (req) => {
     // match (genuinely new/changed identity) fall through to the normal
     // resolveFoods() pipeline, exactly as a fresh log would.
     const previousByName = new Map(previousEntries.map((e) => [normalizeName(e.name), e]))
-    const allParsed = aiResult.foods as ParsedFood[]
+    // The card's edit text is built from each entry's quantity_label, so on an
+    // edit a rough entry's "· rough estimate" marker comes back in the text.
+    // It is a flag, not part of the food: if the parse folded it into a name,
+    // strip it before matching/resolving (entryQuantityLabel handles labels).
+    const allParsed = (aiResult.foods as ParsedFood[]).map((f) =>
+      editMealLogId && typeof f.name === 'string' ? { ...f, name: stripRoughMarker(f.name) || f.name } : f)
     const rescaledIndices: number[] = []
     const freshIndices: number[] = []
     const rescaled: ResolvedFood[] = new Array(allParsed.length)
+
+    // Same food, new quantity: the previous entry's numbers × new/old grams.
+    const rescaleFromPrevious = (f: ParsedFood, prev: PreviousEntry): ResolvedFood => {
+      const ratio = f.quantity_g / prev.quantity_g
+      const r1 = (n: number) => Math.round(n * ratio * 10) / 10
+      return {
+        ...f,
+        calories: r1(prev.calories),
+        protein_g: r1(prev.protein_g),
+        carbs_g: r1(prev.carbs_g),
+        fat_g: r1(prev.fat_g),
+        fiber_g: r1(prev.fiber_g),
+        food_item_id: prev.food_item_id,
+        macro_source: prev.macro_source ?? 'user_created',
+        resolution: 'edit_rescale',
+      }
+    }
 
     allParsed.forEach((f, i) => {
       const prev = editMealLogId ? previousByName.get(normalizeName(f.name)) : undefined
@@ -266,38 +292,99 @@ Deno.serve(async (req) => {
       // (e.g. a new label_macros from a re-scanned label) and the previous
       // entry actually has a usable macro_source to trust.
       if (prev && !f.label_macros && prev.food_item_id && prev.quantity_g > 0) {
-        const ratio = f.quantity_g / prev.quantity_g
-        const r1 = (n: number) => Math.round(n * ratio * 10) / 10
-        rescaled[i] = {
-          ...f,
-          calories: r1(prev.calories),
-          protein_g: r1(prev.protein_g),
-          carbs_g: r1(prev.carbs_g),
-          fat_g: r1(prev.fat_g),
-          fiber_g: r1(prev.fiber_g),
-          food_item_id: prev.food_item_id,
-          macro_source: prev.macro_source ?? 'user_created',
-        }
+        rescaled[i] = rescaleFromPrevious(f, prev)
         rescaledIndices.push(i)
       } else {
         freshIndices.push(i)
       }
     })
 
-    // Resolve macros from real data (cache → USDA → one-time AI estimate) for
-    // anything not covered by the rescale above. The parse only identified
-    // foods + grams for these; numbers are computed here, same as a fresh log.
+    // Resolve macros from real data (memory → verified base → USDA → AI
+    // estimate) for anything not covered by the rescale above. The parse only
+    // identified foods + grams for these; numbers are computed here, same as a
+    // fresh log. RESOLVER_MEMORY (on | write_only | off) is the memory kill switch.
     const freshResolved = freshIndices.length > 0
       ? await resolveFoods(supabase, freshIndices.map((i) => allParsed[i]), {
           openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
+          memory: memoryModeFromEnv(Deno.env.get('RESOLVER_MEMORY')),
         })
-      : { foods: [] as ResolvedFood[], totals: null }
+      : { foods: [] as ResolvedFood[], totals: null, unresolved: [] as UnresolvedFood[] }
 
-    const foods: ResolvedFood[] = new Array(allParsed.length)
-    rescaledIndices.forEach((origIdx) => { foods[origIdx] = rescaled[origIdx] })
-    freshIndices.forEach((origIdx, j) => { foods[origIdx] = freshResolved.foods[j] })
+    // An edit must never silently delete a food the meal already had. The
+    // edit replaces ALL of the meal's entries, so a food that matches a
+    // previous entry by name but had to be re-resolved (its entry predates the
+    // resolver and has no food_item_id — 429 such entries on 2026-11-12) and
+    // then got no usable number would vanish from the user's history. It keeps
+    // its previous numbers, rescaled, instead. Only genuinely new foods can be
+    // left out of an edit.
+    const leftOut: UnresolvedFood[] = []
+    for (const u of freshResolved.unresolved) {
+      const origIdx = freshIndices[u.index]
+      const f = allParsed[origIdx]
+      const prev = editMealLogId ? previousByName.get(normalizeName(f.name)) : undefined
+      if (prev && !f.label_macros && prev.quantity_g > 0) {
+        console.warn(`[edit] no usable estimate for "${f.name}" — keeping its previous entry's numbers`)
+        rescaled[origIdx] = rescaleFromPrevious(f, prev)
+        rescaledIndices.push(origIdx)
+      } else {
+        leftOut.push({ ...u, index: origIdx })
+      }
+    }
+
+    // A rescaled rough estimate is still a rough estimate (D5): keep its low
+    // confidence and its flag, or a quantity edit (the likeliest follow-up to
+    // "this is a rough estimate") would quietly make it look trustworthy. The
+    // app's previous_entries carry neither, so ask the row itself — by the id,
+    // server-side, rather than trusting anything else the client sent. Not
+    // fatal: without the answer the entry just logs unflagged, as before.
+    const rescaledIds = [...new Set(rescaledIndices.map((i) => rescaled[i].food_item_id).filter((id): id is string => !!id))]
+    if (rescaledIds.length > 0) {
+      const { data: rows, error: roughErr } = await supabase
+        .from('food_items')
+        .select('id, status_reason')
+        .in('id', rescaledIds)
+      if (roughErr) console.error('[edit] rough-estimate lookup failed, rescaling unflagged:', roughErr.message)
+      const roughIds = new Set(
+        (rows ?? [])
+          .filter((r: { status_reason: unknown }) => typeof r.status_reason === 'string' && r.status_reason.startsWith('rough_'))
+          .map((r: { id: string }) => r.id),
+      )
+      for (const i of rescaledIndices) {
+        const f = rescaled[i]
+        if (f.food_item_id && roughIds.has(f.food_item_id)) {
+          rescaled[i] = { ...f, rough: true, confidence: capRoughConfidence(f.confidence) }
+        }
+      }
+    }
+
+    // Merge back into the message's original order. A food the resolver had
+    // to leave out leaves a gap that is dropped, so later foods don't shift.
+    const placed: Array<ResolvedFood | undefined> = new Array(allParsed.length)
+    rescaledIndices.forEach((origIdx) => { placed[origIdx] = rescaled[origIdx] })
+    placeFoods(placed, freshIndices, freshResolved)
+    const foods: ResolvedFood[] = placed.filter((f): f is ResolvedFood => f !== undefined)
+
+    // Founder decision D5, "log the rest, flag the unknown": a food with no
+    // usable number at all is left out and named in the coach note, and the
+    // rest of the meal still logs. Only when NOTHING is left to log do we
+    // answer in chat instead — and write nothing: no meal_log, no entries,
+    // and on an edit the meal stays exactly as it was (this check runs before
+    // the meal update and the entry delete below).
+    if (foods.length === 0) {
+      const reply = unsureReply(leftOut.map((u) => u.name), 'text')
+      if (editMealLogId) return json({ success: false, error: reply }, 200)
+      await saveChatTurn(supabase, user.id, logged_date, text, reply, null, requestStartedAt)
+      return json({
+        success: true,
+        type: 'answer',
+        reply,
+        water_logged: waterLogged,
+        needs_clarification: true,
+        unresolved: leftOut.map((u) => ({ name: u.name, reason: u.reason })),
+      })
+    }
 
     const r1 = (n: number) => Math.round(n * 10) / 10
     const totals = {
@@ -339,9 +426,10 @@ Deno.serve(async (req) => {
       mealLog = created
     }
 
-    // Insert food entries. Each references the shared food_items cache row the
-    // resolver returned — no more one-off food_items rows per log. A single
-    // batched insert instead of one round trip per food.
+    // Insert food entries. Each references the food_items row the resolver
+    // returned: a shared verified row, or one of this user's own private rows
+    // (AI estimates and personal USDA picks — since 050 those are never
+    // shared). A single batched insert instead of one round trip per food.
     const { data: savedEntries, error: entriesErr } = await supabase
       .from('food_entries')
       .insert(foods.map((food) => ({
@@ -350,7 +438,9 @@ Deno.serve(async (req) => {
         food_item_id: food.food_item_id,
         food_name: food.name,
         quantity_g: food.quantity_g,
-        quantity_label: food.quantity_description,
+        // "1 plate · rough estimate" for a rough entry: the one D5 flag the
+        // installed app shows on the card (see entryQuantityLabel).
+        quantity_label: entryQuantityLabel(food),
         calories: food.calories,
         protein_g: food.protein_g,
         carbs_g: food.carbs_g,
@@ -365,8 +455,17 @@ Deno.serve(async (req) => {
 
     // The coach_note is the AI's personalised insight about this specific meal.
     // It's saved as the assistant message so it appears in history and is readable.
-    const coachNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
-    await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id, requestStartedAt)
+    // D5: one short sentence naming any rough estimate (and where to adjust it)
+    // or any food left out (add it manually), so the user knows which number
+    // to check. No installed build renders coach_note, so saveChatTurn also
+    // writes that sentence as its own chat row, which Home does show.
+    const note = estimateNote(
+      foods.filter((f) => f.rough).map((f) => f.name),
+      leftOut.map((u) => u.name),
+    )
+    const baseNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
+    const coachNote = note ? `${baseNote} ${note}` : baseNote
+    await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id, requestStartedAt, note)
 
     return json({
       success: true,
@@ -380,6 +479,8 @@ Deno.serve(async (req) => {
       foods,
       totals,
       entries: savedEntries,
+      // Additive (the current app ignores it): foods left out of this log.
+      unresolved: leftOut.map((u) => ({ name: u.name, reason: u.reason })),
     })
   } catch (err) {
     console.error('log-food-from-text error:', err)
@@ -702,6 +803,13 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
         loggedFoods.push(m.content)
         continue
       }
+      // D5's flag line ("X is a rough estimate…") is stored as a plain chat row
+      // so Home shows it, but it belongs to its meal (meal_log_id set) and is
+      // not a conversational turn: replaying it would rebuild the very
+      // "log → prose reply" pattern this function folds away.
+      if (m.role === 'assistant' && m.meal_log_id !== null) {
+        continue
+      }
       // A user turn that produced a meal is folded into the summary line below
       // rather than replayed. Two tests, deliberately:
       //
@@ -744,8 +852,16 @@ async function loadChatHistory(supabase: any, userId: string, date: string): Pro
 // must sort BEFORE the meal_log row this same request may have already created
 // (see call site), or the feed reorders the food log card above the user's own
 // message on reload.
+// `flagNote` is D5's one-line rough-estimate / left-out flag. It goes into a
+// third, separate row on purpose: the installed app's Home feed drops every
+// food_log_confirmation row (the meal card stands in for it) and never reads
+// coach_note, but it does show assistant 'chat' rows. created_at is left to
+// the database's now(), which is later than the meal_log this request
+// inserted, so the line sorts directly under its card. meal_log_id ties it to
+// the meal, so deleting the meal deletes it too. Inserted on its own because
+// a batch whose rows have different keys sends NULL for the missing ones.
 // deno-lint-ignore no-explicit-any
-async function saveChatTurn(supabase: any, userId: string, date: string, userText: string, aiReply: string, mealLogId: string | null, userSentAt: string): Promise<void> {
+async function saveChatTurn(supabase: any, userId: string, date: string, userText: string, aiReply: string, mealLogId: string | null, userSentAt: string, flagNote = ''): Promise<void> {
   try {
     await supabase.from('chat_messages').insert([
       {
@@ -776,6 +892,16 @@ async function saveChatTurn(supabase: any, userId: string, date: string, userTex
         created_at: userSentAt,
       },
     ])
+    if (mealLogId && flagNote) {
+      await supabase.from('chat_messages').insert({
+        user_id: userId,
+        role: 'assistant',
+        content: flagNote,
+        message_type: 'chat',
+        meal_log_id: mealLogId,
+        chat_date: date,
+      })
+    }
   } catch (err) {
     console.error('saveChatTurn error:', err)
   }
