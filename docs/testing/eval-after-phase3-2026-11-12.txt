@@ -1,0 +1,207 @@
+Running HTTP eval: 100 cases from dataset-v4.json → log-food-from-text, repeat 3, concurrency 4
+
+[PASS] j01 (indian) — "palak paneer with 2 rotis"
+[PASS] j02 (indian) — "a plate of chole chawal"
+[PASS] j03 (indian) — "2 medu vadas with sambar"
+[PASS] j04 (indian) — "one plain uttapam"
+[PASS] j05 (indian) — "aloo gobi with rice"
+[PASS] j06 (indian) — "a bowl of sabudana khichdi"  [INCONSISTENT: 368.5 / 435.5 / 352.4]
+[PASS] j07 (indian) — "egg bhurji with 2 slices of bread"
+[FAIL] j08 (indian) — "mutton curry with rice"
+       predicted: {"calories":793.8,"protein_g":53.5,"carbs_g":61.7,"fat_g":37.8}
+       expected:  {"calories":[500,850],"protein_g":[25,50]}
+       off: protein_g | foods: mutton curry(250g)[ai_estimated/ai_estimate]conf=0.85 | cooked rice(174g)[usda/verified_exact]conf=0.85
+[PASS] j09 (indian) — "a plate of misal pav"  [INCONSISTENT: 625 / 750 / 625]
+[FAIL] j10 (indian) — "3 dhoklas"
+       predicted: {"calories":389.7,"protein_g":24.2,"carbs_g":55.2,"fat_g":9.5}
+       expected:  {"calories":[130,300]}
+       off: calories | foods: dhokla(180g)[indb/verified_exact]conf=0.85
+[FAIL] j11 (indian) — "a bowl of moong dal"
+       predicted: {"calories":348,"protein_g":20.6,"carbs_g":46,"fat_g":10.3}
+       expected:  {"calories":[150,320],"protein_g":[8,20]}
+       off: calories, protein_g | foods: moong dal(240g)[usda/verified_exact]conf=0.85
+[PASS] j12 (indian) — "half plate of veg pulao"  [INCONSISTENT: 316 / 448.8 / 316]
+[PASS] j13 (indian) — "2 besan chillas"
+[PASS] j14 (indian) — "one kachori"
+[FAIL] j15 (indian) — "a plate of veg fried rice"
+       predicted: {"calories":696,"protein_g":15.4,"carbs_g":130,"fat_g":12.8}
+       expected:  {"calories":[350,650]}
+       off: calories | foods: fried rice(400g)[usda/verified_exact]conf=0.85
+[PASS] j16 (indian) — "2 rotis with baingan bharta"
+[PASS] j17 (indian) — "kadhi chawal"  [INCONSISTENT: 543.8 / 468.8 / 543.8]
+[PASS] j18 (indian) — "a glass of sweet lassi"
+[PASS] j19 (indian) — "2 pieces of dhokla with chutney"
+[PASS] j20 (indian) — "a bowl of dal khichdi with ghee"
+[FAIL] c01 (branded) — "a mcaloo tikki burger"
+       predicted: {"calories":446.6,"protein_g":6.7,"carbs_g":53.7,"fat_g":22.3}
+       expected:  {"calories":[290,420]}
+       off: calories | foods: aloo tikki(100g)[ai_estimated/ai_estimate]conf=0.85 | burger bun(50g)[ai_estimated/ai_estimate]conf=0.85 | mayonnaise(15g)[indb/verified_exact]conf=0.85 | lettuce(10g)[ifct/verified_exact]conf=0.85 | tomato(20g)[usda/verified_exact]conf=0.85
+[PASS] c02 (branded) — "medium fries from burger king"
+[PASS] c03 (branded) — "a mcflurry oreo"
+[PASS] c04 (branded) — "a bottle of coca cola 500ml"
+[PASS] c05 (branded) — "subway 6 inch chicken teriyaki"
+[FAIL] c06 (branded) — "a kitkat 4 finger"  [INCONSISTENT: 135.3 / 138.6 / 135.3]
+       predicted: {"calories":135.3,"protein_g":7.4,"carbs_g":7.3,"fat_g":8.5}
+       expected:  {"calories":[180,260]}
+       off: calories | foods: KitKat 4-finger bar(41g)[usda/verified_exact]conf=0.9
+[FAIL] c07 (branded) — "a packet of parle g biscuits"
+       predicted: {"calories":499,"protein_g":5.9,"carbs_g":74.3,"fat_g":19.8}
+       expected:  {"calories":[180,460]}
+       off: calories | foods: Parle-G biscuits(100g)[ai_estimated/rough_estimate]conf=0.3
+[FAIL] c08 (branded) — "starbucks grande americano"
+       predicted: {"calories":156.1,"protein_g":5.3,"carbs_g":26.3,"fat_g":3.9}
+       expected:  {"calories":[0,35]}
+       off: calories | foods: Americano(473g)[usda/verified_exact]conf=0.9
+[PASS] c09 (branded) — "dominos garlic breadsticks"
+[FAIL] c10 (branded) — "a cup of amul ice cream"
+       predicted: {"calories":496.8,"protein_g":8.4,"carbs_g":56.6,"fat_g":26.4}
+       expected:  {"calories":[180,400]}
+       off: calories | foods: amul ice cream(240g)[ai_estimated/ai_estimate]conf=0.85
+[PASS] c11 (branded) — "a bowl of kelloggs corn flakes with milk"
+[PASS] c12 (branded) — "a britannia good day cookie"
+[FAIL] c13 (branded) — "kfc popcorn chicken regular"
+       predicted: {"calories":526.5,"protein_g":26.6,"carbs_g":31.8,"fat_g":32.6}
+       expected:  {"calories":[250,460],"protein_g":[12,28]}
+       off: calories | foods: Popcorn Chicken(150g)[usda/verified_exact]conf=0.85
+[PASS] c14 (branded) — "a bottle of tropicana orange juice 200ml"
+[PASS] c15 (branded) — "2 pieces of dairy milk chocolate"
+[PASS] x01 (western-home) — "a grilled cheese sandwich"  [INCONSISTENT: 459.8 / 481.6 / 459.8]
+[PASS] x02 (western-home) — "spaghetti with meatballs"
+[PASS] x03 (western-home) — "a chicken salad with olive oil dressing"
+[PASS] x04 (western-home) — "3 scrambled eggs with cheese"  [INCONSISTENT: 346.5 / 334.8 / 334.8]
+[FAIL] x05 (western-home) — "a tuna sandwich"
+       predicted: {"calories":285,"protein_g":34.9,"carbs_g":27.9,"fat_g":3.3}
+       expected:  {"calories":[280,500],"protein_g":[18,34]}
+       off: protein_g | foods: tuna(120g)[ifct/reference_match]conf=0.85 | bread(58g)[usda/verified_exact]conf=0.85
+[PASS] x06 (western-home) — "a bowl of tomato soup"
+[PASS] x07 (western-home) — "mashed potatoes with butter"
+[FAIL] x08 (western-home) — "a chicken wrap"  [INCONSISTENT: 540 / 412.5 / 398.2]
+       predicted: {"calories":540,"protein_g":44.8,"carbs_g":30.1,"fat_g":25.3}
+       expected:  {"calories":[300,560],"protein_g":[20,38]}
+       off: protein_g | foods: chicken(100g)[ai_estimated/ai_estimate]conf=0.85 | wrap(70g)[usda/verified_exact]conf=0.85 | vegetables (lettuce, tomato, etc.)(50g)[usda/reference_match]conf=0.85 | sauce (e.g. mayo, ranch)(30g)[ai_estimated/ai_estimate]conf=0.85
+[PASS] x09 (western-home) — "2 waffles with butter"  [INCONSISTENT: 521.7 / 450 / 450]
+[PASS] x10 (western-home) — "a bowl of chicken soup"  [INCONSISTENT: 147.5 / 147.5 / 144.5]
+[PASS] x11 (western-home) — "cottage cheese with fruit"  [INCONSISTENT: 284.4 / 269.4 / 269.4]
+[PASS] x12 (western-home) — "a beef steak, medium size"
+[PASS] x13 (western-home) — "a bowl of mixed green salad"
+[FAIL] x14 (western-home) — "2 sausages with eggs"
+       predicted: {"calories":642.4,"protein_g":31.6,"carbs_g":2.5,"fat_g":55.1}
+       expected:  {"calories":[320,620],"protein_g":[18,38]}
+       off: calories | foods: sausage(160g)[usda/verified_exact]conf=0.85 | egg(100g)[usda/verified_exact]conf=0.85
+[PASS] x15 (western-home) — "a smoothie bowl with granola"  [INCONSISTENT: 596.7 / 401.7 / 596.7]
+[PASS] k01 (drinks-additives) — "tea with milk and sugar"
+[FAIL] k02 (drinks-additives) — "a cup of filter coffee"
+       predicted: {"calories":4.8,"protein_g":0.7,"carbs_g":0.4,"fat_g":0}
+       expected:  {"calories":[30,120]}
+       off: calories | foods: filter coffee(240g)[usda/verified_exact]conf=0.9
+[PASS] k03 (drinks-additives) — "a glass of coconut water"
+[PASS] k04 (drinks-additives) — "black coffee with one sugar"  [INCONSISTENT: 24.3 / 24.3 / 20.4]
+[FAIL] k05 (drinks-additives) — "a glass of sugarcane juice"
+       predicted: {"calories":138.7,"protein_g":0.4,"carbs_g":31.5,"fat_g":1}
+       expected:  {"calories":[140,300]}
+       off: calories | foods: sugarcane juice(240g)[ifct/verified_exact]conf=0.9
+[FAIL] k06 (drinks-additives) — "an iced tea"
+       predicted: {"calories":24.8,"protein_g":0.1,"carbs_g":6.5,"fat_g":0}
+       expected:  {"calories":[50,160]}
+       off: calories | foods: iced tea(240g)[indb/verified_exact]conf=0.85
+[FAIL] k07 (drinks-additives) — "a protein coffee with skim milk"
+       predicted: {"calories":15.5,"protein_g":1.7,"carbs_g":1.9,"fat_g":0.1}
+       expected:  {"calories":[80,250],"protein_g":[8,30]}
+       off: calories, protein_g | foods: coffee(248g)[usda/verified_exact]conf=0.9 | skim milk(30g)[usda/verified_exact]conf=0.85
+[PASS] k08 (drinks-additives) — "a glass of almond milk unsweetened"
+[PASS] k09 (drinks-additives) — "hot water with lemon"
+[PASS] k10 (drinks-additives) — "a small glass of coke"
+[FAIL] k11 (drinks-additives) — "chaas or buttermilk, one glass"
+       predicted: {"calories":148.8,"protein_g":7.7,"carbs_g":11.7,"fat_g":7.9}
+       expected:  {"calories":[40,130]}
+       off: calories | foods: buttermilk(240g)[usda/verified_exact]conf=0.85
+[PASS] k12 (drinks-additives) — "a whiskey with soda"  [INCONSISTENT: 178.2 / 75 / 178.2]
+[PASS] k13 (drinks-additives) — "a cup of hot milk with turmeric"
+[PASS] k14 (drinks-additives) — "a banana milkshake"
+[PASS] k15 (drinks-additives) — "green tea with honey"  [INCONSISTENT: 15.2 / 63.8 / 15.2]
+[PASS] y01 (raw) — "a bowl of papaya"
+[PASS] y02 (raw) — "a guava"
+[PASS] y03 (raw) — "10 walnuts halves"
+[PASS] y04 (raw) — "a cucumber"
+[PASS] y05 (raw) — "a handful of raisins"
+[PASS] y06 (raw) — "a mango"
+[PASS] y07 (raw) — "2 carrots"
+[PASS] y08 (raw) — "a boiled sweet potato"
+[PASS] y09 (raw) — "a bowl of pomegranate"
+[FAIL] y10 (raw) — "5 dates"
+       predicted: {"calories":332.4,"protein_g":2.2,"carbs_g":90,"fat_g":0.2}
+       expected:  {"calories":[90,220]}
+       off: calories | foods: medjool dates(120g)[usda/usda_match]conf=0.85
+[PASS] z01 (explicit-weight) — "200g paneer"
+[PASS] z02 (explicit-weight) — "150g curd"  [INCONSISTENT: 150 / 293.6 / 150]
+[PASS] z03 (explicit-weight) — "100g almonds"
+[PASS] z04 (explicit-weight) — "250g boiled potato"
+[PASS] z05 (explicit-weight) — "2 eggs and 50g oats"
+[PASS] z06 (explicit-weight) — "300ml milk"
+[PASS] z07 (explicit-weight) — "120g grilled fish"
+[PASS] z08 (explicit-weight) — "30g peanuts"
+[PASS] z09 (explicit-weight) — "100g boiled chana"
+[ERROR] z10 (explicit-weight) — "60g dry pasta cooked with sauce"
+       error: Unexpected end of JSON input
+[ERROR] q01 (vague) — "just a small snack"
+       error: HTTP 422: {"error":"I couldn't find any food in that. Try describing what you ate, e.g. \"2 eggs and toast\"."}
+[ERROR] q02 (vague) — "ate a heavy lunch today"
+       error: HTTP 422: {"error":"I couldn't find any food in that. Try describing what you ate, e.g. \"2 eggs and toast\"."}
+[PASS] q03 (vague) — "a couple of biscuits"  [INCONSISTENT: 176.4 / 179.5 / 176.4]
+[PASS] q04 (vague) — "a small piece of cake"
+[PASS] q05 (vague) — "some nuts while working"
+[FAIL] q06 (vague) — "a spoonful of ghee in my dal"  [INCONSISTENT: 425 / 135 / 135]
+       predicted: {"calories":425,"protein_g":17.2,"carbs_g":38.3,"fat_g":23.6}
+       expected:  {"calories":[40,160]}
+       off: calories | foods: ghee(15g)[usda/verified_exact]conf=0.9 | dal(200g)[usda/verified_exact]conf=0.85
+[FAIL] q07 (vague) — "quarter of a pizza"  [INCONSISTENT: 161.4 / 403.6 / 161.4]
+       predicted: {"calories":161.4,"protein_g":7.5,"carbs_g":10.9,"fat_g":9.6}
+       expected:  {"calories":[250,700]}
+       off: calories | foods: pizza(110g)[indb/verified_exact]conf=0.85
+[FAIL] q08 (vague) — "a light dinner, just soup and salad"  [INCONSISTENT: 85.5 / 225 / 325]
+       predicted: {"calories":85.5,"protein_g":5.3,"carbs_g":15.1,"fat_g":1.1}
+       expected:  {"calories":[100,400]}
+       off: calories | foods: soup(150g)[usda/usda_match]conf=0.8 | salad(150g)[usda/usda_match]conf=0.8
+[PASS] q09 (vague) — "two small idlis"
+[FAIL] q10 (vague) — "a big glass of juice"
+       predicted: {"calories":108,"protein_g":1.2,"carbs_g":25.2,"fat_g":0.2}
+       expected:  {"calories":[110,280]}
+       off: calories | foods: juice(240g)[ai_estimated/ai_estimate]conf=0.85
+[PASS] m01 (negative) — "is intermittent fasting good for me?"
+[PASS] m02 (negative) — "how many calories should i eat to lose weight?"
+[PASS] m03 (negative) — "i am not eating anything today"
+[PASS] m04 (negative) — "what was my average protein last week?"
+[PASS] m05 (negative) — "can you give me a diet plan?"
+
+────────────────────────────────────────────────────────────────────────
+FUNCTION:                    log-food-from-text   (repeat 3, memory cold)
+STRICT (all declared bands): 69/95 logs passed (72.6%)
+CALORIES IN BAND:            72/92 (78.3%)
+CALORIES WITHIN ±25% OF MID: 51/92 (55.4%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        22.2%
+CALORIE LEAN (signed):       median -2.4%   41 above mid / 50 below
+PROTEIN (19 cases):          median error 15.4%, lean +12.9%
+CONSISTENCY (same number ×3): 72/92 (78.3%)
+LATENCY:                     p50 4.70s   p95 7.90s   (300 requests)
+AI COST:                     $0.1869 total, ~$0.00067 per log (472 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 243 · ai_estimate 123 · usda_match 37 · reference_match 28 · rough_estimate 3 · memory 1
+NEGATIVES (no phantom log):  5/5
+ERRORS: 3
+────────────────────────────────────────────────────────────────────────
+
+By category:   strict   |  median calorie lean
+  indian             16/20   |  +9.6%
+  branded             9/15   |  +2.3%
+  western-home       12/15   |  +8.2%
+  drinks-additives   10/15   |  -34.5%
+  raw                 9/10   |  -22.3%
+  explicit-weight     9/10   |  -1.9%
+  vague               4/10   |  -12.8%
+  negative            5/5    |  +0.0%
+
+Field-level misses:
+  protein_g: 5
+  calories: 20
+
+Full results written to /home/shivam/STEADY/scripts/eval/results-dataset-v4-log-food-from-text.json
