@@ -293,6 +293,7 @@ Seven fixes from the 2026-08-04 round are marked 🧪 in the archived `BUG.md` �
 | 2026-09-02 | `TESTING.md` reset to a blank per-build checklist and absorbed the Maestro selectors + E2E facts from `WINDOWS_HANDOFF.md`. |
 | 2026-09-02 | `README.md` corrected (5-tab nav and 7-step onboarding removed, roadmap checkboxes fixed); `BUILD.md` repointed here; `.claude/plans/notifications.md` no longer claims "nothing here is built yet"; `.claude/memory/project_steady_vision.md` marked which original decisions were later reversed. |
 | 2026-09-02 | `NOTIFICATIONS.md` catalogue regenerated. Fixed `scripts/gen-notification-docs.py` first — it was the source of the stale "⚠️ Not wired up" labels on `group_member_joined` and `weight_milestone`, both wired by migration 043. |
+| 2026-11-11 | All docs moved under `docs/` (index in `docs/README.md`): `STATUS.md`, `BUILD.md`, `NOTIFICATIONS.md` at `docs/`; `DEVLOG.md` and `LEARNING.md` in `docs/journal/`; `TESTING.md` and `TEST_SCENARIOS.md` in `docs/testing/`; `reports/` and `research_notes/` became `docs/research/reports/` and `docs/research/notes/`. Path references repointed, including `scripts/gen-notification-docs.py`. Only `README.md` and `CLAUDE.md` stay at the root. |
 
 **Archive:** `docs/archive/` holds the superseded trackers. `BUG.md` is worth keeping for its root-cause writeups and its "Verified NOT the cause" section, which exists to stop anyone re-investigating settled questions.
 

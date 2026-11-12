@@ -397,5 +397,5 @@ processes will eventually serialise them into an error message.
 | Typical build time | ~18-31 min local (18m with a warm Gradle cache, 2026-09-02) |
 
 Related: `STATUS.md` (what's built, pending and broken — including open
-pre-upload items), `DEVLOG.md` (the story of the 2026-08-03 session),
-`LEARNING.md` (the concepts).
+pre-upload items), `journal/DEVLOG.md` (the story of the 2026-08-03 session),
+`journal/LEARNING.md` (the concepts).

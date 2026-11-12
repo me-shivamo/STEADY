@@ -184,7 +184,7 @@ AI keys live in Supabase Edge Function secrets — they never touch the client.
 
 ## Roadmap
 
-> Live status, including known bugs and release blockers, is tracked in **[`STATUS.md`](STATUS.md)**.
+> Live status, including known bugs and release blockers, is tracked in **[`docs/STATUS.md`](docs/STATUS.md)**.
 
 - [x] Conversational onboarding
 - [x] User profile & settings

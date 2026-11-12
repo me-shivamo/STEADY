@@ -20,7 +20,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CATALOGUE = ROOT / ".claude/plans/notifications.md"
-TARGET = ROOT / "NOTIFICATIONS.md"
+TARGET = ROOT / "docs/NOTIFICATIONS.md"
 
 BEGIN = "<!-- BEGIN GENERATED CATALOGUE -->"
 END = "<!-- END GENERATED CATALOGUE -->"

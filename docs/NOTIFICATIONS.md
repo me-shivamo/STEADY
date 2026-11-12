@@ -1148,5 +1148,5 @@ WHERE status = 'queued';
 7. **Measure the rendered string, not the template.**
 8. **When recreating a SQL function, copy from the newest migration that defines it.**
 
-*Full explanations in [`LEARNING.md`](LEARNING.md); the chronological story is in
-[`DEVLOG.md`](DEVLOG.md).*
+*Full explanations in [`LEARNING.md`](journal/LEARNING.md); the chronological story is in
+[`DEVLOG.md`](journal/DEVLOG.md).*
