@@ -1752,3 +1752,18 @@ Google issues an iOS OAuth client as `<number>-<hash>.apps.googleusercontent.com
 *2026-08-06 · Protocol*
 
 `signInWithIdToken()` doesn't trust the app; it verifies the JWT's signature against the provider's public keys and then checks the `aud` ("audience") claim against the client IDs configured in the Supabase dashboard. That's why STEADY passes the *web* client ID on Android — it sets the audience to something Supabase recognises — and it's why native Apple sign-in is a separate trap: Apple audiences its token to the **bundle identifier**, so `com.steadyapp.steady` has to be added to Supabase's Apple provider before the first iOS build, or every Apple sign-in comes back as an audience mismatch.
+
+### Determinism comes from architecture, not from temperature 0
+*2026-11-11 · Architecture*
+
+Even at temperature 0, AI servers don't return identical answers. In one test, the same prompt sent 1,000 times gave 80 different completions, because results depend on what else the server is processing at that moment. Anthropic's newest API version won't even accept a temperature setting. So the only way to guarantee "same meal, same number" is to keep numbers out of the model's hands. The model picks a food ID and a unit from fixed lists, like a Java enum. Then a database query with a complete `ORDER BY` (score, then source priority, then ID, so ties always break the same way) and a portion table produce the grams and calories. For STEADY this matters twice over: it fixes the "same food, different numbers" complaint, and it makes every number traceable, so fixing one bad row fixes every future log at once.
+
+### Error direction depends on the user's goal
+*2026-11-11 · Architecture*
+
+A calorie app's *bias* is whether its errors lean high or low on average, and which direction hurts depends on what the user is trying to do. Under-counting (the app shows less than you ate) quietly stalls someone trying to lose weight. Over-counting (the app shows more than you ate) quietly stalls someone trying to gain, because the ring says they banked a surplus when they actually ate at maintenance. Every tested competitor under-counts, while STEADY's numbers run high, so for our gain-first persona the eval has to report signed bias separately for each input mode, and the gainer zone shouldn't ship until that bias sits within a set target.
+
+### App store billing rules
+*2026-11-11 · Protocol*
+
+When a subscription unlocks features inside a mobile app, Apple requires its own In-App Purchase and Google requires Play Billing. Each store takes a cut, 15% for small developers. A payment gateway like Razorpay or Stripe is allowed only in narrow cases (some regions and programmes), so putting one straight into the app risks rejection. For STEADY, that's why RevenueCat sits on top of both stores. It acts as one translator for Apple's and Google's billing, then tells our Supabase backend through a webhook which users have an active subscription.

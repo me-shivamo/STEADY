@@ -2416,3 +2416,38 @@ So the pipeline is verified end to end right up to the certificate, and no free-
 *2026-10-26 · Milestone*
 
 Our status tracker had one row glowing red for a while: the last commit was 2026-08-06, but the newest work dated to 2026-09-02. That gap held nineteen database migrations (029–047), a 700-line rewrite of the notification sender, notification tap tracking in the app, and a pile of new docs, all sitting unversioned on one laptop. We split it into a series of themed commits (database, generated types, Edge Functions, app code, version bump, docs) so each one can be read or rolled back on its own, then pushed it all to GitHub. We did this first on purpose: we're about to redesign the whole app, a redesign touches every screen, and we wanted a clean point to come back to before starting.
+
+### What the evidence says the redesign should be
+*2026-10-27 · Decision*
+
+Before touching any screens for the redesign, we pulled seven research tracks into one report, `reports/STEADY redesign research.md`. The tracks were retention science, ring psychology, voice logging, food-data accuracy, AI coaching and calls, widgets and visuals, and performance, cost and privacy. The headline is that how *often* people log predicts success far better than whether they hit a calorie number. So we're designing around goal-aware rings that never go red when a gainer eats more, forgiving streaks, and "your usual" repeat-meal cards alongside one-tap voice. Two findings surprised us. Our held-out ~65% in-tolerance accuracy already matches the best published text result. And OpenAI's flagship transcriber ranked last on an Indian Hindi benchmark, so a Hinglish speech bake-off comes before any vendor choice. We also shelved real "AI phones you" calls for India: they'd cost roughly 90× our other AI and they collide with TRAI's anti-robocall rules. We'll build a scheduled in-app voice check-in instead.
+
+### What Journable taught us about fast and accurate logging
+*2026-11-11 · Decision*
+
+We studied Journable, a chat-first AI calorie counter with 1M+ Android downloads and a real Indian user base, and wrote it up in `reports/Journable speed and accuracy.md`. The short version: it's fast because it deletes steps (one chat box, no signup, no meal slots), not because its AI is clever, and its numbers come straight from a language model. "No databases needed" is literally its tagline. So users who check it against labels or a scale see the same meal swing 50% between days. The uncomfortable part was finding the same disease in our own pipeline: the model guesses grams, an unranked `LIMIT 3` search can pick different rows for the same food, and a shared cache froze bad matches for everyone. So we've set a twelve-step fix order. First measure signed bias and repeat-run consistency, then quarantine bad rows, make search fully ordered, move portions into data, and learn each user's servings. The model bake-off comes last, because every candidate costs under $0.55 per user per month.
+
+### What Cal AI and Healthify taught us about trust
+*2026-11-11 · Decision*
+
+We tore down the two apps STEADY's users already compare us with, and wrote it up in `reports/Cal AI and HealthifyMe teardown.md`. Cal AI (4.8 stars, $30M+ a year, now owned by MyFitnessPal) wins on ease, but its numbers move between scans of the same meal. An NIH weighed-meal test also found it under-counted by 345 kcal per meal. Healthify owns Indian food data and Hinglish voice, but its free tracker has become a sales funnel: users describe up to 15–20 calls a day, duplicate Hindi and English food rows with different calories, and Apple Health write-back switched off. Add Journable and all three rivals leave the same four holes: the same meal gives different numbers, corrections don't stick, there's no health write-back or export, and they make money from friction. Those are the holes we're building into. The surprise was about which way our errors lean. Every rival under-counts, but our numbers run high, and for someone trying to gain, over-counting is the harmful direction. So the accuracy rebuild now comes before the gainer-zone ring, and we're taking a second look at photo-based sizing, groups, health sync, the order of our next markets, and the top of our AI budget.
+
+### We set a bar for when our work becomes a public post
+*2026-11-11 · Decision*
+
+We adopted a standing rule for X and LinkedIn posts, written into CLAUDE.md and backed by a separate post guide built from research into how both platforms rank posts. The point is restraint. Most tasks don't get a post. A story has to pass a bar first: a stranger would care, there's a real hook, there's proof attached, it's live, and someone outside tech would retell it to a friend. Posts never name the product or its features, so each one has to stand on an idea anyone can use. Drafts that pass go to a gitignored `docs/social/social-posts.md`, so they never land in the repo, and this devlog stays the honest internal record it has always been.
+
+### The redesign gets a rulebook before it gets a single pixel
+*2026-11-11 · Decision*
+
+Before designing a single screen, we went through ten rounds of questions and pulled four research reports into one decision record (`.claude/plans/redesign.md`). The biggest call is about order: the food-accuracy rebuild comes before the new rings. Our numbers run high, and for someone trying to gain weight that's the dangerous direction: the ring says you ate a surplus you never actually had. Checking the database also humbled us. 24 of our 36 users are gainers, which confirms the persona, but only 2 have logged a meal in the last 30 days. So the 34 people who quietly stopped are the first people we want to hear from.
+
+### Nine docs at the root became one `docs/` folder
+*2026-11-11 · Setup*
+
+Our repo root had turned into a pile: app config like `app.json` and `eas.json` sat next to nine Markdown files and two loose research folders. We moved every doc under `docs/`, grouped by job. `STATUS.md`, `BUILD.md` and `NOTIFICATIONS.md` sit at the top of `docs/`, the devlog and learning log live in `docs/journal/`, the test docs in `docs/testing/`, the research reports and their raw notes in `docs/research/`, and post drafts in a gitignored `docs/social/`. Only `README.md` and `CLAUDE.md` stayed at the root, because GitHub and Claude Code look for them there. The move itself took one command. Most of the work was finding everything that pointed at the old paths: a script that writes the notification catalogue, a few doc links, our rules, and the memory files. A new `docs/README.md` says what each file is for.
+
+### We decided how STEADY makes money, and moved the accuracy fix up the queue
+*2026-11-11 · Decision*
+
+STEADY is going paid: a free trial, then a subscription, live with v2.1, with a two-price test in India before we lock the number. Payments run through RevenueCat on top of Apple's and Google's own billing, because app subscriptions have to go through the stores. We're making the paywall honest on purpose: the trial terms are shown up front and there's no paywall in the middle of logging, since a surprise paywall was the number-one complaint about every rival we studied. Reviewing the plan also changed the order of work. The food-accuracy rebuild now ships first, as v1.2 inside today's app, so we can measure it on real meals before the redesign. The minimum age became 18+ in India, because India's data-protection law treats anyone under 18 as a child who needs parental consent.
