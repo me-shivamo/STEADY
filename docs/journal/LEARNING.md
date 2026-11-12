@@ -1797,3 +1797,13 @@ The nutrition rules run in TypeScript on the server and in SQL in the database, 
 *2026-11-12 · Protocol*
 
 Postgres deadlocks when transaction A holds table X and waits for Y while B holds Y and waits for X; after a second it aborts one of them. Deleting an account locks `profiles` and then `food_items` (the foreign-key actions on `auth.users` fire in trigger-name order), while migration 050 first locked `food_items` and only later `profiles`, through a new foreign key. The fix is the one you'd use for mutexes in Java or C++: take the shared locks in one global order, so 050 now creates the table whose foreign keys lock `profiles` before it touches `food_items`, and a concurrent deletion simply waits instead of being killed.
+
+### Comparing foods on a dry-matter basis
+*2026-11-12 · Pattern*
+
+Calories per 100 g depend heavily on how much water a cooked food holds: the same dal can be 44 or 145 kcal/100 g depending on how thin it is. Food-composition scientists compare sources after removing water (energy per 100 g of dry matter), and then rescale the chosen value to the water content of the dish as it's actually eaten. For STEADY this turns "which database is right?" into two separate, answerable questions: is the dry food the same, and how wet is the dish people really cook?
+
+### Recipe calculation needs yield and absorption factors
+*2026-11-12 · Pattern*
+
+Adding up raw ingredients gives the nutrients of the whole pot, not of the food on the plate. FAO/INFOODS recipe calculation divides by the *cooked* weight (the yield factor) and, for fried foods, counts only the oil actually absorbed, not the whole pan. INDB skipped both steps. That's why its roti looks like dough and its poori looks like oil, and why STEADY recalculates those dishes instead of trusting the raw rows.
