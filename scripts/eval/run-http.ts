@@ -1,24 +1,45 @@
 // ── HTTP eval: hits the REAL deployed edge function ──────────────────────────
-// Calls https://{project}.supabase.co/functions/v1/log-food-from-text exactly
-// the way the Expo app does — same request parsing, same intent routing, same
-// DB writes. Needs scripts/eval/.eval-session.json (run setup-user.ts first).
+// Calls https://{project}.supabase.co/functions/v1/<function> exactly the way
+// the Expo app does — same request parsing, same intent routing, same DB
+// writes. Needs scripts/eval/.eval-session.json (run setup-user.ts first).
 //
 // Run:
-//   npx tsx scripts/eval/run-http.ts [--dataset=dataset-v3.json] [--ids=a,b,c]
+//   npx tsx scripts/eval/run-http.ts [--dataset=dataset-v4.json] [--ids=a,b,c]
+//                                    [--function=log-food-from-text] [--repeat=1]
+//
+//   --function  which deployed function to test, so the new pipeline
+//               (log-food-v2) can be scored against the old one on the same data
+//   --repeat    run every case N times; reports how many give the identical
+//               number every time (the "same meal, same number" promise)
 //
 // Methodology notes (learned the hard way in earlier rounds):
-// - Every case gets its OWN logged_date, so chat history never leaks between
-//   cases. (History saturation is a real production concern, but it has its
-//   own dedicated fix + test — this eval isolates macro accuracy.)
+// - Every request gets its OWN logged_date, so chat history never leaks between
+//   cases or repeats. (History saturation is a real production concern, but it
+//   has its own dedicated fix + test — this eval isolates macro accuracy.)
 // - A case's `expected` bands are OPTIONAL per field. Calories is the primary
 //   metric on every log case; protein/carbs/fat only where diagnostic. Our old
 //   all-four-bands-required metric read 42% on a run the literature-standard
 //   "calories within ±25%" metric scored 58-64% — pick metrics the field uses.
+// - Size and direction of error are reported separately: users said numbers
+//   run HIGH, and a small median error can hide a pipeline that leans high on
+//   most meals. Pass/fail and "predicted" use the FIRST run of each case, so
+//   results stay comparable with earlier reports.
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, basename } from 'node:path'
 import { config as loadEnv } from 'dotenv'
+import {
+  type Band,
+  type TokenRow,
+  costUsd,
+  isConsistent,
+  median,
+  mid,
+  percentile,
+  signedError,
+  summarizeErrors,
+} from './metrics.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 loadEnv({ path: join(__dirname, '.env.local') })
@@ -34,13 +55,23 @@ if (!existsSync(sessionPath)) {
   console.error('No session found. Run: npx tsx scripts/eval/setup-user.ts first')
   process.exit(1)
 }
-const { accessToken } = JSON.parse(readFileSync(sessionPath, 'utf8')) as { accessToken: string }
+const { accessToken, userId } = JSON.parse(readFileSync(sessionPath, 'utf8')) as {
+  accessToken: string
+  userId: string
+}
+
+function arg(name: string): string | undefined {
+  const a = process.argv.find((x) => x.startsWith(`--${name}=`))
+  return a?.slice(name.length + 3)
+}
+
+const FUNCTION_NAME = arg('function') ?? 'log-food-from-text'
+const REPEAT = Math.max(1, Number(arg('repeat') ?? 1))
 
 // Sequential requests took ~8 min for 50 cases; 4 workers keeps a 100-case run
 // inside a sane wall clock without hammering OpenRouter/USDA rate limits.
 const CONCURRENCY = 4
 
-type Band = [number, number]
 interface DatasetExample {
   id: string
   type: 'log' | 'negative'
@@ -50,6 +81,15 @@ interface DatasetExample {
   note?: string
 }
 
+interface Totals { calories: number; protein_g: number; carbs_g: number; fat_g: number }
+
+interface RunResult {
+  latencyMs: number
+  responseType?: string
+  totals?: Totals
+  error?: string
+}
+
 interface HttpResult {
   id: string
   text: string
@@ -57,20 +97,22 @@ interface HttpResult {
   category?: string
   status: 'pass' | 'fail' | 'error'
   responseType?: string
-  predicted?: { calories: number; protein_g: number; carbs_g: number; fat_g: number }
+  predicted?: Totals
   expected?: DatasetExample['expected']
   offFields: string[]
   foodNames?: string[]
   mealLogId?: string
   minConfidence?: number
   error?: string
+  runs: RunResult[]
+  consistent?: boolean
 }
 
-// Unique past date per case (2026-04-01 + index) — keeps every request's chat
-// history empty AND safely in the past so nothing shows up as "today" for the
-// eval user.
+// Unique past date per request (2025-01-01 + index). Each case owns REPEAT
+// consecutive dates, so a 100-case × 5-repeat run still ends well in the past
+// and nothing ever shows up as "today" for the eval user.
 function dateFor(index: number): string {
-  const d = new Date(Date.UTC(2026, 3, 1))
+  const d = new Date(Date.UTC(2025, 0, 1))
   d.setUTCDate(d.getUTCDate() + index)
   return d.toISOString().slice(0, 10)
 }
@@ -79,9 +121,15 @@ function inBand(value: number, [lo, hi]: Band): boolean {
   return value >= lo && value <= hi
 }
 
+// One stuck request must not stall a 300-request run, so each call gets a hard
+// limit. 60s is far beyond any healthy log (p95 is a few seconds); hitting it
+// is recorded as an error for that run, not retried.
+const REQUEST_TIMEOUT_MS = 60_000
+
 async function callEdgeFunction(text: string, loggedDate: string): Promise<Record<string, unknown>> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/log-food-from-text`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${FUNCTION_NAME}`, {
     method: 'POST',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     headers: {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -93,82 +141,102 @@ async function callEdgeFunction(text: string, loggedDate: string): Promise<Recor
     }),
   })
   const body = await res.json()
+  // An expired session fails every request identically; stop at the first one
+  // instead of recording a whole run of "errors" that measure nothing.
+  if (res.status === 401) {
+    console.error('\nHTTP 401: the eval session has expired (JWTs last ~1h). Run: npx tsx scripts/eval/setup-user.ts')
+    process.exit(2)
+  }
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${JSON.stringify(body)}`)
   return body
 }
 
-async function runExample(example: DatasetExample, index: number): Promise<HttpResult> {
-  try {
-    const response = await callEdgeFunction(example.text, dateFor(index))
-    const responseType = response.type as string
+async function runExample(example: DatasetExample, caseIndex: number): Promise<HttpResult> {
+  const base = { id: example.id, text: example.text, type: example.type, category: example.category }
+  const runs: RunResult[] = []
+  let first: Record<string, unknown> | undefined
 
-    if (example.type === 'negative') {
-      const passed = responseType !== 'log'
-      return {
-        id: example.id, text: example.text, type: example.type, category: example.category,
-        status: passed ? 'pass' : 'fail', responseType,
-        offFields: passed ? [] : ['intent'],
-      }
+  for (let r = 0; r < REPEAT; r++) {
+    const started = Date.now()
+    try {
+      const response = await callEdgeFunction(example.text, dateFor(caseIndex * REPEAT + r))
+      const t = response.totals as Totals | undefined
+      runs.push({
+        latencyMs: Date.now() - started,
+        responseType: response.type as string,
+        totals: t && { calories: t.calories, protein_g: t.protein_g, carbs_g: t.carbs_g, fat_g: t.fat_g },
+      })
+      if (r === 0) first = response
+    } catch (err) {
+      runs.push({ latencyMs: Date.now() - started, error: (err as Error)?.message ?? String(err) })
     }
+  }
 
-    if (responseType !== 'log') {
-      return {
-        id: example.id, text: example.text, type: example.type, category: example.category,
-        status: 'fail', responseType, offFields: ['intent'],
-        error: `Expected a food log but got intent="${responseType}"`,
-      }
-    }
+  if (!first) {
+    return { ...base, status: 'error', offFields: [], error: runs[0].error, runs }
+  }
 
-    const totals = response.totals as Record<string, number>
-    const foods = (response.foods as Array<Record<string, unknown>>) ?? []
-    const offFields: string[] = []
-    for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
-      const band = example.expected?.[field]
-      if (band && !inBand(totals[field], band)) offFields.push(field)
-    }
+  const responseType = first.type as string
+  if (example.type === 'negative') {
+    const passed = responseType !== 'log'
+    return { ...base, status: passed ? 'pass' : 'fail', responseType, offFields: passed ? [] : ['intent'], runs }
+  }
 
+  if (responseType !== 'log') {
     return {
-      id: example.id, text: example.text, type: example.type, category: example.category,
-      status: offFields.length === 0 ? 'pass' : 'fail',
-      responseType,
-      predicted: {
-        calories: totals.calories, protein_g: totals.protein_g,
-        carbs_g: totals.carbs_g, fat_g: totals.fat_g,
-      },
-      expected: example.expected,
-      offFields,
-      // Lowest per-food confidence in the meal: if a clarification loop is ever
-      // built, THIS is the number that would trigger it, so we capture it to
-      // check whether it actually correlates with being wrong.
-      minConfidence: foods.length
-        ? Math.min(...foods.map((f) => Number(f.confidence ?? 1)))
-        : undefined,
-      foodNames: foods.map((f) => `${f.name}(${f.quantity_g}g)[${f.macro_source}]conf=${f.confidence}`),
-      mealLogId: response.meal_log_id as string | undefined,
+      ...base, status: 'fail', responseType, offFields: ['intent'], runs,
+      error: `Expected a food log but got intent="${responseType}"`,
     }
-  } catch (err) {
-    return {
-      id: example.id, text: example.text, type: example.type, category: example.category,
-      status: 'error', offFields: [],
-      error: (err as { message?: string })?.message ?? String(err),
-    }
+  }
+
+  const totals = runs[0].totals!
+  const foods = (first.foods as Array<Record<string, unknown>>) ?? []
+  const offFields: string[] = []
+  for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
+    const band = example.expected?.[field]
+    if (band && !inBand(totals[field], band)) offFields.push(field)
+  }
+
+  // Consistency only means something when every repeat actually logged.
+  const loggedCalories = runs.filter((x) => x.responseType === 'log' && x.totals).map((x) => x.totals!.calories)
+  const consistent = REPEAT > 1
+    ? loggedCalories.length === REPEAT && isConsistent(loggedCalories)
+    : undefined
+
+  return {
+    ...base,
+    status: offFields.length === 0 ? 'pass' : 'fail',
+    responseType,
+    predicted: totals,
+    expected: example.expected,
+    offFields,
+    // Lowest per-food confidence in the meal: if a clarification loop is ever
+    // built, THIS is the number that would trigger it, so we capture it to
+    // check whether it actually correlates with being wrong.
+    minConfidence: foods.length ? Math.min(...foods.map((f) => Number(f.confidence ?? 1))) : undefined,
+    foodNames: foods.map((f) => `${f.name}(${f.quantity_g}g)[${f.macro_source}]conf=${f.confidence}`),
+    mealLogId: first.meal_log_id as string | undefined,
+    runs,
+    consistent,
   }
 }
 
 async function main() {
-  const datasetArg = process.argv.find((a) => a.startsWith('--dataset='))
-  const datasetFile = datasetArg ? datasetArg.slice('--dataset='.length) : 'dataset-v2.json'
-  const datasetPath = join(__dirname, datasetFile)
-  let dataset: DatasetExample[] = JSON.parse(readFileSync(datasetPath, 'utf8'))
+  const datasetFile = arg('dataset') ?? 'dataset-v2.json'
+  let dataset: DatasetExample[] = JSON.parse(readFileSync(join(__dirname, datasetFile), 'utf8'))
 
-  const idsArg = process.argv.find((a) => a.startsWith('--ids='))
-  if (idsArg) {
-    const ids = new Set(idsArg.slice('--ids='.length).split(','))
-    dataset = dataset.filter((e) => ids.has(e.id))
+  const ids = arg('ids')
+  if (ids) {
+    const wanted = new Set(ids.split(','))
+    dataset = dataset.filter((e) => wanted.has(e.id))
   }
 
-  console.log(`Running HTTP eval: ${dataset.length} cases from ${datasetFile}, concurrency ${CONCURRENCY}\n`)
+  console.log(
+    `Running HTTP eval: ${dataset.length} cases from ${datasetFile} → ${FUNCTION_NAME}, ` +
+    `repeat ${REPEAT}, concurrency ${CONCURRENCY}\n`,
+  )
 
+  const runStartedAt = new Date().toISOString()
   const results: HttpResult[] = new Array(dataset.length)
   let next = 0
   async function worker() {
@@ -181,7 +249,8 @@ async function main() {
 
   for (const r of results) {
     const icon = r.status === 'pass' ? 'PASS' : r.status === 'fail' ? 'FAIL' : 'ERROR'
-    console.log(`[${icon}] ${r.id} (${r.category ?? r.type}) — "${r.text}"`)
+    const drift = r.consistent === false ? '  [INCONSISTENT: ' + r.runs.map((x) => x.totals?.calories ?? 'x').join(' / ') + ']' : ''
+    console.log(`[${icon}] ${r.id} (${r.category ?? r.type}) — "${r.text}"${drift}`)
     if (r.status !== 'pass') {
       if (r.error) console.log(`       error: ${r.error}`)
       if (r.predicted) {
@@ -192,10 +261,32 @@ async function main() {
     }
   }
 
-  writeReport(results, datasetFile)
+  const cost = await fetchCost(runStartedAt)
+  writeReport(results, datasetFile, cost)
 }
 
-function writeReport(results: HttpResult[], datasetFile: string) {
+// Token usage comes from ai_logs (every OpenRouter call writes one row). The
+// inserts are fire-and-forget on the server, so give them a moment to land.
+async function fetchCost(since: string): Promise<{ rows: number; usd: number; unpriced: string[] } | null> {
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!serviceKey) return null
+  await new Promise((r) => setTimeout(r, 3000))
+  const url = `${SUPABASE_URL}/rest/v1/ai_logs?select=model,prompt_tokens,completion_tokens` +
+    `&user_id=eq.${userId}&created_at=gte.${encodeURIComponent(since)}`
+  const res = await fetch(url, { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` } })
+  if (!res.ok) return null
+  const rows = (await res.json()) as TokenRow[]
+  return { rows: rows.length, ...costUsd(rows) }
+}
+
+const pct = (x: number) => `${(x * 100).toFixed(1)}%`
+const signedPct = (x: number) => `${x >= 0 ? '+' : ''}${(x * 100).toFixed(1)}%`
+
+function writeReport(
+  results: HttpResult[],
+  datasetFile: string,
+  cost: { rows: number; usd: number; unpriced: string[] } | null,
+) {
   const logs = results.filter((r) => r.type === 'log')
   const negatives = results.filter((r) => r.type === 'negative')
   const logsPassed = logs.filter((r) => r.status === 'pass').length
@@ -204,31 +295,56 @@ function writeReport(results: HttpResult[], datasetFile: string) {
 
   // Literature-standard calorie metrics against the band midpoint.
   const scored = logs.filter((r) => r.predicted && r.expected?.calories)
-  const mid = (b: Band) => (b[0] + b[1]) / 2
   const inCalBand = scored.filter((r) => inBand(r.predicted!.calories, r.expected!.calories!)).length
   const within25 = scored.filter((r) =>
-    Math.abs(r.predicted!.calories - mid(r.expected!.calories!)) / mid(r.expected!.calories!) <= 0.25
+    Math.abs(r.predicted!.calories - mid(r.expected!.calories!)) / mid(r.expected!.calories!) <= 0.25,
   ).length
-  const apes = scored
-    .map((r) => Math.abs(r.predicted!.calories - mid(r.expected!.calories!)) / mid(r.expected!.calories!))
-    .sort((a, b) => a - b)
-  const medianApe = apes.length ? apes[Math.floor(apes.length / 2)] : 0
+  const calErrors = summarizeErrors(scored.map((r) => signedError(r.predicted!.calories, r.expected!.calories!)))
 
-  console.log('\n' + '─'.repeat(64))
-  console.log(`STRICT (all declared bands): ${logsPassed}/${logs.length} logs passed (${((logsPassed / logs.length) * 100).toFixed(1)}%)`)
-  console.log(`CALORIES IN BAND:            ${inCalBand}/${scored.length} (${((inCalBand / scored.length) * 100).toFixed(1)}%)`)
-  console.log(`CALORIES WITHIN ±25% OF MID: ${within25}/${scored.length} (${((within25 / scored.length) * 100).toFixed(1)}%)  [literature-comparable]`)
-  console.log(`MEDIAN CALORIE ERROR:        ${(medianApe * 100).toFixed(1)}%`)
+  const proteinScored = logs.filter((r) => r.predicted && r.expected?.protein_g)
+  const proteinErrors = summarizeErrors(
+    proteinScored.map((r) => signedError(r.predicted!.protein_g, r.expected!.protein_g!)),
+  )
+
+  const latencies = results.flatMap((r) => r.runs.map((x) => x.latencyMs))
+  const logRequests = results.flatMap((r) => r.runs).filter((x) => x.responseType === 'log').length
+
+  console.log('\n' + '─'.repeat(72))
+  console.log(`FUNCTION:                    ${FUNCTION_NAME}   (repeat ${REPEAT})`)
+  console.log(`STRICT (all declared bands): ${logsPassed}/${logs.length} logs passed (${pct(logsPassed / logs.length)})`)
+  console.log(`CALORIES IN BAND:            ${inCalBand}/${scored.length} (${pct(inCalBand / scored.length)})`)
+  console.log(`CALORIES WITHIN ±25% OF MID: ${within25}/${scored.length} (${pct(within25 / scored.length)})  [literature-comparable]`)
+  console.log(`MEDIAN CALORIE ERROR:        ${pct(calErrors.medianAbs)}`)
+  console.log(`CALORIE LEAN (signed):       median ${signedPct(calErrors.medianSigned)}   ${calErrors.above} above mid / ${calErrors.below} below`)
+  if (proteinErrors.n) {
+    console.log(`PROTEIN (${proteinErrors.n} cases):          median error ${pct(proteinErrors.medianAbs)}, lean ${signedPct(proteinErrors.medianSigned)}`)
+  }
+  if (REPEAT > 1) {
+    const judged = logs.filter((r) => r.consistent !== undefined)
+    const same = judged.filter((r) => r.consistent).length
+    console.log(`CONSISTENCY (same number ×${REPEAT}): ${same}/${judged.length} (${pct(same / Math.max(judged.length, 1))})`)
+  }
+  console.log(`LATENCY:                     p50 ${(percentile(latencies, 50) / 1000).toFixed(2)}s   p95 ${(percentile(latencies, 95) / 1000).toFixed(2)}s   (${latencies.length} requests)`)
+  if (cost) {
+    const perLog = logRequests ? cost.usd / logRequests : 0
+    console.log(`AI COST:                     $${cost.usd.toFixed(4)} total, ~$${perLog.toFixed(5)} per log (${cost.rows} AI calls)` +
+      (cost.unpriced.length ? `   unpriced models: ${cost.unpriced.join(', ')}` : ''))
+  } else {
+    console.log('AI COST:                     unavailable (needs SUPABASE_SERVICE_ROLE_KEY in .env.local and the ai_logs table)')
+  }
   console.log(`NEGATIVES (no phantom log):  ${negPassed}/${negatives.length}`)
   console.log(`ERRORS: ${errored}`)
-  console.log('─'.repeat(64))
+  console.log('─'.repeat(72))
 
   const categories = [...new Set(results.map((r) => r.category).filter(Boolean))] as string[]
-  console.log('\nBy category (strict):')
+  console.log('\nBy category:   strict   |  median calorie lean')
   for (const cat of categories) {
     const inCat = results.filter((r) => r.category === cat)
     const passed = inCat.filter((r) => r.status === 'pass').length
-    console.log(`  ${cat}: ${passed}/${inCat.length}`)
+    const lean = median(
+      inCat.filter((r) => r.predicted && r.expected?.calories).map((r) => signedError(r.predicted!.calories, r.expected!.calories!)),
+    )
+    console.log(`  ${cat.padEnd(18)} ${String(passed).padStart(2)}/${String(inCat.length).padEnd(4)} |  ${signedPct(lean)}`)
   }
 
   const fieldMisses = new Map<string, number>()
@@ -236,7 +352,7 @@ function writeReport(results: HttpResult[], datasetFile: string) {
   console.log('\nField-level misses:')
   for (const [field, count] of fieldMisses) console.log(`  ${field}: ${count}`)
 
-  const outPath = join(__dirname, `results-${basename(datasetFile, '.json')}.json`)
+  const outPath = join(__dirname, `results-${basename(datasetFile, '.json')}-${FUNCTION_NAME}.json`)
   writeFileSync(outPath, JSON.stringify(results, null, 2))
   console.log(`\nFull results written to ${outPath}`)
 }

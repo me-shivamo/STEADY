@@ -70,7 +70,7 @@ Every table below uses the same four columns: **Item · Status · Where · Next 
 | Saved entries (re-log without AI) | ✅ | `014`, `savedEntriesStore.ts` | — |
 | Meal photo thumbnails + viewer | ✅ | `ImageViewerModal.tsx` | — |
 | Swipe-to-delete on meal cards | ⬜ | `foodLogStore.ts:517` has an unused `deleteEntry` | Roadmap 3.5. Deletion works via the options sheet |
-| **Logging accuracy** | 🟡 | `scripts/eval/` | **68.4% strict on held-out data** (80% on the tuned set). Known failure modes: bare noun phrases misclassified; one Starbucks americano ~9× too high |
+| **Logging accuracy** | 🟡 | `scripts/eval/` | **v1.2 baseline (2026-11-12, dataset-v4 held out, ×3 repeats, live `log-food-from-text`):** 73.7% strict · 76.3% calories in band · **median error 19.9%** · lean −5.4% overall (drinks −37%, raw −22%, western +10%) · protein median error 16.5% · **consistency 75.3%** (the first log of a food is often different, then the shared cache freezes it) · p50 3.2 s / p95 7.0 s · ~$0.0005 per log · 2 HTTP errors. Note: eval runs write into the shared `food_items` cache until Phase 3 lands. |
 | `ai_confidence` / `macro_source` | 🟡 | Written on every entry, read by nothing | Surface in the UI — a "low confidence, tap to adjust" affordance, and USDA-verified vs AI-guessed |
 
 ### Water · Weight · Body
