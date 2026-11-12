@@ -1,0 +1,8 @@
+[
+  { "id": "s01", "type": "log", "category": "verified", "text": "2 roti", "expected": { "calories": [180, 300] }, "note": "should resolve from a verified shared row" },
+  { "id": "s02", "type": "log", "category": "quarantined", "text": "1 khasta kachori", "expected": { "calories": [150, 320] }, "note": "the 713 kcal/100g INDB row is quarantined; must not be served" },
+  { "id": "s03", "type": "log", "category": "unknown", "text": "a bowl of bhapa doi with nolen gur", "expected": { "calories": [150, 400] }, "note": "obscure Bengali dessert; AI estimate path, private row" },
+  { "id": "s04", "type": "log", "category": "unknown", "text": "one slice of my aunt's ghevar cheesecake", "expected": { "calories": [250, 600] }, "note": "made-up dish; exercises the estimate / rough-estimate path" },
+  { "id": "s05", "type": "log", "category": "verified", "text": "a katori of moong dal and 1 cup cooked rice", "expected": { "calories": [250, 450] }, "note": "was inconsistent in the baseline (217 vs 348)" },
+  { "id": "s06", "type": "negative", "category": "negative", "text": "how much protein should I eat to gain muscle?" }
+]
