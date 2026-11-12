@@ -1,7 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decode } from 'https://deno.land/std@0.177.0/encoding/base64.ts'
 import {
-  resolveFoods, planLabelFoods, commitLabelFoods, placeFoods, memoryModeFromEnv, unsureReply, estimateNote,
+  resolveFoods, planLabelFoods, commitLabelFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch,
+  unsureReply, estimateNote,
   entryQuantityLabel, GRAM_HINTS_PROMPT, type ParsedFood, type ResolvedFood, type Totals, type UnresolvedFood,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
@@ -298,6 +299,8 @@ Deno.serve(async (req) => {
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
           memory,
+          // RESOLVER_SEARCH (fts | eval_only | ranked): the Phase 4 DB search, same secret as text logs.
+          search: effectiveSearch(searchModeFromEnv(Deno.env.get('RESOLVER_SEARCH')), user.email),
         })
       : { foods: [] as ResolvedFood[], totals: null, unresolved: [] as UnresolvedFood[] }
 

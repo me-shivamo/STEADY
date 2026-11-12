@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  resolveFoods, normalizeName, placeFoods, memoryModeFromEnv, unsureReply, estimateNote,
+  resolveFoods, normalizeName, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, unsureReply, estimateNote,
   capRoughConfidence, entryQuantityLabel, stripRoughMarker,
   type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood,
 } from '../_shared/macroResolver.ts'
@@ -302,13 +302,15 @@ Deno.serve(async (req) => {
     // Resolve macros from real data (memory → verified base → USDA → AI
     // estimate) for anything not covered by the rescale above. The parse only
     // identified foods + grams for these; numbers are computed here, same as a
-    // fresh log. RESOLVER_MEMORY (on | write_only | off) is the memory kill switch.
+    // fresh log. RESOLVER_MEMORY (on | write_only | off) is the memory kill switch;
+    // RESOLVER_SEARCH (fts | eval_only | ranked) picks the DB search (Phase 4).
     const freshResolved = freshIndices.length > 0
       ? await resolveFoods(supabase, freshIndices.map((i) => allParsed[i]), {
           openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
           memory: memoryModeFromEnv(Deno.env.get('RESOLVER_MEMORY')),
+          search: effectiveSearch(searchModeFromEnv(Deno.env.get('RESOLVER_SEARCH')), user.email),
         })
       : { foods: [] as ResolvedFood[], totals: null, unresolved: [] as UnresolvedFood[] }
 

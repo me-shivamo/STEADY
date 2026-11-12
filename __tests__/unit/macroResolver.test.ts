@@ -1,10 +1,12 @@
 import {
   commitLabelFoods,
+  effectiveSearch,
   entryQuantityLabel,
   estimateNote,
   placeFoods,
   planLabelFoods,
   resolveFoods,
+  searchModeFromEnv,
   unsureReply,
   ROUGH_MAX_CONFIDENCE,
   type ParsedFood,
@@ -23,6 +25,10 @@ import {
 //     rest of the meal still logs; nothing is written when nothing is loggable.
 //   * a food whose grams the matcher corrected is not remembered (the next log
 //     of the same words would skip that correction).
+//   * Phase 4 (migration 052), behind RESOLVER_SEARCH: curated aliases sit
+//     between the verified exact hit and machine-learned memory, and ranked
+//     search_foods rows replace the FTS query. RESULT ORDER is SQL's job, so it
+//     is pinned by 052's self-check and scripts/eval/search-check.sql, not here.
 
 // ── Fake supabase: a chainable builder that records every call ──────────────
 interface Call {
@@ -33,11 +39,20 @@ interface Call {
   filters: Array<[string, ...unknown[]]>
 }
 
-function fakeSupabase(rows: { memory?: any[]; exact?: any[]; fuzzy?: any[] } = {}) {
+function fakeSupabase(rows: {
+  memory?: any[]; exact?: any[]; fuzzy?: any[]; alias?: any[]; search?: any[]
+  errors?: { alias?: string; search?: string }
+  // A REJECTED promise rather than an { error } result (a dropped socket): the
+  // ranked rpc, or the fts textSearch query.
+  rejects?: { search?: string; fuzzy?: string }
+  // Holds every search_foods answer until this promise settles (ordering tests).
+  searchGate?: Promise<unknown>
+} = {}) {
   const calls: Call[] = []
   const answer = (c: Call): any[] | null => {
     if (c.op !== 'select') return null
     if (c.table === 'user_food_memory') return rows.memory ?? []
+    if (c.table === 'food_aliases') return rows.alias ?? []
     if (c.table === 'food_items') {
       if (c.filters.some(([f]) => f === 'textSearch')) return rows.fuzzy ?? []
       if (c.filters.some(([f, col]) => f === 'in' && col === 'normalized_name')) return rows.exact ?? []
@@ -56,13 +71,23 @@ function fakeSupabase(rows: { memory?: any[]; exact?: any[]; fuzzy?: any[] } = {
         delete() { call.op = 'delete'; return builder },
         then(resolve: any, reject: any) {
           calls.push(call)
-          return Promise.resolve({ data: answer(call), error: null }).then(resolve, reject)
+          if (rows.rejects?.fuzzy && call.filters.some(([f]) => f === 'textSearch')) {
+            return Promise.reject(new Error(rows.rejects.fuzzy)).then(resolve, reject)
+          }
+          const err = call.table === 'food_aliases' && rows.errors?.alias ? { message: rows.errors.alias } : null
+          return Promise.resolve({ data: err ? null : answer(call), error: err }).then(resolve, reject)
         },
       }
       for (const f of ['eq', 'in', 'not', 'textSearch', 'order', 'limit', 'range']) {
         builder[f] = (...args: unknown[]) => { call.filters.push([f, ...args]); return builder }
       }
       return builder
+    },
+    rpc(fn: string, args: Record<string, unknown>) {
+      calls.push({ table: `rpc:${fn}`, op: 'select', payload: args, filters: [] })
+      if (rows.rejects?.search) return Promise.reject(new Error(rows.rejects.search))
+      const err = rows.errors?.search ? { message: rows.errors.search, code: 'PGRST202' } : null
+      return Promise.resolve(rows.searchGate).then(() => ({ data: err ? null : rows.search ?? [], error: err }))
     },
   }
   const writes = (table?: string) =>
@@ -317,6 +342,189 @@ describe('resolveFoods — D5: log the rest, flag the unknown', () => {
     expect(matcherPrompts).toHaveLength(1)
     expect(r.foods[0]).toMatchObject({ resolution: 'ai_estimate', calories: 138.6 })
   })
+})
+
+describe('resolveFoods — Phase 4 search and aliases', () => {
+  const RANKED = { ...OPTS, search: 'ranked' as const }
+  const row = (id: string, source: string, kcal: number, extra: Record<string, unknown> = {}) =>
+    ({ ...per100(id, source, kcal), name: id, match_kind: 'trgm', score: 0.62, name_sim: 0.4, head_match: false, matched_key: id, ...extra })
+  const rpcCalls = (sb: ReturnType<typeof fakeSupabase>) => sb.calls.filter((c) => c.table.startsWith('rpc:'))
+  const usedTextSearch = (sb: ReturnType<typeof fakeSupabase>) => sb.calls.some((c) => c.filters.some(([f]) => f === 'textSearch'))
+  const pick0 = { candidate_index: 0, est_per_100g: null, corrected_quantity_g: null }
+
+  it('fts (default) never reads food_aliases or calls search_foods', async () => {
+    const sb = fakeSupabase({ fuzzy: [{ ...per100('indb-poha', 'indb', 130), name: 'Poha' }],
+      alias: [{ alias: 'poha', food_items: per100('x', 'usda', 1) }], search: [row('y', 'indb', 1)] })
+    matcherAnswers.push([pick0])
+    const r = await resolveFoods(sb.client, [food('poha')], OPTS)
+    expect(rpcCalls(sb)).toEqual([])
+    expect(sb.calls.some((c) => c.table === 'food_aliases')).toBe(false)
+    expect(usedTextSearch(sb)).toBe(true)
+    expect(r.foods[0]).toMatchObject({ food_item_id: 'indb-poha', resolution: 'reference_match' })
+    expect(r.foods[0].match_score).toBeUndefined()
+  })
+
+  it('ranked: one search_foods call per miss with the normalized name and k=5, never textSearch', async () => {
+    const sb = fakeSupabase({ search: [row('sago', 'indb', 187)] })
+    matcherAnswers.push([pick0])
+    await resolveFoods(sb.client, [food('Sabudana Khichdi!')], RANKED)
+    expect(rpcCalls(sb)).toEqual([expect.objectContaining({ table: 'rpc:search_foods', payload: { q: 'sabudana khichdi', k: 5 } })])
+    expect(usedTextSearch(sb)).toBe(false)
+  })
+
+  it('search rows reach the matcher in SQL order; a pick is a reference_match carrying its score', async () => {
+    const sb = fakeSupabase({ search: [row('uttapam', 'indb', 256, { name: 'Uttapam', score: 0.57 }), row('pulao', 'usda', 140, { name: 'plain pulao' })] })
+    matcherAnswers.push([pick0])
+    const r = await resolveFoods(sb.client, [food('set dosa')], RANKED)
+    expect(matcherPrompts[0]).toMatch(/0: Uttapam \[indb\][\s\S]*1: plain pulao \[usda\]/)
+    expect(matcherPrompts[0]).not.toContain('0.57')        // the raw score never reaches the prompt
+    expect(r.foods[0]).toMatchObject({ food_item_id: 'uttapam', resolution: 'reference_match', match_score: 0.57 })
+  })
+
+  it('an alias hit is deterministic: no search, no matcher, no memory write; last_used_at touched', async () => {
+    const sb = fakeSupabase({ alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71) }] })
+    const r = await resolveFoods(sb.client, [food('curd', 150)], RANKED)
+    expect(r.foods[0]).toMatchObject({ food_item_id: 'dahi', resolution: 'verified_alias', macro_source: 'usda', calories: 106.5, match_score: 1 })
+    expect(matcherPrompts).toHaveLength(0)
+    expect(rpcCalls(sb)).toHaveLength(0)
+    expect(sb.writes('user_food_memory')).toEqual([])
+    expect(sb.writes('food_items')).toEqual([expect.objectContaining({ op: 'update', payload: { last_used_at: expect.any(String) } })])
+  })
+
+  it('the alias read asks only for verified targets, in the same round trip as the exact read', async () => {
+    const sb = fakeSupabase({ alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71) }] })
+    await resolveFoods(sb.client, [food('curd'), food('Curd!')], RANKED)
+    const [read] = sb.calls.filter((c) => c.table === 'food_aliases')
+    expect(read.filters).toEqual(expect.arrayContaining([
+      ['in', 'alias', ['curd']], ['eq', 'food_items.status', 'verified'], ['not', 'food_items.calories_per_100g', 'is', null],
+    ]))
+  })
+
+  it('the verified exact key beats an alias for the same words', async () => {
+    const sb = fakeSupabase({ exact: [{ ...per100('shared-roti', 'usda', 297), normalized_name: 'roti' }],
+      alias: [{ alias: 'roti', food_items: per100('indb-roti', 'indb', 202) }] })
+    expect((await resolveFoods(sb.client, [food('roti')], RANKED)).foods[0]).toMatchObject({ food_item_id: 'shared-roti', resolution: 'verified_exact', match_score: 1 })
+  })
+
+  it('user-taught memory beats an alias; an alias beats machine-learned memory', async () => {
+    const taught = fakeSupabase({ memory: [{ normalized_name: 'curd', origin: 'correction', food_items: per100('my-curd', 'user_created', 98, { status: 'unverified' }) }],
+      alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71) }] })
+    const t = (await resolveFoods(taught.client, [food('curd')], RANKED)).foods[0]
+    expect(t).toMatchObject({ food_item_id: 'my-curd', resolution: 'memory' })
+    expect(t.match_score).toBeUndefined()
+    const learned = fakeSupabase({ memory: [{ normalized_name: 'curd', origin: 'history', food_items: per100('old-ai', 'ai_estimated', 61, { status: 'unverified' }) }],
+      alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71) }] })
+    expect((await resolveFoods(learned.client, [food('curd')], RANKED)).foods[0]).toMatchObject({ food_item_id: 'dahi', resolution: 'verified_alias' })
+  })
+
+  it('an alias whose target is no longer verified is ignored and the food is searched', async () => {
+    const sb = fakeSupabase({ alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71, { status: 'quarantined' }) }] })
+    matcherAnswers.push([est(120, 4, 18, 3)])
+    const r = await resolveFoods(sb.client, [food('curd')], RANKED)
+    expect(rpcCalls(sb)).toHaveLength(1)
+    expect(r.foods[0].resolution).toBe('ai_estimate')
+  })
+
+  it('alias and search failures are not fatal (USDA/estimate path continues)', async () => {
+    const sb = fakeSupabase({ errors: { alias: 'relation does not exist', search: 'Could not find the function' } })
+    matcherAnswers.push([est(120, 4, 18, 3)])
+    const r = await resolveFoods(sb.client, [food('sambhar')], RANKED)
+    expect(r.foods[0].resolution).toBe('ai_estimate')
+    expect(matcherPrompts[0]).toContain('(no candidates found)')
+  })
+
+  // A REJECTED DB promise (dropped socket) instead of an { error } result. The DB
+  // query is no longer awaited inline, so a rejection must neither 500 the log nor
+  // vanish silently: USDA still answers, the prompt holds USDA rows only, and the
+  // failure is logged in both modes.
+  describe('a rejected DB search promise', () => {
+    const withUsda = () => {
+      const openRouter = (globalThis as any).fetch
+      ;(globalThis as any).fetch = jest.fn(async (url: string, init: any) => {
+        if (!String(url).includes('api.nal.usda.gov')) return openRouter(url, init)
+        const foods = [{ fdcId: 7, description: 'Sambar, cooked', dataType: 'Survey (FNDDS)', foodNutrients: [{ nutrientId: 1008, value: 90 }] }]
+        return { ok: true, json: async () => ({ foods }), text: async () => '' }
+      })
+    }
+    const errorLog = () => (console.error as jest.Mock).mock.calls.map((c) => c.join(' ')).join('\n')
+
+    it('ranked: logs through USDA, offers only USDA rows, and logs the failure', async () => {
+      const sb = fakeSupabase({ rejects: { search: 'socket hang up' }, search: [row('never', 'indb', 1, { name: 'Never shown' })] })
+      withUsda()
+      matcherAnswers.push([pick0])
+      const r = await resolveFoods(sb.client, [food('sambhar')], { ...RANKED, fdcApiKey: 'fdc-key' })
+      expect(r.foods[0].resolution).toBe('usda_match')
+      expect(matcherPrompts[0]).toMatch(/0: Sambar, cooked \[USDA Survey \(FNDDS\)\]/)
+      expect(matcherPrompts[0]).not.toContain('Never shown')
+      expect(errorLog()).toMatch(/\[resolver\] search failed, continuing with USDA only: sambhar socket hang up/)
+    })
+
+    it('fts: the same, and the failure is logged instead of dropped', async () => {
+      const sb = fakeSupabase({ rejects: { fuzzy: 'socket hang up' } })
+      withUsda()
+      matcherAnswers.push([pick0])
+      const r = await resolveFoods(sb.client, [food('sambhar')], { ...OPTS, fdcApiKey: 'fdc-key' })
+      expect(r.foods[0].resolution).toBe('usda_match')
+      expect(matcherPrompts[0]).toMatch(/0: Sambar, cooked \[USDA/)
+      expect(errorLog()).toMatch(/\[resolver\] fuzzy search failed, continuing with USDA only: sambhar socket hang up/)
+    })
+  })
+
+  it('verified rows now pass portions to the matcher, labelled by source', async () => {
+    const sb = fakeSupabase({ search: [
+      row('roti-usda', 'usda', 297, { name: 'roti', portions: [{ description: '1 piece', gramWeight: 68 }] }),
+      row('katori-dal', 'indb', 100, { name: 'Dal', portions: [{ description: '1 katori', gramWeight: 150 }] })] })
+    matcherAnswers.push([pick0])
+    await resolveFoods(sb.client, [food('rotti')], RANKED)
+    expect(matcherPrompts[0]).toContain('USDA portions: 1 piece = 68g')
+    expect(matcherPrompts[0]).toContain('       Portions: 1 katori = 150g')
+  })
+
+  it('an alias row with portions corrects the parse grams like an exact hit', async () => {
+    const sb = fakeSupabase({ alias: [{ alias: 'phulka', food_items: per100('chapati', 'usda', 299, { portions: [{ description: '1 piece', gramWeight: 43 }] }) }] })
+    const r = await resolveFoods(sb.client, [{ ...food('phulka', 60), quantity_description: '2 pieces' }], RANKED)
+    expect(r.foods[0]).toMatchObject({ resolution: 'verified_alias', quantity_g: 86 })
+  })
+
+  it("memory:'off' (the eval) still applies aliases", async () => {
+    const sb = fakeSupabase({ alias: [{ alias: 'curd', food_items: per100('dahi', 'usda', 71) }] })
+    expect((await resolveFoods(sb.client, [food('curd')], { ...RANKED, memory: 'off' })).foods[0].resolution).toBe('verified_alias')
+  })
+
+  it('the DB search and USDA run in parallel, and DB rows still come first in the prompt', async () => {
+    // search_foods answers only once USDA has been asked (or after 200 ms). If the
+    // resolver still awaited the DB before calling USDA, the safety timer would
+    // release search_foods first and the event order below would flip.
+    const events: string[] = []
+    let openGate: () => void = () => {}
+    const searchGate = new Promise<void>((res) => { openGate = res })
+    const timer = setTimeout(() => { events.push('timer'); openGate() }, 200)
+    const sb = fakeSupabase({ search: [row('indb-dal', 'indb', 116, { name: 'Dal' })], searchGate })
+    const openRouter = (globalThis as any).fetch
+    ;(globalThis as any).fetch = jest.fn(async (url: string, init: any) => {
+      if (!String(url).includes('api.nal.usda.gov')) return openRouter(url, init)
+      events.push('usda')
+      openGate()
+      const foods = [{ fdcId: 1, description: 'Dal, cooked', dataType: 'Survey (FNDDS)', foodNutrients: [{ nutrientId: 1008, value: 120 }] }]
+      return { ok: true, json: async () => ({ foods }), text: async () => '' }
+    })
+    searchGate.then(() => events.push('search'))
+    matcherAnswers.push([pick0])
+    try {
+      await resolveFoods(sb.client, [food('dal tadka')], { ...RANKED, fdcApiKey: 'fdc-key' })
+    } finally {
+      clearTimeout(timer)
+    }
+    expect(events.slice(0, 2)).toEqual(['usda', 'search'])
+    expect(matcherPrompts[0]).toMatch(/0: Dal \[indb\][\s\S]*1: Dal, cooked \[USDA Survey \(FNDDS\)\]/)
+  })
+
+  it.each([
+    [undefined, 'a@gmail.com', 'fts'], ['garbage', 'eval-test@steadyapp.internal', 'fts'],
+    ['eval_only', 'eval-test@steadyapp.internal', 'ranked'], ['eval_only', 'Eval-Test@SteadyApp.Internal', 'ranked'],
+    ['eval_only', 'a@gmail.com', 'fts'], ['eval_only', null, 'fts'], ['ranked', null, 'ranked'],
+  ])('RESOLVER_SEARCH=%s for %s → %s', (env, email, want) =>
+    expect(effectiveSearch(searchModeFromEnv(env as string | undefined), email as string | null)).toBe(want))
 })
 
 describe('label foods', () => {

@@ -1,10 +1,12 @@
 // ── Macro resolver (RAG core) ─────────────────────────────────────────────────
 // Replaces "the LLM invents macro numbers" with a grounded pipeline:
 //
-//   parsed foods → 1. the user's memory + the shared verified exact hit
-//                     (user_food_memory → food_items; precedence in step 1)
-//                → 2. fuzzy candidates from the VERIFIED base (FTS; finds the INDB seed rows)
-//                → 3. USDA search candidates for remaining misses
+//   parsed foods → 1. the user's memory + the shared verified exact hit (+ a curated
+//                     alias in ranked mode) (user_food_memory → food_items; precedence in step 1)
+//                → 2. DB candidates from the VERIFIED base: ranked search_foods (exact
+//                     aliases + trigram, migration 052) when RESOLVER_SEARCH says so, else
+//                     the old FTS query
+//                → 3. USDA search candidates for remaining misses (in parallel with step 2)
 //                → 4. ONE cheap LLM call: pick best candidate per miss, or
 //                     emit a per-100g estimate when nothing matches. Every
 //                     estimate is checked against validate.ts; doubtful ones
@@ -92,6 +94,10 @@ export interface ResolvedFood extends ParsedFood {
   // flag survives a quantity change. Drives the note, the label marker and the
   // confidence cap.
   rough?: boolean
+  // Ranked search only: 1 for a verified exact/alias hit, search_foods' score for
+  // a reference_match. A raw signal for Phase 8 calibration, not a confidence.
+  // Never stored (the food_entries inserts map their fields one by one).
+  match_score?: number
 }
 
 export interface Totals {
@@ -105,6 +111,7 @@ export interface Totals {
 export type Resolution =
   | 'memory'          // the user's own user_food_memory pointer
   | 'verified_exact'  // the shared verified row with this exact normalized name
+  | 'verified_alias'  // a curated food_aliases phrase → its verified row (migration 052); skips the matcher
   | 'reference_match' // the matcher picked a verified row from fuzzy search
   | 'usda_match'      // the matcher picked a USDA search result
   | 'ai_estimate'     // the matcher's own per-100 g estimate
@@ -180,10 +187,27 @@ export interface ResolveOpts {
   // false = write NOTHING: no rows, no memory, no last_used_at touches. For the
   // in-process eval, which must never write to production.
   persist?: boolean
+  // How step 2 finds DB candidates. 'fts' (default) is the pre-Phase-4 query,
+  // unchanged. 'ranked' reads curated aliases in step 1 and asks search_foods
+  // (migration 052) for a deterministic, ranked candidate list. The callers
+  // decide per request from the RESOLVER_SEARCH secret (see effectiveSearch).
+  search?: 'fts' | 'ranked'
 }
 
 export const memoryModeFromEnv = (v: string | undefined): MemoryMode =>
   v === 'off' || v === 'write_only' ? v : 'on'
+
+// RESOLVER_SEARCH secret: 'fts' (default: today's query), 'eval_only' (ranked
+// for the internal eval accounts only), 'ranked' (everyone). Same kill-switch
+// pattern as RESOLVER_MEMORY: flipping it needs no deploy, and an unset or
+// misspelt value falls back to the old behaviour rather than the new one.
+// eval_only is how the ranked path meets real traffic first: the deployed
+// function, real latency, real data, but only the eval user's requests.
+export type SearchMode = 'fts' | 'eval_only' | 'ranked'
+export const searchModeFromEnv = (v: string | undefined): SearchMode =>
+  v === 'ranked' || v === 'eval_only' ? v : 'fts'
+export const effectiveSearch = (m: SearchMode, email?: string | null): 'fts' | 'ranked' =>
+  m === 'ranked' || (m === 'eval_only' && !!email && email.toLowerCase().endsWith('@steadyapp.internal')) ? 'ranked' : 'fts'
 
 // "a", "a and b", "a, b and c" — deduped, each quoted.
 function quoteList(names: string[]): string {
@@ -358,6 +382,11 @@ export function computeMacros(quantityG: number, per100g: Per100g) {
   }
 }
 
+// How many ranked DB candidates each miss offers the matcher (search_foods' k).
+// The FTS path offered 3; ranked rows are ordered best-first, so 5 costs a few
+// prompt lines and catches a right row that a near-tie pushed to 4th or 5th.
+const SEARCH_K = 5
+
 // One retrieved candidate a miss can be matched against — either an existing
 // cache row (carries its id) or a fresh USDA result (carries its fdcId).
 interface Candidate {
@@ -366,9 +395,14 @@ interface Candidate {
   cacheRowId?: string
   cacheSource?: MacroSource
   fdcId?: number
-  // USDA's published household measures for this food ("1 item = 38g"). Used
-  // to sanity-check the parse step's gram guess — see matchCall().
+  // Household measures for this food ("1 item = 38g"): USDA's published ones,
+  // or the portions stored on a verified row (ranked search only). Used to
+  // sanity-check the parse step's gram guess — see matchCall().
   portions?: UsdaPortion[]
+  // search_foods' raw signals (ranked mode only). Never shown to the matcher:
+  // a number in the prompt would anchor its pick, and these are not calibrated.
+  score?: number
+  matchKind?: 'exact' | 'alias' | 'trgm'
 }
 
 // deno-lint-ignore no-explicit-any
@@ -386,10 +420,14 @@ export async function resolveFoods(
   const uniqueNorms = [...new Set(norms)]
 
   // ── 1. The user's memory + the shared verified exact hit, read together ──
-  // Two independent reads, so they run in parallel. Memory is a pointer only
+  // Independent reads, so they run in parallel. Memory is a pointer only
   // (user, phrase) → food_items row; the numbers always come from food_items,
   // so a later quarantine of that row reaches the user immediately.
-  const [memRes, exactRes] = await Promise.all([
+  // In ranked mode a third read joins the same round trip: the curated aliases
+  // (migration 052, "curd" → the verified dahi row). An alias is a verified key
+  // under another name, so it is read here with the exact hit, not searched.
+  const ranked = opts.search === 'ranked'
+  const [memRes, exactRes, aliasRes] = await Promise.all([
     memoryMode === 'off'
       ? Promise.resolve({ data: [] as any[], error: null })
       : supabase
@@ -407,10 +445,30 @@ export async function resolveFoods(
       // belt-and-braces — but it keeps the query honest if a key ever slips through.
       .eq('status', 'verified')
       .not('calories_per_100g', 'is', null),
+    ranked
+      ? supabase
+          .from('food_aliases')
+          .select('alias, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions)')
+          .in('alias', uniqueNorms)
+          // Filtered here AND re-checked below: an alias whose target was later
+          // quarantined must stop serving, not serve a bad row under a good name.
+          .eq('food_items.status', 'verified')
+          .not('food_items.calories_per_100g', 'is', null)
+      : Promise.resolve({ data: [] as any[], error: null }),
   ])
   // A failed exact read used to look exactly like "every food is a miss",
   // which silently paid for LLM calls and wrote rows for foods we already had.
   if (exactRes.error) throw exactRes.error
+  // Not fatal, unlike the exact read: an alias read error (e.g. this code deployed
+  // before 052, so the table is missing) means "no alias". The food is searched
+  // instead, which is what happened to it before aliases existed.
+  if (aliasRes.error) console.error('[resolver] alias read failed, continuing without aliases:', aliasRes.error.message)
+  // deno-lint-ignore no-explicit-any
+  const aliasByNorm = new Map<string, any>()
+  for (const a of aliasRes.error ? [] : aliasRes.data ?? []) {
+    const t = embedded(a.food_items)
+    if (t?.status === 'verified' && t.calories_per_100g != null) aliasByNorm.set(a.alias, t)
+  }
   // Memory is an accelerator, not a requirement: without it we resolve the way
   // a brand-new user would. But we also stop WRITING memory for this request,
   // because we no longer know which existing rows are user-taught and must not
@@ -441,9 +499,17 @@ export async function resolveFoods(
   // Precedence (founder decision D6):
   //   1. what the user TAUGHT us (label scan, correction, manual entry)
   //   2. the shared verified exact hit
-  //   3. what we LEARNED for this user (history, matches, AI estimates)
+  //   3. a curated alias (ranked mode; migration 052): a verified row under
+  //      another name, so it outranks machine memory exactly as a verified
+  //      exact hit does, but never the row that holds the words themselves
+  //   4. what we LEARNED for this user (history, matches, AI estimates)
   // A label the user photographed is ground truth for them and must beat the
   // generic reference row; an old machine guess must not beat a verified row.
+  //
+  // An alias hit behaves like an exact hit in every other way: it touches the
+  // row's last_used_at, is never written to memory (fixing an alias in a
+  // migration reaches every user at once), and gets its grams corrected from
+  // the row's portions.
   //
   // A hit deliberately skips matchCall — we already know this food's macros,
   // and paying for an LLM call would defeat the cache. But the parse step's
@@ -454,7 +520,8 @@ export async function resolveFoods(
   const sharedHitIds: string[] = []
   for (const norm of uniqueNorms) {
     const m = memUsable.get(norm)
-    const e = exactByNorm.get(norm)
+    const exact = exactByNorm.get(norm)
+    const e = exact ?? aliasByNorm.get(norm)          // an alias = a verified key under another name
     const useMem = m !== undefined && (USER_TAUGHT.has(m.origin) || !e)
     const row = useMem ? m.row : e
     if (!row) continue
@@ -471,11 +538,12 @@ export async function resolveFoods(
       source: row.source as MacroSource,
       per100g: rowPer100g(row),
       correctedG,
-      resolution: useMem ? 'memory' : 'verified_exact',
+      resolution: useMem ? 'memory' : exact ? 'verified_exact' : 'verified_alias',
+      ...(ranked && !useMem ? { matchScore: 1 } : {}),
     })
     if (useMem) memHitNorms.push(norm)
     else sharedHitIds.push(row.id)
-    console.log(`[resolver] ${useMem ? `memory hit (${m.origin})` : 'verified hit'}:`, norm, correctedG ? `(portion → ${correctedG}g)` : '')
+    console.log(`[resolver] ${useMem ? `memory hit (${m.origin})` : exact ? 'verified hit' : 'alias hit'}:`, norm, correctedG ? `(portion → ${correctedG}g)` : '')
   }
 
   const missNorms = uniqueNorms.filter((n) => !hits.has(n))
@@ -493,32 +561,83 @@ export async function resolveFoods(
     await Promise.all(
       missFoods.map(async (food, i) => {
         const norm = missNorms[i]
-        const candidates: Candidate[] = []
 
-        // 2. fuzzy search over the VERIFIED base only (this is how "poha" finds
-        //    the seeded INDB row named e.g. "Poha (beaten rice, cooked)").
-        //    Without the status filter this searched every row, including other
-        //    users' private AI guesses — a proven cross-user leak.
+        // 2. DB candidates from the VERIFIED base, started now and awaited only
+        //    after USDA, so the two lookups overlap instead of queueing (the DB
+        //    call no longer delays step 3). Candidate ORDER is unchanged: DB rows
+        //    first, then USDA. Both paths are verified-only, so decide() may keep
+        //    trusting cacheRowId; without that status filter this once searched
+        //    other users' private AI guesses — a proven cross-user leak.
+        //    ranked (052): search_foods, a total order (exact > alias > trigram
+        //    word match > head noun > not raw > similarity > source > id, last
+        //    slot kept for the query's last word: "butter naan" -> Naan), so the
+        //    same words always offer the matcher the same rows in the same order.
+        //    Not fatal: on error or rejection (PGRST202 = function missing, a
+        //    timeout, a dropped socket) the matcher sees USDA only, exactly as
+        //    when FTS finds nothing, and the failure is logged.
+        //    fts: today's query, unchanged, until the cleanup migration drops it.
         //    config 'english' matches food_items_fts_idx so the index is used;
-        //    order('id') keeps the 3 candidates stable until Phase 4 ranks them.
-        const { data: fuzzy, error: fuzzyErr } = await supabase
-          .from('food_items')
-          .select('id, name, source, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g')
-          .textSearch('name', norm, { type: 'websearch', config: 'english' })
-          .eq('status', 'verified')
-          .not('calories_per_100g', 'is', null)
-          .order('id')
-          .limit(3)
-        if (fuzzyErr) console.error('[resolver] fuzzy search failed, continuing with USDA only:', norm, fuzzyErr.message)
-
-        for (const row of fuzzy ?? []) {
-          candidates.push({
-            label: `${row.name} [${row.source}]`,
-            per100g: rowPer100g(row),
-            cacheRowId: row.id,
-            cacheSource: row.source as MacroSource,
-          })
-        }
+        //    order('id') keeps its 3 candidates stable.
+        const dbCandidates: Promise<Candidate[]> = ranked
+          ? Promise.resolve(supabase.rpc('search_foods', { q: norm, k: SEARCH_K })).then(
+              // deno-lint-ignore no-explicit-any
+              ({ data, error }: any) => {
+                if (error) {
+                  console.error('[resolver] search failed, continuing with USDA only:', norm, error.message)
+                  return []
+                }
+                // deno-lint-ignore no-explicit-any
+                const rows: any[] = data ?? []
+                if (rows.length) {
+                  console.log('[resolver] search:', norm, rows.map((r) => `${r.match_kind}:${Number(r.score).toFixed(2)}`).join(' '))
+                }
+                return rows.map((row): Candidate => ({
+                  label: `${row.name} [${row.source}]`,   // same label shape as the FTS path
+                  per100g: rowPer100g(row),
+                  cacheRowId: row.id,
+                  cacheSource: row.source as MacroSource,
+                  // A verified row's stored measures (USDA's, or a katori for an
+                  // INDB dish) anchor the matcher's gram check as USDA's do.
+                  portions: Array.isArray(row.portions) && row.portions.length ? row.portions : undefined,
+                  score: Number(row.score),
+                  matchKind: row.match_kind,
+                }))
+              },
+              (err: unknown) => {
+                console.error('[resolver] search failed, continuing with USDA only:', norm, (err as Error)?.message ?? err)
+                return []
+              },
+            )
+          : Promise.resolve(
+              supabase
+                .from('food_items')
+                .select('id, name, source, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g')
+                .textSearch('name', norm, { type: 'websearch', config: 'english' })
+                .eq('status', 'verified')
+                .not('calories_per_100g', 'is', null)
+                .order('id')
+                .limit(3),
+            ).then(
+              // deno-lint-ignore no-explicit-any
+              ({ data: fuzzy, error: fuzzyErr }: any) => {
+                if (fuzzyErr) console.error('[resolver] fuzzy search failed, continuing with USDA only:', norm, fuzzyErr.message)
+                // deno-lint-ignore no-explicit-any
+                return (fuzzy ?? []).map((row: any): Candidate => ({
+                  label: `${row.name} [${row.source}]`,
+                  per100g: rowPer100g(row),
+                  cacheRowId: row.id,
+                  cacheSource: row.source as MacroSource,
+                }))
+              },
+              // A rejection (not an { error } result) used to surface as a logged 500
+              // when this query was awaited inline; now it is not fatal, but it must
+              // still leave a trace, exactly like the ranked path's.
+              (err: unknown) => {
+                console.error('[resolver] fuzzy search failed, continuing with USDA only:', norm, (err as Error)?.message ?? err)
+                return []
+              },
+            )
+        const usdaCandidates: Candidate[] = []
 
         // 3. USDA. A missing key is a lasting configuration state, not an
         // outage — skip the lookup but keep genuine-miss semantics so the AI
@@ -537,7 +656,7 @@ export async function resolveFoods(
                 console.warn('[resolver] skipping impossible USDA candidate:', c.fdcId, c.description, issues.join(','))
                 continue
               }
-              candidates.push({
+              usdaCandidates.push({
                 label: `${c.description} [USDA ${c.dataType}]`,
                 per100g: c.per100g,
                 fdcId: c.fdcId,
@@ -554,7 +673,7 @@ export async function resolveFoods(
           }
         }
 
-        perMissCandidates[i] = candidates
+        perMissCandidates[i] = [...(await dbCandidates), ...usdaCandidates]
       })
     )
 
@@ -566,7 +685,7 @@ export async function resolveFoods(
     const lastIssues: IssueCode[][] = missFoods.map(() => [])
     const decide = (i: number, m: MatchResult, final: boolean): Decision | null => {
       const c = m.candidate_index !== null ? perMissCandidates[i][m.candidate_index] : undefined
-      if (c?.cacheRowId) return { kind: 'reference_match', id: c.cacheRowId, source: c.cacheSource!, per100g: c.per100g }
+      if (c?.cacheRowId) return { kind: 'reference_match', id: c.cacheRowId, source: c.cacheSource!, per100g: c.per100g, score: c.score }
       if (c?.fdcId) {
         return { kind: 'usda_match', cand: c, per100g: c.per100g, issues: foodItemIssues('usda', missFoods[i].name, c.per100g) }
       }
@@ -691,7 +810,7 @@ export async function resolveFoods(
 
       if (d.kind === 'reference_match') {
         // fuzzy verified row matched → reuse it, no row to write
-        resolvedMisses.set(norm, { id: d.id, source: d.source, per100g: d.per100g, correctedG, resolution: 'reference_match' })
+        resolvedMisses.set(norm, { id: d.id, source: d.source, per100g: d.per100g, correctedG, resolution: 'reference_match', matchScore: d.score })
         remember({ norm, displayName: food.name, foodItemId: d.id, origin: 'reference_match' })
         return
       }
@@ -806,6 +925,7 @@ export async function resolveFoods(
       macro_source: hit.source,
       resolution: hit.resolution,
       ...(rough ? { rough: true } : {}),
+      ...(hit.matchScore !== undefined ? { match_score: hit.matchScore } : {}),
     })
   })
 
@@ -1077,11 +1197,12 @@ interface Hit {
   per100g: Per100g
   correctedG?: number
   resolution: Resolution
+  matchScore?: number   // ResolvedFood.match_score (ranked mode only)
 }
 
 // What the resolver decided for one miss, before anything is written.
 type Decision =
-  | { kind: 'reference_match'; id: string; source: MacroSource; per100g: Per100g }
+  | { kind: 'reference_match'; id: string; source: MacroSource; per100g: Per100g; score?: number }
   | { kind: 'usda_match'; cand: Candidate; per100g: Per100g; issues: IssueCode[] }
   | { kind: 'ai_estimate'; per100g: Per100g; issues: IssueCode[] }
   | { kind: 'rough_estimate'; per100g: Per100g; issues: IssueCode[] }   // issues = what the ORIGINAL guess failed
@@ -1189,8 +1310,11 @@ async function matchCall(
         // Only a handful of measures — enough to anchor the common phrasings
         // ("1 piece", "1 cup") without flooding the prompt.
         const p = (c.portions ?? []).slice(0, 5)
+        // Ranked search hands verified rows their stored portions too; those are
+        // not USDA's for an INDB/IFCT row, so the label says whose they are.
+        // The search score is deliberately NOT shown (see Candidate.score).
         return p.length
-          ? `${base}\n       USDA portions: ${p.map((m) => `${m.description} = ${m.gramWeight}g`).join('; ')}`
+          ? `${base}\n       ${c.fdcId != null || c.cacheSource === 'usda' ? 'USDA portions' : 'Portions'}: ${p.map((m) => `${m.description} = ${m.gramWeight}g`).join('; ')}`
           : base
       })
       .join('\n')
