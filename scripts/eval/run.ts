@@ -10,20 +10,48 @@
 // way, so a prompt change in production is automatically picked up here too.
 //
 // Run:
-//   npx tsx scripts/eval/run.ts
-// Reads scripts/eval/.env.local for secrets (see .env.local.example).
+//   npx tsx scripts/eval/run.ts [--dataset=dataset.json] [--ids=a,b,c]
+//                               [--search=fts|ranked] [--repeat=1]
+//
+//   --dataset  which dataset file in scripts/eval/ (default dataset.json). The
+//              v4 format works too: optional per-field bands, and 'negative'
+//              cases that pass when the parse step does NOT return a food log.
+//   --search   which DB search the resolver uses (v1.2 Phase 4): fts (default,
+//              the pre-Phase-4 query) or ranked (food_aliases + search_foods,
+//              migration 052). This is the cleanest A/B of Phase 4: same code,
+//              same moment, no deploy, nothing written (spec §(d) run A).
+//   --repeat   run every case N times and report how many give the identical
+//              calories every time. Pass/fail uses the FIRST run.
+// Reads scripts/eval/.env.local for secrets (see .env.local.example). Results go
+// to results.json for the default dataset + fts, else
+// results-<dataset>-inprocess-<search>.json, so an fts and a ranked run of the
+// same dataset can be diffed food by food.
 
 import { createClient } from '@supabase/supabase-js'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { config as loadEnv } from 'dotenv'
 
 import { resolveFoods, type ParsedFood } from '../../supabase/functions/_shared/macroResolver.ts'
 import { SYSTEM_PROMPT } from '../../supabase/functions/_shared/foodParsePrompt.ts'
+import { isConsistent, type Band } from './metrics.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 loadEnv({ path: join(__dirname, '.env.local') })
+
+function arg(name: string): string | undefined {
+  const a = process.argv.find((x) => x.startsWith(`--${name}=`))
+  return a?.slice(name.length + 3)
+}
+
+const DATASET_FILE = arg('dataset') ?? 'dataset.json'
+const SEARCH = arg('search') ?? 'fts'
+if (SEARCH !== 'fts' && SEARCH !== 'ranked') {
+  console.error(`--search must be fts or ranked (got "${SEARCH}")`)
+  process.exit(1)
+}
+const REPEAT = Math.max(1, Number(arg('repeat') ?? 1) || 1)
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -45,16 +73,14 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 // nothing to production.
 const EVAL_USER_ID = '00000000-0000-0000-0000-0000000eeeee'
 
+// dataset.json gives all four bands; dataset-v2+ give calories and only the
+// diagnostic macros, and add 'negative' cases (not a food log at all).
 interface DatasetExample {
   id: string
+  type?: 'log' | 'negative'
   text: string
   category: string
-  expected: {
-    calories: [number, number]
-    protein_g: [number, number]
-    carbs_g: [number, number]
-    fat_g: [number, number]
-  }
+  expected?: { calories?: Band; protein_g?: Band; carbs_g?: Band; fat_g?: Band }
   note?: string
 }
 
@@ -67,11 +93,16 @@ interface ExampleResult {
   expected?: DatasetExample['expected']
   offFields: string[]
   macroSources: string[]
+  // foods[].resolution of the first run (memory, verified_exact, verified_alias, …)
+  resolutions?: string[]
   // Foods the resolver could not put a single usable number on (left out of
   // the log) and foods logged as flagged rough estimates — founder decision D5.
   unresolved?: string[]
   roughEstimates?: string[]
   parsedFoods?: ParsedFood[]
+  // --repeat > 1 only: calories of every run, and whether they all agree.
+  runCalories?: number[]
+  consistent?: boolean
   error?: string
 }
 
@@ -79,7 +110,7 @@ interface ExampleResult {
 // log-food-from-text/index.ts, minus the agent tool-calling loop — eval
 // inputs are always food descriptions, never coaching questions, so there's
 // nothing for the model to call a tool for). ──────────────────────────────
-async function parseFoods(text: string): Promise<ParsedFood[]> {
+async function parseFoods(text: string): Promise<{ intent: string; foods: ParsedFood[] }> {
   const requestBody = {
     model: 'openai/gpt-4o-mini',
     temperature: 0,
@@ -106,38 +137,72 @@ async function parseFoods(text: string): Promise<ParsedFood[]> {
   const json = await res.json()
   const content = json.choices[0].message.content as string
   const parsed = JSON.parse(content)
-
-  if (parsed.intent !== 'log' || !Array.isArray(parsed.foods) || parsed.foods.length === 0) {
-    throw new Error(`expected a food log, got intent="${parsed.intent}"`)
-  }
-
-  return parsed.foods as ParsedFood[]
+  return { intent: String(parsed.intent), foods: Array.isArray(parsed.foods) ? parsed.foods as ParsedFood[] : [] }
 }
 
-function inRange(value: number, [lo, hi]: [number, number]): boolean {
+function inRange(value: number, [lo, hi]: Band): boolean {
   return value >= lo && value <= hi
+}
+
+// One parse → resolve pass, exactly as production runs it for a fresh log.
+async function logOnce(text: string) {
+  const { intent, foods: parsedFoods } = await parseFoods(text)
+  if (intent !== 'log' || parsedFoods.length === 0) {
+    throw new Error(`expected a food log, got intent="${intent}"`)
+  }
+  const resolved = await resolveFoods(supabase, parsedFoods, {
+    openRouterKey: OPENROUTER_API_KEY!,
+    fdcApiKey: FDC_API_KEY,
+    userId: EVAL_USER_ID,
+    // Never write to production from an eval, and start every case cold:
+    // memory would make the second run of a food measure the first one.
+    persist: false,
+    memory: 'off',
+    // Phase 4 A/B. Aliases still apply under memory:'off' (they are shared
+    // verified data, not per-user memory), so ranked runs measure them too.
+    search: SEARCH as 'fts' | 'ranked',
+  })
+  return { parsedFoods, ...resolved }
 }
 
 async function runExample(example: DatasetExample): Promise<ExampleResult> {
   try {
-    const parsedFoods = await parseFoods(example.text)
-    const { totals, foods, unresolved } = await resolveFoods(supabase, parsedFoods, {
-      openRouterKey: OPENROUTER_API_KEY!,
-      fdcApiKey: FDC_API_KEY,
-      userId: EVAL_USER_ID,
-      // Never write to production from an eval, and start every case cold:
-      // memory would make the second run of a food measure the first one.
-      persist: false,
-      memory: 'off',
-    })
+    if (example.type === 'negative') {
+      // Not a food log: passes when the parse step does not try to log it.
+      const { intent, foods } = await parseFoods(example.text)
+      const passed = intent !== 'log' || foods.length === 0
+      return {
+        id: example.id, text: example.text, category: example.category,
+        status: passed ? 'pass' : 'fail', offFields: passed ? [] : ['intent'], macroSources: [],
+      }
+    }
+
+    const { parsedFoods, totals, foods, unresolved } = await logOnce(example.text)
 
     const offFields: string[] = []
     for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
-      if (!inRange(totals[field], example.expected[field])) offFields.push(field)
+      const band = example.expected?.[field]
+      if (band && !inRange(totals[field], band)) offFields.push(field)
     }
     // A food left out of the meal is a failure even if the remaining total
     // happens to land in the band: the user would have to add it by hand.
     if (unresolved.length > 0) offFields.push('unsure')
+
+    // The "same meal, same number" promise. A repeat that errors counts as
+    // inconsistent, the same rule run-http.ts uses.
+    let runCalories: number[] | undefined
+    let consistent: boolean | undefined
+    if (REPEAT > 1) {
+      runCalories = [totals.calories]
+      for (let r = 1; r < REPEAT; r++) {
+        try {
+          runCalories.push((await logOnce(example.text)).totals.calories)
+        } catch {
+          // left out of runCalories, so the length check below fails
+        }
+      }
+      consistent = runCalories.length === REPEAT && isConsistent(runCalories)
+    }
 
     return {
       id: example.id,
@@ -152,10 +217,15 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
       },
       expected: example.expected,
       offFields,
-      macroSources: foods.map((f) => `${f.name} [${f.macro_source}] ${f.quantity_g}g (${f.resolution ?? '?'})`),
+      // match_score (ranked only) is search_foods' raw signal, kept for Phase 8.
+      macroSources: foods.map((f) =>
+        `${f.name} [${f.macro_source}] ${f.quantity_g}g (${f.resolution ?? '?'}${f.match_score !== undefined ? ` ${f.match_score.toFixed(2)}` : ''})`),
+      resolutions: foods.map((f) => String(f.resolution ?? 'unknown')),
       unresolved: unresolved.map((u) => `${u.name} (${u.reason})`),
       roughEstimates: foods.filter((f) => f.resolution === 'rough_estimate').map((f) => f.name),
       parsedFoods,
+      runCalories,
+      consistent,
     }
   } catch (err) {
     return {
@@ -174,7 +244,7 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
 }
 
 async function main() {
-  const datasetPath = join(__dirname, 'dataset.json')
+  const datasetPath = join(__dirname, DATASET_FILE)
   let dataset: DatasetExample[] = JSON.parse(readFileSync(datasetPath, 'utf8'))
 
   // --ids=id1,id2 restricts the run to specific examples — useful for
@@ -186,7 +256,7 @@ async function main() {
     dataset = dataset.filter((e) => ids.has(e.id))
   }
 
-  console.log(`Running eval on ${dataset.length} examples...\n`)
+  console.log(`Running eval on ${dataset.length} examples from ${DATASET_FILE} (search=${SEARCH}, repeat=${REPEAT}, memory=off, persist=false)...\n`)
 
   const results: ExampleResult[] = []
   // Sequential, not Promise.all — keeps OpenRouter/USDA rate limits sane and
@@ -223,7 +293,19 @@ function writeReport(results: ExampleResult[]) {
   const unsure = results.filter((r) => r.unresolved?.length).length
   const rough = results.filter((r) => r.roughEstimates?.length).length
   console.log(`         ${unsure} with a food left out (unsure), ${rough} with a rough estimate`)
+  console.log(`         search=${SEARCH} · dataset=${DATASET_FILE}`)
+  if (REPEAT > 1) {
+    const logged = results.filter((r) => r.consistent !== undefined)
+    const same = logged.filter((r) => r.consistent).length
+    console.log(`         consistency: ${same}/${logged.length} cases gave identical calories on all ${REPEAT} runs`)
+  }
   console.log('─'.repeat(60))
+
+  // Which tier each food took (first run). The Phase 4 pass criteria are read
+  // off this mix: ai_estimate down, reference_match + verified_alias up.
+  const tally = new Map<string, number>()
+  for (const r of results) for (const res of r.resolutions ?? []) tally.set(res, (tally.get(res) ?? 0) + 1)
+  console.log(`\nResolution mix: ${[...tally].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · ')}`)
 
   // By category
   const categories = [...new Set(results.map((r) => r.category))]
@@ -260,7 +342,9 @@ function writeReport(results: ExampleResult[]) {
     console.log(`  ${field}: ${count}`)
   }
 
-  const outPath = join(__dirname, 'results.json')
+  const outPath = DATASET_FILE === 'dataset.json' && SEARCH === 'fts'
+    ? join(__dirname, 'results.json')
+    : join(__dirname, `results-${basename(DATASET_FILE, '.json')}-inprocess-${SEARCH}.json`)
   writeFileSync(outPath, JSON.stringify(results, null, 2))
   console.log(`\nFull results written to ${outPath}`)
 }
