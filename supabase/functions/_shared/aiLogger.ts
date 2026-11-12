@@ -43,7 +43,7 @@ export async function logAiCall(supabase: any, args: LogAiCallArgs): Promise<{ r
       requestPayload: args.requestPayload,
       responsePayload: null,
       status: 'error',
-      errorMessage: err?.message ?? String(err),
+      errorMessage: err instanceof Error ? err.message : String(err),
       latencyMs: Date.now() - startedAt,
       promptTokens: null,
       completionTokens: null,
