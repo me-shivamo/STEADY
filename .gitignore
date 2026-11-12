@@ -61,3 +61,6 @@ service-account*.json
 fcm-service-account*.json
 steady-*-*.json
 *-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.json
+
+# Social post drafts (private; see "Social post drafts" in CLAUDE.md)
+docs/social/
