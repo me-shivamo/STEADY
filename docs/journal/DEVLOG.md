@@ -2546,3 +2546,8 @@ The founder's phone testing found the splash image showing twice: Android's own 
 *2026-11-13 · Bug*
 
 At 17:01 UTC every food log started failing with an HTTP 500. The cause was mundane: the OpenRouter key the live app uses carries a $1.00 monthly spending cap, and our evaluation runs had been going through the live functions with that same key. Two days of back-to-back held-out tests (about $0.18 each) spent the month's budget. Nothing was corrupted, but nobody could log a meal until the cap was raised, so the founder raised it in OpenRouter. The lessons: tests must never share a budget with production, and a spending cap that low is an outage waiting to happen. Next we're giving the eval account its own key with its own limit, and adding a cheap alert before any key gets near its cap.
+
+### Personalization becomes always-on, not a feature flag
+*2026-11-13 · Decision*
+
+The founder set a clear rule: STEADY should learn each person and behave accordingly, for every user, always. So personal portion sizes ("my cup is 350 ml", edited grams, answers to size questions) will be captured and applied in every mode, not only behind the new portion engine's switch. On top of sizes, STEADY will remember how each person makes their food: chai with or without sugar, toned or full-cream milk, which oil they cook in, ghee on roti or not. All of it can be seen and undone, and it's never shared between users. We're also adding the common Indian and global cooking oils (mustard, groundnut, rice bran, coconut, til, sunflower, olive and more) plus a generic "cooking oil" default. A redesign of the AI's system prompt is planned for after the model choice, because prompts are tuned to a specific model.
