@@ -1,0 +1,258 @@
+word,category,priority,head_only
+dal,liquid_dish,50,false
+daal,liquid_dish,50,false
+dhal,liquid_dish,50,false
+lentil,liquid_dish,50,false
+lentils,liquid_dish,50,false
+sambar,liquid_dish,50,false
+sambhar,liquid_dish,50,false
+rasam,liquid_dish,50,false
+kadhi,liquid_dish,50,false
+rajma,liquid_dish,50,false
+rajmah,liquid_dish,50,false
+chole,liquid_dish,50,false
+chhole,liquid_dish,50,false
+chana masala,liquid_dish,55,false
+curry,liquid_dish,40,false
+gravy,liquid_dish,40,false
+korma,liquid_dish,45,false
+soup,liquid_dish,45,false
+broth,liquid_dish,45,false
+kanji,liquid_dish,45,false
+khichdi,liquid_dish,45,false
+khichri,liquid_dish,45,false
+khitchdi,liquid_dish,45,false
+paneer,paneer_gravy,30,false
+curd,curd,50,false
+dahi,curd,50,false
+yogurt,curd,50,false
+yoghurt,curd,50,false
+raita,curd,50,false
+oatmeal,porridge,60,false
+porridge,porridge,60,false
+dalia,porridge,60,false
+kheer,porridge,60,false
+rice,cooked_rice,60,false
+chawal,cooked_rice,60,false
+pulao,cooked_rice,60,false
+biryani,biryani,80,false
+biriyani,biryani,80,false
+poha,poha_upma,70,false
+upma,poha_upma,70,false
+sabudana,poha_upma,75,false
+sabzi,dry_sabzi,40,false
+sabji,dry_sabzi,40,false
+subji,dry_sabzi,40,false
+subzi,dry_sabzi,40,false
+bhaji,dry_sabzi,40,false
+aloo,dry_sabzi,30,false
+gobhi,dry_sabzi,35,false
+lauki,dry_sabzi,35,false
+loki,dry_sabzi,35,false
+bhindi,sabzi_bhindi,45,false
+okra,sabzi_bhindi,45,false
+roti,flatbread,70,false
+rotis,flatbread,70,false
+chapati,flatbread,70,false
+chapatti,flatbread,70,false
+chappati,flatbread,70,false
+phulka,flatbread,70,false
+bhakri,flatbread,70,false
+naan,flatbread_tandoor,72,false
+kulcha,flatbread_tandoor,72,false
+tandoori roti,flatbread_tandoor,75,false
+paratha,paratha,72,false
+parantha,paratha,72,false
+aloo paratha,stuffed_paratha,78,false
+gobhi paratha,stuffed_paratha,78,false
+paneer paratha,stuffed_paratha,78,false
+stuffed paratha,stuffed_paratha,78,false
+idli,idli,70,false
+dosa,dosa,70,false
+masala dosa,masala_dosa,78,false
+egg,egg,55,true
+eggs,egg,55,true
+omelette,omelette,60,false
+omelet,omelette,60,false
+masala omelette,masala_omelette,65,false
+banana,banana,60,false
+yelakki,banana_small,65,false
+elaichi banana,banana_small,65,false
+baby banana,banana_small,65,false
+apple,apple,60,true
+medjool,date_fruit,70,false
+almond,almond,60,false
+almonds,almond,60,false
+badam,almond,60,false
+cashew,cashew,60,false
+cashews,cashew,60,false
+kaju,cashew,55,false
+walnut,walnut,60,false
+walnuts,walnut,60,false
+peanut,peanut,58,true
+peanuts,peanut,58,true
+groundnut,peanut,58,true
+nuts,nuts,50,false
+makhana,nuts,50,false
+ghee,fat,90,true
+oil,fat,90,true
+butter,fat,85,true
+sugar,sugar,90,true
+jaggery,sugar,85,true
+gud,sugar,85,true
+honey,honey,90,true
+chutney,condiment,65,false
+chatni,condiment,65,false
+ketchup,condiment,65,false
+sauce,condiment,60,true
+pickle,condiment,65,false
+achaar,condiment,65,false
+mayonnaise,condiment,65,false
+mayo,condiment,65,false
+dressing,condiment,65,false
+salsa,condiment,65,false
+peanut butter,spread,95,false
+chai,tea,85,false
+tea,tea,85,false
+coffee,coffee,85,false
+espresso,coffee,86,false
+latte,cafe_coffee,90,false
+cappuccino,cafe_coffee,90,false
+mocha,cafe_coffee,90,false
+americano,cafe_coffee,90,false
+frappe,cafe_coffee,90,false
+hot chocolate,cafe_coffee,95,false
+cold coffee,beverage,95,false
+iced coffee,beverage,95,false
+milk,milk,70,true
+buttermilk,buttermilk,88,false
+chaas,buttermilk,88,false
+chaach,buttermilk,88,false
+lassi,beverage,80,false
+juice,juice,80,false
+smoothie,beverage,80,false
+shake,beverage,80,false
+milkshake,beverage,82,false
+soda,beverage,80,false
+water,beverage,80,false
+cola,beverage,80,false
+coke,beverage,80,false
+pepsi,beverage,80,false
+soft drink,beverage,82,false
+energy drink,beverage,82,false
+beer,alcohol_beer,95,false
+wine,alcohol_wine,95,false
+whisky,alcohol_spirit,95,false
+whiskey,alcohol_spirit,95,false
+rum,alcohol_spirit,95,false
+vodka,alcohol_spirit,95,false
+oats,cereal_dry,55,false
+cornflakes,cereal_dry,60,false
+muesli,cereal_dry,60,false
+granola,cereal_dry,60,false
+whey,protein_powder,90,false
+protein powder,protein_powder,95,false
+bread,bread,50,false
+toast,bread,50,false
+french toast,french_toast,80,false
+pizza,pizza,70,false
+samosa,samosa,70,false
+vada pav,vada_pav,80,false
+oreo,biscuit,70,false
+biscuit,biscuit,65,false
+cookie,biscuit,60,false
+nugget,nugget,70,false
+mcnuggets,nugget,70,false
+ice cream,ice_cream,95,false
+chilla,generic,99,false
+cheela,generic,99,false
+pakora,generic,99,false
+pakoda,generic,99,false
+vada,generic,99,false
+momo,generic,99,false
+momos,generic,99,false
+tikki,generic,99,false
+cutlet,generic,99,false
+kachori,generic,99,false
+uttapam,generic,99,false
+thepla,generic,99,false
+poori,generic,99,false
+puri,generic,99,false
+bhatura,generic,99,false
+sandwich,generic,99,false
+burger,generic,99,false
+cake,generic,99,false
+barfi,generic,99,false
+burfi,generic,99,false
+ladoo,generic,99,false
+masala,liquid_dish,40,true
+butter masala,liquid_dish,45,false
+tikka masala,liquid_dish,45,false
+makhani,liquid_dish,45,false
+butter chicken,liquid_dish,60,false
+paneer butter masala,paneer_gravy,70,false
+paneer makhani,paneer_gravy,70,false
+paneer masala,paneer_gravy,60,false
+paneer tikka masala,paneer_gravy,70,false
+halwa,generic,99,false
+chikki,generic,99,false
+pie,generic,99,false
+chocolate,generic,99,false
+chips,generic,99,false
+noodles,generic,99,false
+pasta,generic,99,false
+roll,generic,99,false
+wrap,generic,99,false
+papad,generic,99,false
+jam,spread,90,false
+cookies,biscuit,60,false
+biscuits,biscuit,65,false
+coconut milk,generic,99,false
+almond milk,beverage,90,false
+soy milk,beverage,90,false
+oat milk,beverage,90,false
+garam masala,generic,99,false
+chat masala,generic,99,false
+chaat masala,generic,99,false
+sambar masala,generic,99,false
+rasam masala,generic,99,false
+pav bhaji masala,generic,99,false
+kashmiri masala,generic,99,false
+masala powder,generic,99,false
+sambar powder,generic,99,false
+rasam powder,generic,99,false
+curry leaves,generic,99,false
+curry powder,generic,99,false
+puffed rice,cereal_dry,80,false
+rice puffed,cereal_dry,80,false
+murmura,cereal_dry,80,false
+kurmura,cereal_dry,80,false
+mamra,cereal_dry,80,false
+rice flakes,poha_upma,80,false
+chiwda,generic,99,false
+tikka,generic,99,false
+salad,generic,99,false
+salaad,generic,99,false
+fritter,generic,99,false
+fritters,generic,99,false
+mixture,generic,99,false
+chaat,generic,99,false
+chat,generic,99,false
+patty,generic,99,false
+patties,generic,99,false
+filling,generic,99,false
+fillings,generic,99,false
+tart,generic,99,false
+pancake,generic,99,false
+pancakes,generic,99,false
+pudding,generic,99,false
+sorbet,ice_cream,90,false
+mcflurry,ice_cream,90,false
+squash,beverage,80,false
+canjee,liquid_dish,45,false
+water chestnut,generic,99,false
+watermelon,fruit,60,false
+water melon,fruit,60,false
+custard apple,fruit,60,false
+wood apple,fruit,60,false
+lemon curd,spread,90,false

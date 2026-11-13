@@ -7,7 +7,9 @@
 //                     aliases + trigram, migration 052) when RESOLVER_SEARCH says so, else
 //                     the old FTS query. Ranked trigram rows must pass gateCandidate
 //                     (food identity + preparation state) before the matcher sees them
-//                → 3. USDA search candidates for remaining misses (in parallel with step 2)
+//                → 3. USDA candidates for remaining misses (in parallel with step 2): the USDA
+//                     API, or with RESOLVER_USDA local the USDA rows stored in our own database
+//                     (search_usda_local, migrations 055/056) and the API for Branded only
 //                → 4. ONE cheap LLM call: pick best candidate per miss, or
 //                     emit a per-100g estimate when nothing matches. Every
 //                     estimate is checked against validate.ts; doubtful ones
@@ -42,6 +44,16 @@ import {
   foodItemIssues, fromRow, isBlocking, issueHints, roughEstimate, toNumber, toPer100g, RULES_VERSION,
   type IssueCode, type Per100gLike,
 } from './validate.ts'
+import {
+  AI_CONFIDENCE, bandOf, categoryChain, computePortion, cookingFatGrams, R8_BOUNDS, RULE_CONFIDENCE, statedPerUnit,
+  type Calibration, type CookingFat, type PortionInfo, type PortionOption, type PortionParse, type PortionResult,
+  type PortionTables, type Region,
+} from './portions.ts'
+import { MASS_G, portionFromDescription, VOLUME_ML, type Unit } from './portionText.ts'
+import { readMemoryPortions } from './portionMemory.ts'
+import { loadCalibrations, loadFoodPortionRows, loadPortionTables, type EffectivePortion } from './portionStore.ts'
+import { AI_COMPUTED_MAX_CONFIDENCE, computeEstimate, loadAiMacroContext, type AiMacroContext } from './aiMacros.ts'
+export { aiMacrosModeFromEnv, effectiveAiMacros } from './aiMacros.ts'
 
 export interface ParsedFood {
   name: string
@@ -59,6 +71,11 @@ export interface ParsedFood {
   // does the quantity_g/label_serving_g scaling in code, deterministically,
   // rather than trusting the model to do that arithmetic itself.
   label_serving_g?: number
+  // v1.2 Phase 5 (PORTION_MODE table): the amount as the V2 parse named it
+  // (count, unit, size, stated amount; parseSchema.ts). Absent on V1 parses; the
+  // engine then reads quantity_description (portionFromDescription).
+  portion_parse?: PortionParse
+  cooking_fat?: CookingFat | null
 }
 
 export interface Per100g {
@@ -99,6 +116,12 @@ export interface ResolvedFood extends ParsedFood {
   // a reference_match. A raw signal for Phase 8 calibration, not a confidence.
   // Never stored (the food_entries inserts map their fields one by one).
   match_score?: number
+  // v1.2 Phase 5, table mode only: where the grams came from, and up to four
+  // alternatives the app can offer as chips ("small katori 100 g", …). When
+  // needs_follow_up is true the app should ask (low confidence, or a main dish
+  // logged with no amount; founder k2).
+  portion?: PortionInfo & { needs_follow_up: boolean }
+  options?: PortionOption[]
 }
 
 export interface Totals {
@@ -144,6 +167,18 @@ export interface ResolveResult {
   foods: ResolvedFood[]
   totals: Totals
   unresolved: UnresolvedFood[]
+  // Lines the resolver added that the caller did not parse (table mode: the
+  // "cooking oil" rule line). Not in `foods` or `totals`, so placeFoods() keeps
+  // its positions; callers append them after placing.
+  extras?: ResolvedFood[]
+}
+
+// v1.2 Phase 5: the effective PORTION_MODE for this request plus what the engine
+// needs. Absent or mode 'legacy' = today's grams, byte for byte.
+export interface PortionContext extends EffectivePortion {
+  region: Region
+  userText?: string
+  channel?: 'text' | 'photo'
 }
 
 // Upper bound on food_entries.ai_confidence for a rough estimate (D5), so it
@@ -193,6 +228,17 @@ export interface ResolveOpts {
   // (migration 052) for a deterministic, ranked candidate list. The callers
   // decide per request from the RESOLVER_SEARCH secret (see effectiveSearch).
   search?: 'fts' | 'ranked'
+  // v1.2 Phase 5 (PORTION_MODE): grams from data. Absent = legacy.
+  portion?: PortionContext
+  // v1.2 Phase 7 (RESOLVER_USDA): where step 3's USDA candidates come from. 'api' (default,
+  // absent) is today's three-tier API search, byte for byte. 'local' asks search_usda_local
+  // (the USDA foods 055 stored as verified key-less rows) and calls the API for Branded only when
+  // no stored row matched; a pick of a stored row is a reference_match (no private row).
+  usda?: 'api' | 'local'
+  // v1.2 Phase 7 (RESOLVER_AI_MACROS): 'legacy' (default, absent) keeps the matcher's own per-100 g
+  // estimate; 'computed' asks it for protein, carbs, fat and fibre only and computes the energy here
+  // (053's basis), bounded by the food's portion category range, at confidence <= 0.4 (aiMacros.ts).
+  aiMacros?: 'legacy' | 'computed'
 }
 
 export const memoryModeFromEnv = (v: string | undefined): MemoryMode =>
@@ -209,6 +255,14 @@ export const searchModeFromEnv = (v: string | undefined): SearchMode =>
   v === 'ranked' || v === 'eval_only' ? v : 'fts'
 export const effectiveSearch = (m: SearchMode, email?: string | null): 'fts' | 'ranked' =>
   m === 'ranked' || (m === 'eval_only' && !!email && email.toLowerCase().endsWith('@steadyapp.internal')) ? 'ranked' : 'fts'
+
+// RESOLVER_USDA secret (v1.2 Phase 7): 'api' (default: today's USDA API tiers), 'eval_only' (local for
+// the internal eval accounts only), 'local' (everyone). Unset or misspelt = api, as RESOLVER_SEARCH.
+export type UsdaMode = 'api' | 'eval_only' | 'local'
+export const usdaModeFromEnv = (v: string | undefined): UsdaMode =>
+  v === 'local' || v === 'eval_only' ? v : 'api'
+export const effectiveUsda = (m: UsdaMode, email?: string | null): 'api' | 'local' =>
+  m === 'local' || (m === 'eval_only' && !!email && email.toLowerCase().endsWith('@steadyapp.internal')) ? 'local' : 'api'
 
 // "a", "a and b", "a, b and c" — deduped, each quoted.
 function quoteList(names: string[]): string {
@@ -387,6 +441,10 @@ export function computeMacros(quantityG: number, per100g: Per100g) {
 // The FTS path offered 3; ranked rows are ordered best-first, so 5 costs a few
 // prompt lines and catches a right row that a near-tie pushed to 4th or 5th.
 const SEARCH_K = 5
+let warnedUsdaLocalLegacy = false
+// How many stored USDA rows (search_usda_local) each miss offers the matcher (RESOLVER_USDA local).
+// The API tiers offered up to 5 (pageSize 5); so does the local search.
+const USDA_LOCAL_K = 5
 
 // ── Ranked-search candidate gate (v1.2 Phase 4.1) ─────────────────────────────
 // strict_word_similarity gives 1.0 to ANY row that contains the query's word, so
@@ -611,6 +669,8 @@ interface Candidate {
   // a number in the prompt would anchor its pick, and these are not calibrated.
   score?: number
   matchKind?: 'exact' | 'alias' | 'trgm'
+  name?: string   // the row's own name (Phase 5 category words); never shown to the matcher
+  rowFdcId?: number | null   // a row's fdc_id when the search returned it (local USDA rows; FTS rows in portion mode): null = none
 }
 
 // deno-lint-ignore no-explicit-any
@@ -635,19 +695,37 @@ export async function resolveFoods(
   // (migration 052, "curd" → the verified dahi row). An alias is a verified key
   // under another name, so it is read here with the exact hit, not searched.
   const ranked = opts.search === 'ranked'
+  const usdaLocal = opts.usda === 'local'
+  const aiComputed = opts.aiMacros === 'computed'
+  // Phase 5: legacy keeps every select string as it was; any other mode also
+  // reads each row's fdc_id and name (the portion engine's keys) and the
+  // phrase's memory portions.
+  const portionMode = opts.portion?.mode ?? 'legacy'
+  const portionOn = portionMode !== 'legacy'
+  const tableMode = portionMode === 'table'
+  const extraCols = portionOn ? ', name, fdc_id' : ''
+  // RESOLVER_USDA=local with PORTION_MODE=legacy: stored USDA rows carry no measures (their portions live
+  // in 056's portion_units, which legacy never reads), so a USDA pick gets no measure-based gram fix.
+  // Roll back RESOLVER_USDA together with PORTION_MODE (spec (i)); warned once per instance.
+  if (usdaLocal && !portionOn && !warnedUsdaLocalLegacy) {
+    warnedUsdaLocalLegacy = true
+    console.warn('[resolver] RESOLVER_USDA=local with PORTION_MODE=legacy: USDA picks have no measures; set RESOLVER_USDA=api too')
+  }
   const [memRes, exactRes, aliasRes] = await Promise.all([
     memoryMode === 'off'
       ? Promise.resolve({ data: [] as any[], error: null })
       : supabase
           .from('user_food_memory')
-          .select('normalized_name, origin, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions)')
+          .select(portionOn
+            ? `normalized_name, origin, portions, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions${extraCols})`
+            : 'normalized_name, origin, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions)')
           // The Edge Functions use the service role, which bypasses RLS: this
           // filter IS the security boundary between one user's memory and another's.
           .eq('user_id', opts.userId)
           .in('normalized_name', uniqueNorms),
     supabase
       .from('food_items')
-      .select('id, source, normalized_name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions')
+      .select(`id, source, normalized_name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions${extraCols}`)
       .in('normalized_name', uniqueNorms)
       // Since 050 only verified rows hold normalized_name, so this filter is
       // belt-and-braces — but it keeps the query honest if a key ever slips through.
@@ -656,7 +734,7 @@ export async function resolveFoods(
     ranked
       ? supabase
           .from('food_aliases')
-          .select('alias, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions)')
+          .select(`alias, food_items!inner(id, source, status, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g, portions${extraCols})`)
           .in('alias', uniqueNorms)
           // Filtered here AND re-checked below: an alias whose target was later
           // quarantined must stop serving, not serve a bad row under a good name.
@@ -687,7 +765,10 @@ export async function resolveFoods(
   const memOrigin = new Map<string, string>()
   // deno-lint-ignore no-explicit-any
   const memUsable = new Map<string, { origin: string; row: any }>()
+  // Phase 5: the user's own (unit, size) weights for each phrase (served only in memory 'on')
+  const memPortions = new Map<string, ReturnType<typeof readMemoryPortions>>()
   for (const m of memRes.data ?? []) {
+    if (portionOn && memoryMode === 'on') memPortions.set(m.normalized_name, readMemoryPortions(m.portions))
     const t = embedded(m.food_items)
     // Re-validated on every read: a pointer is only as good as the row it
     // points at, and rows can be quarantined by a migration long after the
@@ -737,7 +818,9 @@ export async function resolveFoods(
     // Every parsed food sharing this normalized name; they can differ in how
     // the user phrased the amount, so correct per-food rather than per-row.
     const parsedForRow = parsed.filter((_, i) => norms[i] === norm)
-    const correctedG = parsedForRow.length === 1
+    // Table mode: the portion engine weighs every food at compute (step 6), so
+    // the stored-measures correction does not run here.
+    const correctedG = !tableMode && parsedForRow.length === 1
       ? correctPortionFromMeasures(parsedForRow[0].quantity_description, row.portions) ?? undefined
       : undefined
 
@@ -748,6 +831,7 @@ export async function resolveFoods(
       correctedG,
       resolution: useMem ? 'memory' : exact ? 'verified_exact' : 'verified_alias',
       ...(ranked && !useMem ? { matchScore: 1 } : {}),
+      ...(portionOn ? { portionRow: portionRowOf(row) } : {}),
     })
     if (useMem) memHitNorms.push(norm)
     else sharedHitIds.push(row.id)
@@ -817,6 +901,7 @@ export async function resolveFoods(
                   portions: Array.isArray(row.portions) && row.portions.length ? row.portions : undefined,
                   score: Number(row.score),
                   matchKind: row.match_kind,
+                  ...(portionOn ? { name: row.name } : {}),
                 }))
               },
               (err: unknown) => {
@@ -827,9 +912,13 @@ export async function resolveFoods(
           : Promise.resolve(
               supabase
                 .from('food_items')
-                .select('id, name, source, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g')
+                .select(`id, name, normalized_name, source, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g${portionOn ? ', fdc_id' : ''}`)
                 .textSearch('name', norm, { type: 'websearch', config: 'english' })
                 .eq('status', 'verified')
+                // keyed rows only (spec (g)1): the USDA rows 055 stores are verified but key-less and must stay
+                // invisible here; they are reached through search_usda_local alone. Every verified row had a
+                // key before 055, so this changes no answer until then. DEPLOY THIS BEFORE PUSHING 055.
+                .not('normalized_name', 'is', null)
                 .not('calories_per_100g', 'is', null)
                 .order('id')
                 .limit(3),
@@ -843,6 +932,8 @@ export async function resolveFoods(
                   per100g: rowPer100g(row),
                   cacheRowId: row.id,
                   cacheSource: row.source as MacroSource,
+                  // portion mode: the row's fdc_id comes with it (null = none), so compute needs no lookup
+                  ...(portionOn ? { name: row.name, rowFdcId: row.fdc_id == null ? null : Number(row.fdc_id) } : {}),
                 }))
               },
               // A rejection (not an { error } result) used to surface as a logged 500
@@ -855,14 +946,50 @@ export async function resolveFoods(
             )
         const usdaCandidates: Candidate[] = []
 
+        // 3a. RESOLVER_USDA local: the USDA foods stored in our own database (055/056). Verified
+        //     rows, so a pick is a reference_match like a search_foods row; they go after the DB
+        //     rows and before any API result. null = the search failed (logged): the full API tiers
+        //     then run as in api mode, so a missing function (056 not applied) degrades to today.
+        const localCandidates: Candidate[] | null = usdaLocal
+          ? await Promise.resolve(supabase.rpc('search_usda_local', { q: norm, k: USDA_LOCAL_K })).then(
+              // deno-lint-ignore no-explicit-any
+              ({ data, error }: any) => {
+                if (error) {
+                  console.error('[resolver] usda local search failed, using the USDA API:', norm, error.message)
+                  return null
+                }
+                // deno-lint-ignore no-explicit-any
+                const rows: any[] = data ?? []
+                if (rows.length) console.log('[resolver] usda local:', norm, rows.map((r) => Number(r.score).toFixed(2)).join(' '))
+                return rows.map((row): Candidate => ({
+                  label: `${row.name} [usda]`,
+                  per100g: rowPer100g(row),
+                  cacheRowId: row.id,
+                  cacheSource: 'usda',
+                  ...(ranked ? { score: Number(row.score) } : {}),
+                  ...(row.fdc_id != null ? { rowFdcId: Number(row.fdc_id) } : {}),
+                  ...(portionOn ? { name: row.name } : {}),
+                }))
+              },
+              (err: unknown) => {
+                console.error('[resolver] usda local search failed, using the USDA API:', norm, (err as Error)?.message ?? err)
+                return null
+              },
+            )
+          : null
+
         // 3. USDA. A missing key is a lasting configuration state, not an
         // outage — skip the lookup but keep genuine-miss semantics so the AI
         // estimate is still remembered and stays deterministic. Only a fetch
         // failure with a valid key marks usdaDown (transient → don't remember).
+        // RESOLVER_USDA local: Branded only, and only when no stored row matched (Branded
+        // stays the last resort, exactly as in the API tiers).
         usdaDown[i] = false
-        if (opts.fdcApiKey) {
+        if (opts.fdcApiKey && !(localCandidates !== null && localCandidates.length > 0)) {
           try {
-            const usda = await searchUsda(food.name, opts.fdcApiKey)
+            const usda = localCandidates !== null
+              ? await searchUsda(food.name, opts.fdcApiKey, { brandedOnly: true })
+              : await searchUsda(food.name, opts.fdcApiKey)
             for (const c of usda) {
               // USDA has its own broken rows (branded entries with per-serving
               // numbers in per-100 g fields). Never offer the matcher a
@@ -889,25 +1016,30 @@ export async function resolveFoods(
           }
         }
 
-        perMissCandidates[i] = [...(await dbCandidates), ...usdaCandidates]
+        perMissCandidates[i] = [...(await dbCandidates), ...(localCandidates ?? []), ...usdaCandidates]
       })
     )
 
     // 4. single match call for all misses
     //    (ranked adds RANKED_IDENTITY_RULE to the prompt; the retry below offers no
     //    candidates, so it keeps the shared prompt)
-    const matches = await matchCall(supabase, opts.userId, missFoods, perMissCandidates, opts.openRouterKey, undefined, ranked)
+    // RESOLVER_AI_MACROS computed: the category kcal ranges (054, cached) bound the estimates below
+    const aiCtx: AiMacroContext | null = aiComputed ? await loadAiMacroContext(supabase) : null
+    const matches = await matchCall(supabase, opts.userId, missFoods, perMissCandidates, opts.openRouterKey, undefined, ranked, tableMode, aiComputed)
 
     // Decide EVERY food before writing ANYTHING. The old code wrote rows as it
     // went, so a bad answer for the third food left the first two committed.
     const lastIssues: IssueCode[][] = missFoods.map(() => [])
     const decide = (i: number, m: MatchResult, final: boolean): Decision | null => {
       const c = m.candidate_index !== null ? perMissCandidates[i][m.candidate_index] : undefined
-      if (c?.cacheRowId) return { kind: 'reference_match', id: c.cacheRowId, source: c.cacheSource!, per100g: c.per100g, score: c.score }
+      if (c?.cacheRowId) return { kind: 'reference_match', id: c.cacheRowId, source: c.cacheSource!, per100g: c.per100g, score: c.score, name: c.name, fdcId: c.rowFdcId }
       if (c?.fdcId) {
         return { kind: 'usda_match', cand: c, per100g: c.per100g, issues: foodItemIssues('usda', missFoods[i].name, c.per100g) }
       }
-      const est = toPer100g(m.est_per_100g)
+      // computed (RESOLVER_AI_MACROS): energy from the macros, bounded by the category range; legacy: as given
+      const comp = aiComputed ? computeEstimate(m.est_per_100g, missFoods[i].name, aiCtx) : null
+      if (comp?.bounded) console.log(`[resolver] ai macros: ${comp.kcalRaw} kcal/100 g bounded to the ${comp.category} ${comp.bounded} (${comp.per100g.calories})`)
+      const est = aiComputed ? comp?.per100g ?? null : toPer100g(m.est_per_100g)
       const issues = foodItemIssues('ai_estimated', missFoods[i].name, est ?? m.est_per_100g)
       lastIssues[i] = issues
       if (!est || isBlocking(issues)) return null
@@ -936,6 +1068,9 @@ export async function resolveFoods(
           retryIdx.map(() => []),
           opts.openRouterKey,
           retryIdx.map((i) => issueHints(lastIssues[i])),
+          false,
+          tableMode,
+          aiComputed,
         )
       } catch (err) {
         // The retry is a second chance, not a requirement: if it fails we fall
@@ -990,13 +1125,19 @@ export async function resolveFoods(
     // deno-lint-ignore no-explicit-any
     const verifiedUsda = new Map<number, any>()
     if (fdcIds.length > 0) {
-      const { data, error } = await supabase
+      let q = supabase
         .from('food_items')
         .select('id, fdc_id, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g')
         .eq('source', 'usda')
         .eq('status', 'verified')
         .in('fdc_id', fdcIds)
         .not('calories_per_100g', 'is', null)
+      // api + legacy grams (the rollback lever) stay byte-identical after 055: the key-less rows 055 imports
+      // carry no portions, so reusing one would drop the measure-based gram correction a private row with
+      // USDA's measures gets on its next (memory) log. Every verified row was keyed before 055, so this
+      // filter changes nothing until then. Local search or table mode read 056's portion_units instead.
+      if (!(usdaLocal || tableMode)) q = q.not('normalized_name', 'is', null)
+      const { data, error } = await q
         .order('created_at')
         .order('id')
       // Not fatal: without the lookup each pick just becomes a private row.
@@ -1028,7 +1169,12 @@ export async function resolveFoods(
 
       if (d.kind === 'reference_match') {
         // fuzzy verified row matched → reuse it, no row to write
-        resolvedMisses.set(norm, { id: d.id, source: d.source, per100g: d.per100g, correctedG, resolution: 'reference_match', matchScore: d.score })
+        resolvedMisses.set(norm, {
+          id: d.id, source: d.source, per100g: d.per100g, correctedG, resolution: 'reference_match', matchScore: d.score,
+          // fdc_id unknown for a search_foods row (it does not return it): the compute step looks it
+          // up; a stored USDA row (search_usda_local) brings its own
+          ...(portionOn ? { portionRow: { fdc_id: d.fdcId === undefined ? undefined : d.fdcId, status: 'verified', name: d.name ?? null, portions: null } } : {}),
+        })
         remember({ norm, displayName: food.name, foodItemId: d.id, origin: 'reference_match' })
         return
       }
@@ -1036,7 +1182,10 @@ export async function resolveFoods(
       if (d.kind === 'usda_match') {
         const shared = verifiedUsda.get(d.cand.fdcId!)
         if (shared) {
-          resolvedMisses.set(norm, { id: shared.id, source: 'usda', per100g: rowPer100g(shared), correctedG, resolution: 'usda_match' })
+          resolvedMisses.set(norm, {
+            id: shared.id, source: 'usda', per100g: rowPer100g(shared), correctedG, resolution: 'usda_match',
+            ...(portionOn ? { portionRow: { fdc_id: Number(shared.fdc_id), status: 'verified', name: d.cand.label, portions: null } } : {}),
+          })
           remember({ norm, displayName: food.name, foodItemId: shared.id, origin: 'usda_match' })
           return
         }
@@ -1066,7 +1215,14 @@ export async function resolveFoods(
         // its portion without re-querying USDA (see correctPortionFromMeasures).
         portions: d.kind === 'usda_match' && d.cand.portions?.length ? d.cand.portions : null,
       }))
-      resolvedMisses.set(norm, { id, source, per100g: d.per100g, correctedG, resolution: d.kind })
+      resolvedMisses.set(norm, {
+        id, source, per100g: d.per100g, correctedG, resolution: d.kind,
+        // a private USDA pick keeps USDA's measures: the engine reads them (R5) for a row that is not verified
+        ...(portionOn ? { portionRow: {
+          fdc_id: d.kind === 'usda_match' ? d.cand.fdcId ?? null : null, status: 'unverified', name: food.name,
+          portions: d.kind === 'usda_match' && d.cand.portions?.length ? d.cand.portions : null,
+        } } : {}),
+      })
 
       // Memory only for clean numbers. A doubtful pick or estimate is logged
       // once but never becomes the user's sticky number; neither does an AI
@@ -1111,6 +1267,11 @@ export async function resolveFoods(
   // ── 6. deterministic compute ─────────────────────────────────────────────
   // `foods` keeps the caller's order with left-out foods removed; callers that
   // merge by position use placeFoods() so nothing shifts.
+  // Phase 5: with PORTION_MODE not legacy the portion engine weighs every food
+  // from data (one batched read). table serves its grams; shadow only logs them.
+  const portionResults = portionOn
+    ? await computePortions(supabase, parsed, norms, (n) => hits.get(n) ?? resolvedMisses.get(n), memPortions, opts, memoryMode)
+    : null
   const foods: ResolvedFood[] = []
   const unresolved: UnresolvedFood[] = []
   parsed.forEach((p, i) => {
@@ -1126,10 +1287,16 @@ export async function resolveFoods(
     // household measures (see matchCall). Prefer the revised figure — and
     // carry it on quantity_g too, not just into the macro math, so the entry
     // the user sees ("45 g") agrees with the numbers beside it.
-    const quantityG = hit.correctedG ?? p.quantity_g
+    const legacyG = hit.correctedG ?? p.quantity_g
     if (hit.correctedG && hit.correctedG !== p.quantity_g) {
       console.log(`[resolver] portion corrected: "${p.name}" ${p.quantity_g}g → ${hit.correctedG}g (${p.quantity_description})`)
     }
+    const pr = portionResults?.[i] ?? null
+    if (portionMode === 'shadow') {
+      // counts only: no food names, no user text
+      console.log(`[portion-shadow] ${pr?.portion.unit ?? '-'} ${pr?.portion.source ?? 'none'} ${legacyG} ${pr?.grams ?? '-'}`)
+    }
+    const quantityG = tableMode && pr ? pr.grams : legacyG
     const rough = hit.resolution === 'rough_estimate'
     foods.push({
       ...p,
@@ -1138,16 +1305,286 @@ export async function resolveFoods(
       // A rough estimate must never look like a confident number: confidence
       // becomes food_entries.ai_confidence, which is what a later "check
       // these" UI keys off.
-      confidence: rough ? capRoughConfidence(p.confidence) : p.confidence,
+      confidence: rough ? capRoughConfidence(p.confidence)
+        : aiComputed && hit.resolution === 'ai_estimate' ? Math.min(p.confidence, AI_COMPUTED_MAX_CONFIDENCE) : p.confidence,
       food_item_id: hit.id,
       macro_source: hit.source,
       resolution: hit.resolution,
       ...(rough ? { rough: true } : {}),
       ...(hit.matchScore !== undefined ? { match_score: hit.matchScore } : {}),
+      ...(tableMode && pr ? { portion: { ...pr.portion, needs_follow_up: pr.needs_follow_up }, options: pr.options } : {}),
     })
   })
 
-  return { foods, totals: sumTotals(foods), unresolved }
+  const extras = tableMode && portionResults
+    ? await cookingFatLine(supabase, parsed, portionResults, norms, (n) => hits.get(n) ?? resolvedMisses.get(n))
+    : []
+  // totals include the resolver's own lines (the cooking-oil rule) so the eval measures what production logs
+  return { foods, totals: sumTotals([...foods, ...extras]), unresolved, ...(extras.length ? { extras } : {}) }
+}
+
+// ── Phase 5: portion engine glue ───────────────────────────────────────────
+// One parallel batch: the cached reference tables, the user's calibrations
+// (explicit user settings: read whatever RESOLVER_MEMORY says, skipped only by the
+// eval's persist:false so it runs cold), the fdc_id of any search_foods pick, and the
+// portion rows of every resolved row; then the pure engine per food.
+// deno-lint-ignore no-explicit-any
+async function computePortions(
+  supabase: any,
+  parsed: ParsedFood[],
+  norms: string[],
+  hitOf: (norm: string) => Hit | undefined,
+  memPortions: Map<string, ReturnType<typeof readMemoryPortions>>,
+  opts: ResolveOpts,
+  memoryMode: MemoryMode,
+): Promise<Array<PortionResult | null>> {
+  const ctx = opts.portion!
+  const resolved = [...new Set(norms)].map((n) => hitOf(n)).filter((h): h is Hit => !!h)
+  const ids = [...new Set(resolved.map((h) => h.id))]
+  const unknownFdc = resolved.filter((h) => h.portionRow && h.portionRow.fdc_id === undefined).map((h) => h.id)
+  const knownFdcs = resolved.flatMap((h) => (h.portionRow?.fdc_id != null ? [h.portionRow.fdc_id] : []))
+  void memoryMode
+  const [tables, calibrations, fdcRes, rows] = await Promise.all([
+    loadPortionTables(supabase),
+    opts.persist !== false ? loadCalibrations(supabase, opts.userId) : Promise.resolve([] as Calibration[]),
+    unknownFdc.length
+      ? Promise.resolve(supabase.from('food_items').select('id, fdc_id').in('id', unknownFdc)).then(
+          // deno-lint-ignore no-explicit-any
+          (r: any) => r, (e: unknown) => ({ data: null, error: e }))
+      : Promise.resolve({ data: [], error: null }),
+    loadFoodPortionRows(supabase, ids, knownFdcs, ctx.proposed),
+  ])
+  const fdcOf = new Map<string, number | null>()
+  if (fdcRes.error) console.error('[portions] fdc lookup failed:', fdcRes.error?.message ?? fdcRes.error)
+  // deno-lint-ignore no-explicit-any
+  for (const r of fdcRes.data ?? []) fdcOf.set(r.id, r.fdc_id == null ? null : Number((r as any).fdc_id))
+  const extraFdcs = [...new Set([...fdcOf.values()].filter((x): x is number => x != null && !knownFdcs.includes(x)))]
+  const allRows = extraFdcs.length ? [...rows, ...await loadFoodPortionRows(supabase, [], extraFdcs, ctx.proposed)] : rows
+  if (!tables) {
+    // table mode with no reference tables (a read error on a cold instance, or 054 rolled back while the
+    // flag still says table): never 0 g or an unclamped guess at full confidence; the stated amount, else
+    // the parse's guess clamped like R8, flagged for a follow-up. Shadow keeps legacy grams anyway.
+    console.error('[portions] no reference tables: stated amounts or clamped parse guesses, flagged unsure')
+    return parsed.map((p, i) => (hitOf(norms[i]) ? tablelessPortion(p.portion_parse ?? parseFromDescription(p), p.quantity_g, ctx.channel ?? 'text') : null))
+  }
+  return parsed.map((p, i) => {
+    const hit = hitOf(norms[i])
+    if (!hit) return null
+    const pr = hit.portionRow ?? { fdc_id: null, status: 'verified', name: null, portions: null }
+    const fdc = pr.fdc_id === undefined ? fdcOf.get(hit.id) ?? null : pr.fdc_id
+    const parse = p.portion_parse ?? parseFromDescription(p)
+    return portionOrPlaceholder(tables, {
+      parse,
+      phrase: p.name,
+      row: { id: hit.id, fdc_id: fdc, status: pr.status, name: pr.name, portions: pr.portions },
+      foodRows: allRows,
+      memory: memPortions.get(norms[i]) ?? null,
+      calibrations,
+      region: ctx.region,
+      proposed: ctx.proposed,
+      channel: ctx.channel ?? 'text',
+    }, p.quantity_g)
+  })
+}
+
+// The edit-rescale path (log-food-from-text): weigh foods that keep a previous
+// entry's row. Same data and engine as resolveFoods' compute step: one read of the
+// rows' keys, the phrases' memory portions (memory 'on'), calibrations, and the
+// batched portion rows.
+// `personal: false` = the data default only (no memory, no calibration): what an edit-learned
+// calibration is checked against before it is stored (portionCalibrationApi.learnFromEdit).
+export async function weighFoods(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  items: Array<{ parse: PortionParse; phrase: string; foodItemId: string | null; parseG: number; personal?: boolean }>,
+  opts: { userId: string; memory?: MemoryMode; portion: PortionContext },
+): Promise<Array<PortionResult | null>> {
+  if (items.length === 0 || opts.portion.mode === 'legacy') return items.map(() => null)
+  const memoryMode = opts.memory ?? 'on'
+  const ids = [...new Set(items.flatMap((x) => (x.foodItemId ? [x.foodItemId] : [])))]
+  const phrases = [...new Set(items.map((x) => normalizeName(x.phrase)).filter((n) => n !== ''))]
+  const [tables, calibrations, rowRes, memRes] = await Promise.all([
+    loadPortionTables(supabase),
+    // calibrations are explicit user settings: read in every memory mode
+    loadCalibrations(supabase, opts.userId),
+    ids.length
+      ? Promise.resolve(supabase.from('food_items').select('id, fdc_id, status, name, portions').in('id', ids)).then(
+          // deno-lint-ignore no-explicit-any
+          (r: any) => r, (e: unknown) => ({ data: null, error: e }))
+      : Promise.resolve({ data: [], error: null }),
+    memoryMode === 'on' && phrases.length
+      ? Promise.resolve(supabase.from('user_food_memory').select('normalized_name, portions').eq('user_id', opts.userId).in('normalized_name', phrases)).then(
+          // deno-lint-ignore no-explicit-any
+          (r: any) => r, (e: unknown) => ({ data: null, error: e }))
+      : Promise.resolve({ data: [], error: null }),
+  ])
+  if (!tables) return items.map((x) => tablelessPortion(x.parse, x.parseG, opts.portion.channel ?? 'text'))
+  if (rowRes.error) console.error('[portions] edit rows unavailable:', rowRes.error?.message ?? rowRes.error)
+  // deno-lint-ignore no-explicit-any
+  const rowOf = new Map<string, any>((rowRes.data ?? []).map((r: any) => [r.id, r]))
+  // deno-lint-ignore no-explicit-any
+  const memOf = new Map<string, any>((memRes.data ?? []).map((m: any) => [m.normalized_name, readMemoryPortions(m.portions)]))
+  const fdcs = [...rowOf.values()].flatMap((r) => (r.fdc_id != null ? [Number(r.fdc_id)] : []))
+  const rows = await loadFoodPortionRows(supabase, ids, fdcs, opts.portion.proposed)
+  return items.map((x) => {
+    const r = x.foodItemId ? rowOf.get(x.foodItemId) : undefined
+    return portionOrPlaceholder(tables, {
+      parse: x.parse,
+      phrase: x.phrase,
+      row: {
+        id: x.foodItemId, fdc_id: r?.fdc_id == null ? null : Number(r.fdc_id), status: r?.status ?? null, name: r?.name ?? null,
+        portions: Array.isArray(r?.portions) ? r.portions : null,
+      },
+      foodRows: rows,
+      memory: x.personal === false ? null : memOf.get(normalizeName(x.phrase)) ?? null,
+      calibrations: x.personal === false ? [] : calibrations,
+      region: opts.portion.region,
+      proposed: opts.portion.proposed,
+      channel: opts.portion.channel ?? 'text',
+    }, x.parseG)
+  })
+}
+
+// What food_entries' five portion columns hold for one logged food (table mode).
+export function portionColumns(f: Pick<ResolvedFood, 'portion' | 'resolution'>): {
+  portion_unit: string | null; portion_size: string | null; portion_count: number | null; portion_source: string | null; portion_confidence: number | null
+} {
+  const p = f.portion
+  if (!p) return { portion_unit: null, portion_size: null, portion_count: null, portion_source: null, portion_confidence: null }
+  const count = typeof p.count === 'number' && p.count > 0 && p.count <= 100 ? p.count : null
+  return {
+    portion_unit: p.unit ?? null,
+    portion_size: p.size ?? null,
+    portion_count: count,
+    portion_source: p.source,
+    portion_confidence: Math.max(0, Math.min(1, Math.round(p.confidence * 100) / 100)),
+  }
+}
+
+// A V1 parse (shadow mode, or a caller without the V2 parse) → the engine's input.
+export function parseFromDescription(p: Pick<ParsedFood, 'name' | 'quantity_description' | 'quantity_g'>): PortionParse {
+  const d = portionFromDescription(p.quantity_description, p.name)
+  const fb = typeof p.quantity_g === 'number' && p.quantity_g > 0 ? p.quantity_g : null
+  return d
+    ? { count: d.count, unit: d.unit, size: d.size, stated_amount: d.stated_amount, stated_unit: d.stated_unit, context: null, fallback_g: fb }
+    : { count: 1, unit: null, size: null, stated_amount: null, stated_unit: null, context: null, fallback_g: fb }
+}
+
+// The engine's answer, or — with no data AND no fallback guess — the parse's own
+// grams (or 100 g) at confidence 0.2, flagged for a follow-up.
+function portionOrPlaceholder(tables: PortionTables, input: Parameters<typeof computePortion>[1], parseG: number): PortionResult {
+  const r = computePortion(tables, input)
+  if (r) return r
+  const g = typeof parseG === 'number' && parseG > 0 ? Math.round(parseG * 10) / 10 : 100
+  const conf = 0.2
+  return {
+    grams: g,
+    portion: {
+      unit: input.parse.unit, size: input.parse.size, count: input.parse.count || 1,
+      grams_per_unit: Math.round((g / (input.parse.count || 1)) * 100) / 100,
+      source: 'ai', ref: parseG > 0 ? 'no portion data: the parse grams' : 'no portion data and no fallback: 100 g placeholder',
+      confidence: conf,
+    },
+    options: [], category: 'generic', band: bandOf(conf), needs_follow_up: true,
+  }
+}
+
+// No reference tables at all (table mode): the user's stated amount (volume at 1 g/ml), else the parse's
+// fallback guess clamped to the R8 bounds of its unit, else 100 g — at low confidence, flagged so the app
+// asks. Never 0 g, never an unclamped guess served as certain (fixer 2026-11-13).
+export function tablelessPortion(parse: PortionParse, parseG: number, channel: 'text' | 'photo'): PortionResult {
+  const count = Number.isFinite(parse.count) && parse.count > 0 ? Math.min(parse.count, 100) : 1
+  const r1 = (n: number) => Math.round(n * 10) / 10
+  const flagged = (grams: number, p: Omit<PortionInfo, 'confidence'>, confidence: number): PortionResult => ({
+    grams, portion: { ...p, confidence }, options: [], category: 'generic', band: bandOf(confidence), needs_follow_up: confidence < 0.8,
+  })
+  const mass = parse.stated_unit ? MASS_G[parse.stated_unit] : undefined
+  const vol = parse.stated_unit ? VOLUME_ML[parse.stated_unit] : undefined
+  if (parse.stated_amount != null && parse.stated_amount > 0 && (mass !== undefined || vol !== undefined)) {
+    const per = parse.stated_amount * (mass ?? vol!)
+    const mult = statedPerUnit(parse) ? count : 1
+    return flagged(r1(per * mult), { unit: mass !== undefined ? 'g' : 'ml', size: null, count: mult, grams_per_unit: r1(per), source: 'stated',
+      ref: mass !== undefined ? 'stated mass (no reference tables)' : 'stated volume x 1.0 g/ml (no reference tables)' },
+      mass !== undefined ? 0.95 : 0.85)
+  }
+  const u: Unit = parse.unit ?? 'serving'
+  const [lo, hi] = R8_BOUNDS[u]
+  const fb = Number(parse.fallback_g ?? parseG)
+  if (Number.isFinite(fb) && fb > 0) {
+    const per = Math.min(hi, Math.max(lo, fb / count))
+    return flagged(r1(per * count), { unit: parse.unit, size: parse.size, count, grams_per_unit: Math.round(per * 100) / 100, source: 'ai',
+      ref: `no reference tables: fallback ${fb} clamped to ${u} ${lo}-${hi}` }, channel === 'photo' ? AI_CONFIDENCE.photo : AI_CONFIDENCE.text)
+  }
+  return flagged(100, { unit: parse.unit, size: parse.size, count, grams_per_unit: r1(100 / count), source: 'ai',
+    ref: 'no reference tables and no fallback: 100 g placeholder' }, 0.2)
+}
+
+// Table mode: the cooking-fat rule line ("cooking oil"), spec (d) / founder k5, k9.
+// Only for a meal split into parts, only for its cooked curry/sabzi parts that
+// say a fat level (or come from a restaurant: heavy). Resolved to the first
+// verified key of COOKING_OIL_KEYS; no such row = no line (logged).
+const COOKING_OIL_KEYS = ['cooking oil', 'vegetable oil', 'refined oil', 'sunflower oil', 'oil', 'olive oil']
+const FAT_CATEGORIES: ReadonlySet<string> = new Set(['liquid_dish', 'paneer_gravy', 'dry_sabzi', 'sabzi_bhindi'])
+const SERVING_UNITS: ReadonlySet<string> = new Set(['katori', 'bowl', 'plate', 'serving'])
+// The oil row, cached per instance like the reference tables (no extra round trip per request).
+const OIL_TTL_MS = 10 * 60 * 1000
+// deno-lint-ignore no-explicit-any
+let oilCache: { at: number; row: any | null } | null = null
+export function clearCookingOilCache(): void { oilCache = null }
+// deno-lint-ignore no-explicit-any
+async function cookingOilRow(supabase: any): Promise<any | null> {
+  if (oilCache && Date.now() - oilCache.at < OIL_TTL_MS) return oilCache.row
+  const { data, error } = await supabase.from('food_items')
+    .select('id, source, normalized_name, calories_per_100g, protein_per_100g, carbs_per_100g, fat_per_100g, fiber_per_100g')
+    .in('normalized_name', COOKING_OIL_KEYS).eq('status', 'verified')
+  if (error) { console.error('[portions] cooking oil lookup failed:', error.message); return oilCache?.row ?? null }
+  // deno-lint-ignore no-explicit-any
+  const row = COOKING_OIL_KEYS.map((k) => (data ?? []).find((r: any) => r.normalized_name === k)).find((r) => !!r) ?? null
+  oilCache = { at: Date.now(), row }
+  return row
+}
+// deno-lint-ignore no-explicit-any
+async function cookingFatLine(
+  supabase: any,
+  parsed: ParsedFood[],
+  results: Array<PortionResult | null>,
+  norms: string[],
+  hitOf: (norm: string) => Hit | undefined,
+): Promise<ResolvedFood[]> {
+  if (parsed.length < 2) return []
+  const tables = await loadPortionTables(supabase)
+  if (!tables) return []
+  const parts = parsed.flatMap((p, i) => {
+    const r = results[i]
+    const hit = hitOf(norms[i])
+    if (!r || !hit) return []
+    if (!categoryChain(tables, r.category).some((c) => FAT_CATEGORIES.has(c))) return []
+    const pp = p.portion_parse
+    const servings = pp?.unit && SERVING_UNITS.has(pp.unit) ? pp.count : 1
+    // a dish split into parts = a part resolved to a raw-ingredient reference row (IFCT): it carries no
+    // recipe oil. INDB / 053 recipe rows, USDA dishes and AI estimates of the dish already include theirs.
+    return [{ cooking_fat: p.cooking_fat ?? null, context: pp?.context ?? null, servings, recipe_fat: hit.source !== 'ifct' }]
+  })
+  const grams = cookingFatGrams(parts, parsed.length)
+  if (!(grams > 0)) return []
+  const oil = await cookingOilRow(supabase)
+  if (!oil) { console.warn('[portions] no verified cooking oil row: cooking-fat line skipped'); return [] }
+  return [{
+    name: 'cooking oil',
+    quantity_description: `${grams} g cooking fat`,
+    quantity_g: grams,
+    confidence: RULE_CONFIDENCE,
+    ...computeMacros(grams, rowPer100g(oil)),
+    food_item_id: oil.id,
+    macro_source: oil.source as MacroSource,
+    resolution: 'verified_exact',
+    portion: {
+      unit: 'g', size: null, count: 1, grams_per_unit: grams, source: 'rule',
+      ref: `cooking fat rule: ${parts.map((x) => x.cooking_fat ?? (x.context === 'restaurant' ? 'restaurant=heavy' : '-')).join(',')}`,
+      confidence: RULE_CONFIDENCE, needs_follow_up: false,
+    },
+    options: [],
+  }]
 }
 
 // ── Nutrition-label foods ──────────────────────────────────────────────────
@@ -1416,11 +1853,24 @@ interface Hit {
   correctedG?: number
   resolution: Resolution
   matchScore?: number   // ResolvedFood.match_score (ranked mode only)
+  // Phase 5 (portion mode not legacy): the portion engine's view of the row.
+  // fdc_id undefined = not known yet (a search pick): looked up at compute.
+  portionRow?: { fdc_id: number | null | undefined; status: string; name: string | null; portions: UsdaPortion[] | null }
+}
+
+// deno-lint-ignore no-explicit-any
+function portionRowOf(row: any): NonNullable<Hit['portionRow']> {
+  return {
+    fdc_id: row.fdc_id == null ? null : Number(row.fdc_id),
+    status: String(row.status ?? 'verified'),
+    name: row.name ?? null,
+    portions: Array.isArray(row.portions) ? row.portions : null,
+  }
 }
 
 // What the resolver decided for one miss, before anything is written.
 type Decision =
-  | { kind: 'reference_match'; id: string; source: MacroSource; per100g: Per100g; score?: number }
+  | { kind: 'reference_match'; id: string; source: MacroSource; per100g: Per100g; score?: number; name?: string; fdcId?: number | null }
   | { kind: 'usda_match'; cand: Candidate; per100g: Per100g; issues: IssueCode[] }
   | { kind: 'ai_estimate'; per100g: Per100g; issues: IssueCode[] }
   | { kind: 'rough_estimate'; per100g: Per100g; issues: IssueCode[] }   // issues = what the ORIGINAL guess failed
@@ -1507,6 +1957,27 @@ interface MatchResult {
   corrected_quantity_g: number | null
 }
 
+// The matcher prompt's portion check and answer format, split out so table mode
+// (Phase 5) can leave them out; legacy assembles exactly the old text.
+const PORTION_CHECK_SECTION = `ALSO CHECK THE PORTION SIZE. Our gram estimate came from reading the user's words alone, with no reference data, and it is the single largest source of error in this system — a perfect per-100g figure multiplied by a wrong gram weight still produces a wrong meal. Where a candidate lists USDA portions, use them as ground truth to sanity-check our estimate:
+- Map the user's phrasing onto the closest listed portion ("a bowl" ≈ 1 cup, "a piece"/"a slice" ≈ 1 piece/1 item), multiply by any count they gave ("2 samosas" = 2 × the 1-piece weight), and return that as corrected_quantity_g.
+- Watch for light, bulky, dry foods especially — cereal, oats, popcorn, chips, puffed snacks. A bowl of these weighs FAR less than a bowl of something dense like rice or curry (a bowl of dry cereal is ~30-50g, not the ~150g a bowl of cooked rice would be). Over-estimating these is our most common failure.
+- For a drink with a small additive ("coffee with milk", "tea with milk"), the additive is a splash — roughly 20-50g — not a second full serving of milk.
+- Respect explicit amounts the user gave. If they said "100g" or "2 pints", that is authoritative; do not override it.
+- If the listed portions do not fit the description, or there are none, return null and we keep our original estimate.
+
+`
+const MATCH_FORMAT_LEGACY = '{ "matches": [ { "food_index": 0, "candidate_index": 2 or null, "est_per_100g": null or { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0 }, "corrected_quantity_g": null or 45 } ] }'
+const MATCH_FORMAT_TABLE = '{ "matches": [ { "food_index": 0, "candidate_index": 2 or null, "est_per_100g": null or { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0 } } ] }'
+// Phase 7 RESOLVER_AI_MACROS computed: the estimate names no calories (code computes them, aiMacros.ts).
+const EST_SHAPE_LEGACY = '{ "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0 }'
+const EST_SHAPE_COMPUTED = '{ "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0, "alcohol_g": 0 }'
+const AI_COMPUTED_RULE = 'Give est_per_100g as protein_g, carbs_g (total carbohydrate, fibre included), fat_g and fiber_g only, plus alcohol_g for an alcoholic drink (0 otherwise): we compute the calories from them, so do not give calories.'
+const matchFormat = (tableMode: boolean, aiComputed: boolean): string => {
+  const f = tableMode ? MATCH_FORMAT_TABLE : MATCH_FORMAT_LEGACY
+  return aiComputed ? f.replace(EST_SHAPE_LEGACY, EST_SHAPE_COMPUTED) : f
+}
+
 // One gpt-4o-mini call matching ALL missed foods against their retrieved
 // candidates. Doubles as the AI fallback: when no candidate fits, the model
 // supplies est_per_100g in the same response — never a separate call.
@@ -1522,6 +1993,11 @@ async function matchCall(
   openRouterKey: string,
   hints?: string[][],
   ranked = false,
+  // Phase 5 table mode: the portion engine owns grams, so the matcher is asked
+  // about identity only (no gram estimate, no portion check, no corrected grams).
+  tableMode = false,
+  // Phase 7 RESOLVER_AI_MACROS computed: estimates carry macros only; code computes the energy.
+  aiComputed = false,
 ): Promise<MatchResult[]> {
   const lines = foods.map((food, i) => {
     const cands = perFoodCandidates[i]
@@ -1541,7 +2017,9 @@ async function matchCall(
     const hint = hints?.[i]?.length
       ? `\n    Your previous estimate for this food was rejected (${hints[i].join('; ')}). Give a corrected est_per_100g.`
       : ''
-    return `Food ${i}: "${food.name}" — user described the amount as "${food.quantity_description}", which we currently estimate as ${food.quantity_g}g${hint}\n${cands || '    (no candidates found)'}`
+    return tableMode
+      ? `Food ${i}: "${food.name}" — user described the amount as "${food.quantity_description}"${hint}\n${cands || '    (no candidates found)'}`
+      : `Food ${i}: "${food.name}" — user described the amount as "${food.quantity_description}", which we currently estimate as ${food.quantity_g}g${hint}\n${cands || '    (no candidates found)'}`
   }).join('\n\n')
 
   const prompt = `You match food descriptions to nutrition database candidates.
@@ -1558,19 +2036,12 @@ ${ranked ? `${RANKED_IDENTITY_RULE}\n\n` : ''}TWO TRAPS THAT PRODUCE LARGE, SILE
 
 2. WRONG PRODUCT VARIANT. Databases carry diet/sugar-free/light variants under the same name. If the user did not say "diet", "sugar-free", "zero" or "light", they mean the REGULAR product — a candidate reading near-zero calories for something normally sugary (a cola, an energy drink, a sweetened juice) is the diet variant and is the wrong match. Regular full-sugar soft/energy drinks are ~40-50 kcal/100g, never ~0-5.
 
-est_per_100g values MUST be per 100 GRAMS of the food itself — never per piece or per serving. Sanity anchors: nuts/seeds 500-650 kcal/100g, oils/pure fats ~900 (but a "sauce"/"gravy"/"masala" is diluted with water, tomato, dairy, or vegetables even when butter/cream-based — it is NEVER 100g fat per 100g; treat curry/gravy/sauce as 100-250 kcal/100g, richest cream-based ones up to ~350), cooked grains/dals 100-200, milk 40-70, milk-based coffee drinks (latte/cappuccino/flat white, with or without a shot of flavored syrup) 40-90 — mostly steamed milk by volume, do NOT price like a dessert just because it's flavored, vegetables 20-100, raw fruit 30-90, meats 100-300, fried snacks 300-550, beer/light alcoholic drinks 35-55.
+est_per_100g values MUST be per 100 GRAMS of the food itself — never per piece or per serving.${aiComputed ? ` ${AI_COMPUTED_RULE}` : ''} Sanity anchors: nuts/seeds 500-650 kcal/100g, oils/pure fats ~900 (but a "sauce"/"gravy"/"masala" is diluted with water, tomato, dairy, or vegetables even when butter/cream-based — it is NEVER 100g fat per 100g; treat curry/gravy/sauce as 100-250 kcal/100g, richest cream-based ones up to ~350), cooked grains/dals 100-200, milk 40-70, milk-based coffee drinks (latte/cappuccino/flat white, with or without a shot of flavored syrup) 40-90 — mostly steamed milk by volume, do NOT price like a dessert just because it's flavored, vegetables 20-100, raw fruit 30-90, meats 100-300, fried snacks 300-550, beer/light alcoholic drinks 35-55.
 
-ALSO CHECK THE PORTION SIZE. Our gram estimate came from reading the user's words alone, with no reference data, and it is the single largest source of error in this system — a perfect per-100g figure multiplied by a wrong gram weight still produces a wrong meal. Where a candidate lists USDA portions, use them as ground truth to sanity-check our estimate:
-- Map the user's phrasing onto the closest listed portion ("a bowl" ≈ 1 cup, "a piece"/"a slice" ≈ 1 piece/1 item), multiply by any count they gave ("2 samosas" = 2 × the 1-piece weight), and return that as corrected_quantity_g.
-- Watch for light, bulky, dry foods especially — cereal, oats, popcorn, chips, puffed snacks. A bowl of these weighs FAR less than a bowl of something dense like rice or curry (a bowl of dry cereal is ~30-50g, not the ~150g a bowl of cooked rice would be). Over-estimating these is our most common failure.
-- For a drink with a small additive ("coffee with milk", "tea with milk"), the additive is a splash — roughly 20-50g — not a second full serving of milk.
-- Respect explicit amounts the user gave. If they said "100g" or "2 pints", that is authoritative; do not override it.
-- If the listed portions do not fit the description, or there are none, return null and we keep our original estimate.
-
-${lines}
+${tableMode ? '' : PORTION_CHECK_SECTION}${lines}
 
 Return ONLY JSON:
-{ "matches": [ { "food_index": 0, "candidate_index": 2 or null, "est_per_100g": null or { "calories": 0, "protein_g": 0, "carbs_g": 0, "fat_g": 0, "fiber_g": 0 }, "corrected_quantity_g": null or 45 } ] }
+${matchFormat(tableMode, aiComputed)}
 One entry per food, in order.`
 
   const requestBody = {
@@ -1624,7 +2095,7 @@ One entry per food, in order.`
     // 2-4x; anything wilder than 20x is far likelier to be a model slip (a
     // per-100g figure echoed back as grams, a decimal dropped) than a real
     // portion, and silently trusting it would swap a mild error for a huge one.
-    const raw = m.corrected_quantity_g
+    const raw = tableMode ? null : m.corrected_quantity_g
     const corrected =
       typeof raw === 'number' && Number.isFinite(raw) && raw > 0 &&
       food.quantity_g > 0 &&

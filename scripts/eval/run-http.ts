@@ -193,6 +193,18 @@ async function clearEvalMemory(): Promise<void> {
     console.error(`Could not clear the eval user's memory (HTTP ${res.status}); a cold run would not be cold.`)
     process.exit(1)
   }
+  // ...and their personal portion calibrations (migration 054): the functions apply them in every memory
+  // mode, so a cold run must undo them too. Through the same RPC the app's undo uses (rows are revoked,
+  // never deleted). 404 = 054 is not applied there: nothing to undo.
+  const cal = await fetch(`${SUPABASE_URL}/rest/v1/rpc/revoke_portion_calibrations`, {
+    method: 'POST',
+    headers: { apikey: SERVICE_KEY!, Authorization: `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_user_id: userId, p_all: true }),
+  })
+  if (!cal.ok && cal.status !== 404) {
+    console.error(`Could not clear the eval user's portion calibrations (HTTP ${cal.status}); a cold run would not be cold.`)
+    process.exit(1)
+  }
 }
 
 // A text log with nothing loggable comes back as a chat answer flagged

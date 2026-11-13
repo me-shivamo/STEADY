@@ -1,0 +1,1263 @@
+{
+ "_comment": "public.portion_memory_ok() results (054, local PG16 copy of live, 2026-11-13) for each value; memoryPortions.test.ts checks the TS twin agrees",
+ "cases": [
+  {
+   "name": "null",
+   "value": null,
+   "sql": true
+  },
+  {
+   "name": "empty array",
+   "value": [],
+   "sql": true
+  },
+  {
+   "name": "one valid entry",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "every unit",
+   "value": [
+    {
+     "unit": "piece",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cutting",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "tbsp",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "tsp",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "spoon",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "handful",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "scoop",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "splash",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "serving",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "can",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bottle",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "packet",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "pint",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "peg",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "shot",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "ml is not a parsed unit",
+   "value": [
+    {
+     "unit": "ml",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "g is not a unit",
+   "value": [
+    {
+     "unit": "g",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "unknown unit",
+   "value": [
+    {
+     "unit": "ladle",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "unit uppercase",
+   "value": [
+    {
+     "unit": "Katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "unit number",
+   "value": [
+    {
+     "unit": 1,
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "size S",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "S",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "size L",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "L",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "size lowercase",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "m",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "size XL",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "XL",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "size null",
+   "value": [
+    {
+     "unit": "katori",
+     "size": null,
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams float",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 12.5,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "grams 10000",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 10000,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "grams 10000.01",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 10000.01,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams 0",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 0,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams negative",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": -5,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams string",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": "150",
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams null",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": null,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams tiny",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 0.001,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "grams exponent",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 1000.0,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "grams bool",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": true,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "origin correction",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "origin calibration",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "calibration",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "origin manual",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "manual",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "origin label",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "label",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "origin history",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "history",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "origin missing",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at missing",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "unit missing",
+   "value": [
+    {
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "size missing",
+   "value": [
+    {
+     "unit": "katori",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "grams missing",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "extra key",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13",
+     "note": "x"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at timestamp",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13T10:00:00Z"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2024-02-29 leap",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2024-02-29"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "at 2026-02-29 not leap",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-02-29"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2026-02-30",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-02-30"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2026-04-31",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-04-31"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2026-12-31",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-12-31"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "at 2026-13-01",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-13-01"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2026-00-10",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-00-10"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 0000-01-01",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "0000-01-01"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 0001-01-01",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "0001-01-01"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "at 1900-02-29",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "1900-02-29"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at 2000-02-29",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2000-02-29"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "at short",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-1-1"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "at number",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": 20261113
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "duplicate unit+size",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 120,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "same unit two sizes",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "S",
+     "grams": 100,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "same size two units",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "M",
+     "grams": 240,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "24 entries",
+   "value": [
+    {
+     "unit": "piece",
+     "size": "S",
+     "grams": 10,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "piece",
+     "size": "M",
+     "grams": 11,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "piece",
+     "size": "L",
+     "grams": 12,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "S",
+     "grams": 13,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "M",
+     "grams": 14,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "L",
+     "grams": 15,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "S",
+     "grams": 16,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 17,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "L",
+     "grams": 18,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "S",
+     "grams": 19,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "M",
+     "grams": 20,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "L",
+     "grams": 21,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "S",
+     "grams": 22,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "M",
+     "grams": 23,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "L",
+     "grams": 24,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "S",
+     "grams": 25,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "M",
+     "grams": 26,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "L",
+     "grams": 27,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "S",
+     "grams": 28,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "M",
+     "grams": 29,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "L",
+     "grams": 30,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "S",
+     "grams": 31,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "M",
+     "grams": 32,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "L",
+     "grams": 33,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": true
+  },
+  {
+   "name": "25 entries",
+   "value": [
+    {
+     "unit": "piece",
+     "size": "S",
+     "grams": 10,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "piece",
+     "size": "M",
+     "grams": 11,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "piece",
+     "size": "L",
+     "grams": 12,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "S",
+     "grams": 13,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "M",
+     "grams": 14,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "slice",
+     "size": "L",
+     "grams": 15,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "S",
+     "grams": 16,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 17,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "katori",
+     "size": "L",
+     "grams": 18,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "S",
+     "grams": 19,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "M",
+     "grams": 20,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "L",
+     "grams": 21,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "S",
+     "grams": 22,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "M",
+     "grams": 23,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "plate",
+     "size": "L",
+     "grams": 24,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "S",
+     "grams": 25,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "M",
+     "grams": 26,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cup",
+     "size": "L",
+     "grams": 27,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "S",
+     "grams": 28,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "M",
+     "grams": 29,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "glass",
+     "size": "L",
+     "grams": 30,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "S",
+     "grams": 31,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "M",
+     "grams": 32,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "mug",
+     "size": "L",
+     "grams": 33,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "cutting",
+     "size": "S",
+     "grams": 34,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "object not array",
+   "value": {
+    "unit": "katori",
+    "size": "M",
+    "grams": 150,
+    "origin": "correction",
+    "at": "2026-11-13"
+   },
+   "sql": false
+  },
+  {
+   "name": "string",
+   "value": "katori",
+   "sql": false
+  },
+  {
+   "name": "number",
+   "value": 5,
+   "sql": false
+  },
+  {
+   "name": "array of null",
+   "value": [
+    null
+   ],
+   "sql": false
+  },
+  {
+   "name": "array of array",
+   "value": [
+    [
+     1
+    ]
+   ],
+   "sql": false
+  },
+  {
+   "name": "array of string",
+   "value": [
+    "katori"
+   ],
+   "sql": false
+  },
+  {
+   "name": "nested object value",
+   "value": [
+    {
+     "unit": {
+      "u": "katori"
+     },
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  },
+  {
+   "name": "one good one bad",
+   "value": [
+    {
+     "unit": "katori",
+     "size": "M",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    },
+    {
+     "unit": "bowl",
+     "size": "Q",
+     "grams": 150,
+     "origin": "correction",
+     "at": "2026-11-13"
+    }
+   ],
+   "sql": false
+  }
+ ]
+}

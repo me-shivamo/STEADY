@@ -1,11 +1,15 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { decode } from 'https://deno.land/std@0.177.0/encoding/base64.ts'
 import {
-  resolveFoods, planLabelFoods, commitLabelFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch,
-  unsureReply, estimateNote,
-  entryQuantityLabel, GRAM_HINTS_PROMPT, type ParsedFood, type ResolvedFood, type Totals, type UnresolvedFood,
+  resolveFoods, planLabelFoods, commitLabelFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, usdaModeFromEnv, effectiveUsda, aiMacrosModeFromEnv, effectiveAiMacros,
+  unsureReply, estimateNote, portionColumns,
+  entryQuantityLabel, type ParsedFood, type ResolvedFood, type Totals, type UnresolvedFood, type ResolveResult,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
+import { PHOTO_PROMPT_V1, PHOTO_PROMPT_V2 } from '../_shared/photoPrompt.ts'
+import { validateParsedFoodV2 } from '../_shared/parseSchema.ts'
+import { effectivePortion, loadRegion, portionModeFromEnv } from '../_shared/portionStore.ts'
+import { LABEL_CONFIDENCE } from '../_shared/portions.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -23,91 +27,7 @@ const CORS = {
 //  2. Low-confidence identification — rather than log a guess, the model asks
 //     the user to type the food in chat. index.ts detects this response shape
 //     and returns it straight to the app without touching the resolver.
-const SYSTEM_PROMPT = `You are STEADY, a friendly AI nutritionist inside a calorie-tracking app.
-The user has sent you a photo, possibly with an accompanying message. Figure out which of these three
-cases it is, then respond accordingly.
-
-── QUANTITY PRIORITY (applies to every case below) ──
-The user's accompanying message is the source of truth for portion size whenever it states one — it always
-overrides what you'd otherwise estimate or read from the image. Examples: "I ate 90g of this", "I only had
-half of it", "this was a large bowl", "2 servings". If the message states or implies a quantity for a food,
-use that to set quantity_g (converting units/fractions/multiples as needed) instead of your own visual
-estimate or the label's stated serving size. If the message says nothing about quantity, fall back to visual
-estimation (CASE 1) or the label's own serving size (CASE 2) as before. This applies per food item — if the
-message only specifies quantity for one item in a multi-item photo, use it for that item only.
-
-CASE 1 — Regular meal or food photo
-Identify all the food and drink in the image. Return ONLY this JSON, no markdown, no prose outside it:
-{
-  "meal_name": "brief name for the whole meal (e.g. 'Chicken rice bowl')",
-  "foods": [
-    {
-      "name": "food item name",
-      "quantity_description": "e.g. 2 slices, 1 large egg, 1 cup",
-      "quantity_g": 120,
-      "confidence": 0.85
-    }
-  ]
-}
-Rules for this case:
-- Identify every visible food item, including sides, sauces, drinks, and garnishes
-- Do NOT estimate calories or macros yourself — the app computes them from a verified nutrition database
-- quantity_g follows the QUANTITY PRIORITY rule above: use the user's stated amount if given, otherwise your
-  best gram estimate based on what you can see
-- confidence is 0.0–1.0 (how certain you are — lower if the image is unclear or the food is obscured; a
-  stated quantity does not raise confidence if the food identification itself is still uncertain)
-- Break compound dishes into components where visible (e.g. rice + curry + naan)
-${GRAM_HINTS_PROMPT}
-
-CASE 2 — Nutrition label or nutrition facts panel
-If the photo is of a nutrition label, ingredient panel, or a chart/table that already lists calories and
-macros per serving (not a photo of the actual food), read the exact numbers printed on it — do not estimate.
-Return this JSON instead:
-{
-  "meal_name": "brief name for the product (e.g. 'Oats, 1 serving')",
-  "foods": [
-    {
-      "name": "product/food name as printed on the label",
-      "quantity_description": "the label's own serving size, e.g. '1 serving (40g)'",
-      "quantity_g": 40,
-      "confidence": 0.95,
-      "label_serving_g": 40,
-      "label_macros": {
-        "calories": 150,
-        "protein_g": 5,
-        "carbs_g": 27,
-        "fat_g": 2.5,
-        "fiber_g": 3
-      }
-    }
-  ]
-}
-Rules for this case:
-- label_serving_g is the gram weight the label's own numbers are FOR, exactly as printed — e.g. if the panel
-  says "per 100g" this is 100; if it says "1 serving (40g)" this is 40. Never scale or convert this value.
-- label_macros must be the label's macro values exactly as printed for that label_serving_g — read them
-  verbatim, never estimated, never scaled by you. The app does all scaling math in code from these two raw
-  numbers, so do NOT attempt to compute values for a different quantity yourself — always report the label's
-  own unscaled numbers here, no matter what quantity_g ends up being.
-- quantity_g follows the QUANTITY PRIORITY rule above: if the user stated an amount (e.g. "I ate 90g of
-  this"), set quantity_g to that amount. If the user did not state a quantity, quantity_g equals
-  label_serving_g (i.e. quantity_description and quantity_g describe the label's own serving).
-- quantity_description should describe whichever quantity you used — the label's serving size, or the
-  user's stated amount if that took priority.
-- If a value isn't printed on the label (e.g. no fiber listed), omit that key from label_macros entirely.
-- confidence here reflects how legible/complete the label was, not food-identification uncertainty.
-
-CASE 3 — Cannot identify the food
-If the food in the photo is too unclear, obscured, or ambiguous to identify with reasonable confidence
-(this does not apply to label photos — read those regardless of image quality, per CASE 2), do not guess.
-Return this JSON instead:
-{
-  "status": "needs_clarification",
-  "message": "I couldn't quite make out what's in this photo — could you type the food items here in the chat?"
-}
-Use CASE 3 only when you are genuinely unsure what the food is — not merely uncertain about the exact
-portion size. If you can identify the food but are unsure of the amount, use CASE 1 with a lower confidence
-value instead of asking for clarification.`
+const SYSTEM_PROMPT = PHOTO_PROMPT_V1   // _shared/photoPrompt.ts (moved verbatim; V2 is used in PORTION_MODE table)
 
 Deno.serve(async (req) => {
   // CORS preflight
@@ -146,6 +66,15 @@ Deno.serve(async (req) => {
     const logged_date: string  = body.logged_date ?? today()
 
     if (!image_base64) return json({ error: 'image_base64 is required' }, 400)
+
+    // v1.2 Phase 5 (PORTION_MODE: legacy | shadow | eval_only | table; unset or
+    // misspelt = legacy = V1 prompt and the vision model's grams, as before).
+    const portionEff = effectivePortion(portionModeFromEnv(Deno.env.get('PORTION_MODE')), user.email)
+    const portionOn = portionEff.mode !== 'legacy'
+    const tableMode = portionEff.mode === 'table'
+    const prompt = tableMode ? PHOTO_PROMPT_V2 : SYSTEM_PROMPT
+    // the user's region (profiles.timezone), read while the vision model looks
+    const regionP = portionOn ? loadRegion(supabase, user.id) : null
 
     // ── 3-5. Upload photo + build AI context + call OpenRouter, concurrently ──
     // None of these three depend on each other's output — the storage upload
@@ -187,7 +116,7 @@ Deno.serve(async (req) => {
         model,
         temperature: 0,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: prompt },
           { role: 'system', content: `CONTEXT — ${contextLine}` },
           { role: 'user', content: [{ type: 'image_url', image_url: '[omitted]' }, { type: 'text', text: caption || 'What food is in this photo? Log the nutrition.' }] },
         ],
@@ -212,7 +141,7 @@ Deno.serve(async (req) => {
               temperature: 0,
               response_format: { type: 'json_object' },
               messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'system', content: prompt },
                 { role: 'system', content: `CONTEXT — ${contextLine}` },
                 {
                   role: 'user',
@@ -277,7 +206,27 @@ Deno.serve(async (req) => {
     // AI-estimate pipeline.
     // Foods are kept in original array order after resolving, since they were
     // split by index and merged back rather than resolved as two ordered lists.
-    const allFoods = aiResult.foods as ParsedFood[]
+    // Table mode: CASE 1 foods come in the V2 shape (count/unit/size, the
+    // caption's stated amount, a visual fallback_g); label foods keep V1's.
+    let allFoods = aiResult.foods as ParsedFood[]
+    if (tableMode) {
+      let invented = 0
+      allFoods = (aiResult.foods as Array<Record<string, unknown>>).flatMap((raw): ParsedFood[] => {
+        if (raw && typeof raw === 'object' && raw.label_macros) return [raw as unknown as ParsedFood]
+        const v = validateParsedFoodV2(raw, caption)
+        if (v.invented_stated) invented++
+        if (!v.ok || !v.food) return []
+        const f = v.food
+        return [{
+          name: f.name, quantity_description: f.quantity_description, quantity_g: f.portion.fallback_g ?? 0,
+          confidence: f.confidence, portion_parse: f.portion, cooking_fat: f.cooking_fat,
+        }]
+      })
+      if (invented > 0) console.log(`[portion] invented_stated ${invented}`)
+      if (allFoods.length === 0) {
+        return json({ error: "I couldn't identify any food in that photo. Try a clearer shot with better lighting." }, 422)
+      }
+    }
     const labelIndices: number[] = []
     const normalIndices: number[] = []
     allFoods.forEach((f, i) => (f.label_macros ? labelIndices : normalIndices).push(i))
@@ -301,6 +250,11 @@ Deno.serve(async (req) => {
           memory,
           // RESOLVER_SEARCH (fts | eval_only | ranked): the Phase 4 DB search, same secret as text logs.
           search: effectiveSearch(searchModeFromEnv(Deno.env.get('RESOLVER_SEARCH')), user.email),
+          // RESOLVER_USDA (api | eval_only | local): the Phase 7 local USDA rows, same secret as text logs.
+          usda: effectiveUsda(usdaModeFromEnv(Deno.env.get('RESOLVER_USDA')), user.email),
+          // RESOLVER_AI_MACROS (legacy | eval_only | computed): AI estimates with computed, category-bounded calories
+          aiMacros: effectiveAiMacros(aiMacrosModeFromEnv(Deno.env.get('RESOLVER_AI_MACROS')), user.email),
+          ...(portionOn ? { portion: { ...portionEff, region: await regionP!, userText: caption, channel: 'photo' as const } } : {}),
         })
       : { foods: [] as ResolvedFood[], totals: null, unresolved: [] as UnresolvedFood[] }
 
@@ -328,9 +282,15 @@ Deno.serve(async (req) => {
       }, 200)
     }
 
-    const labelResolved = labelPlan.plans.length > 0
+    const labelResolved = (labelPlan.plans.length > 0
       ? await commitLabelFoods(supabase, labelPlan.plans, { userId: user.id, memory })
-      : [] as ResolvedFood[]
+      : [] as ResolvedFood[])
+      // table mode: a label's grams are the label's (portion_source 'label')
+      .map((f) => tableMode ? {
+        ...f,
+        portion: { unit: 'g' as const, size: null, count: 1, grams_per_unit: f.quantity_g, source: 'label' as const, ref: 'nutrition label', confidence: LABEL_CONFIDENCE, needs_follow_up: false },
+        options: [],
+      } : f)
 
     // Merge back into the photo's original order. Left-out foods leave a gap
     // that is dropped below, so every later food keeps its own numbers.
@@ -338,6 +298,9 @@ Deno.serve(async (req) => {
     labelPlan.plans.forEach((plan, j) => { placed[labelIndices[plan.index]] = labelResolved[j] })
     placeFoods(placed, normalIndices, normalResult)
     const foods: ResolvedFood[] = placed.filter((f): f is ResolvedFood => f !== undefined)
+    // table mode: the resolver's own lines (the cooking-fat rule) go after the photo's foods
+    const extras = (normalResult as Partial<ResolveResult>).extras
+    if (tableMode && extras?.length) foods.push(...extras)
 
     const r1 = (n: number) => Math.round(n * 10) / 10
     const totals: Totals = {
@@ -388,6 +351,8 @@ Deno.serve(async (req) => {
         source: 'ai_photo',
         ai_confidence: food.confidence,
         macro_source: food.macro_source,
+        // table mode only: what the portion was (054's five columns)
+        ...(tableMode ? portionColumns(food) : {}),
       })))
       .select()
 

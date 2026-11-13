@@ -1,0 +1,239 @@
+fdc_id,food_item_id,normalized_name,position,description,gram_weight
+167711,aef79a47-d6f5-45d8-b18b-29f4e0bdc058,flavored milk,1,1 fl oz,30.5
+167711,aef79a47-d6f5-45d8-b18b-29f4e0bdc058,flavored milk,2,1 cup,244
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,1,1 NLEA serving,280
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,2,"1 cup, diced",152
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,3,10 watermelon balls,122
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,4,"1 cup, balls",154
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,5,1 wedge (approx 1/16 of melon),286
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,watermelon,6,"1 melon (15"" long x 7-1/2"" dia)",4518
+167785,82dbd115-1e9c-4be3-b9c8-6772d9ce3269,mango juice,1,1 cup,251
+167787,2fa88a80-30fb-4bb8-9b25-a53ca1e65094,pomegranate juice,1,1 cup,249
+167787,2fa88a80-30fb-4bb8-9b25-a53ca1e65094,pomegranate juice,2,1 fl oz,31.4
+168156,242dbdbd-3b19-4cba-ac68-cefb11e5591f,lime juice,1,1 cup,242
+168156,242dbdbd-3b19-4cba-ac68-cefb11e5591f,lime juice,2,1 fl oz,30.8
+168156,242dbdbd-3b19-4cba-ac68-cefb11e5591f,lime juice,3,1 lime yields,44
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,boiled corn,1,"1 ear, large (7-3/4"" to 9"" long)",118
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,boiled corn,2,1 cup cut,157
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,boiled corn,3,"1 ear, small (5-1/2"" to 6-1/2"" long)",89
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,boiled corn,4,"1 ear, medium (6-3/4"" to 7-1/2"" long)",103
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,boiled corn,5,"1 ear, yields",77
+168746,78b4d8ad-0705-4e60-a4e3-2dc053752117,beer,1,1 can,356
+168746,78b4d8ad-0705-4e60-a4e3-2dc053752117,beer,2,1 fl oz,29.7
+168853,ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e,potato chips,1,16 chips,26
+168853,ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e,potato chips,2,1 oz,28.35
+168853,ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e,potato chips,3,1 oz,28
+168853,ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e,potato chips,4,1 can (7 oz),198
+168879,4015d8de-62b0-49eb-bad4-ce575a907869,grain of rice,1,1 cup,195
+169055,9ed3d048-2b22-42f9-83fd-499da5c346a0,caesar dressing,1,1 tbsp,14.7
+169055,9ed3d048-2b22-42f9-83fd-499da5c346a0,caesar dressing,2,1 serving (2 tbsp),30
+169055,9ed3d048-2b22-42f9-83fd-499da5c346a0,caesar dressing,3,1 cup,235
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,1,1 slice,7
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,2,"1 cup, sliced",119
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,3,"1 large (8-1/4"" long)",280
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,4,"1 small (6-3/8"" long)",158
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,5,"1 stick (4"" long)",9
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,6,1 medium,201
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,cucumber,7,"1 cup, pared, chopped",133
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,lettuce,1,1 cup shredded,47
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,lettuce,2,1 leaf inner,6
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,lettuce,3,1 head,626
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,lettuce,4,1 leaf outer,28
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,lettuce,5,1 NLEA serving,85
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,romaine lettuce,1,1 cup shredded,47
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,romaine lettuce,2,1 leaf inner,6
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,romaine lettuce,3,1 head,626
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,romaine lettuce,4,1 leaf outer,28
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,romaine lettuce,5,1 NLEA serving,85
+169640,b30aea97-0fca-4787-90c2-74a5fbfecf45,honey,1,1 cup,339
+169640,b30aea97-0fca-4787-90c2-74a5fbfecf45,honey,2,1 tbsp,21
+169640,b30aea97-0fca-4787-90c2-74a5fbfecf45,honey,3,1 packet (0.5 oz),14
+169641,361438b1-e1f5-4dd4-bba1-0afc00bd77e8,jam,1,1 tbsp,20
+169641,361438b1-e1f5-4dd4-bba1-0afc00bd77e8,jam,2,1 packet (0.5 oz),14
+169768,01e3b4ee-31c6-46e3-bc3d-fcd717a3446f,mashed potatoes,1,1 container,700
+169768,01e3b4ee-31c6-46e3-bc3d-fcd717a3446f,mashed potatoes,2,1 cup,229
+169869,b5d768db-42eb-409f-b3c6-379e49c7a3af,peanut butter,1,1 tbsp,16
+169997,aaabacb1-23ba-4771-8c77-6b217a314e25,cilantro garnish,1,9 sprigs,20
+169997,aaabacb1-23ba-4771-8c77-6b217a314e25,cilantro garnish,2,0.25 cup,4
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,1,"1 cup, chopped",160
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,2,"1 slice, medium (1/8"" thick)",14
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,3,"1 medium (2-1/2"" dia)",110
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,4,1 large,150
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,5,10 rings,60
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,6,1 tbsp chopped,10
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,7,"1 cup, sliced",115
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,8,"1 slice, thin",9
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,9,1 small,70
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,onion,10,"1 slice, large (1/4"" thick)",38
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,1,1 cup,240
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,2,1 medium,111
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,3,1 large,164
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,4,1 small,82
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,5,1 can,190
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,cherry tomato,6,1 tbsp,15
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,1,1 cup,240
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,2,1 medium,111
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,3,1 large,164
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,4,1 small,82
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,5,1 can,190
+170051,1139fd69-7509-4a60-8164-8f7337722b04,tomato,6,1 tbsp,15
+170320,58d1a365-5699-4a3d-9485-26b7169bdbd8,cheeseburger,1,1 item 4 oz,119
+170328,ff0eea36-a1f5-43ce-a30e-ff09f99a31e7,burger,1,1 sandwich,99
+170471,ec567ced-ce88-4e69-ab0d-bb578533ed66,mixed vegetables,1,0.33 package (10 oz),95
+170471,ec567ced-ce88-4e69-ab0d-bb578533ed66,mixed vegetables,2,1 package (10 oz),284
+170471,ec567ced-ce88-4e69-ab0d-bb578533ed66,mixed vegetables,3,1 pack (2-1/2 lb),1134
+170654,f709cf43-b3cf-4b11-86c3-425240052e5c,trail mix,1,1.5 oz,42
+170654,f709cf43-b3cf-4b11-86c3-425240052e5c,trail mix,2,1 oz,28.35
+170654,f709cf43-b3cf-4b11-86c3-425240052e5c,trail mix,3,1 cup,150
+170655,539ae331-87e9-4e5f-9ce7-bfb02a341060,mixed nuts snack,1,1 oz,28.35
+170655,539ae331-87e9-4e5f-9ce7-bfb02a341060,mixed nuts snack,2,1 cup,146
+170655,539ae331-87e9-4e5f-9ce7-bfb02a341060,mixed nuts snack,3,1.5 oz,42
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,1,1 serving 5 servings per 22.85 oz package,129
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,2,1 serving 5 servings per 24.2 oz package,143
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,3,1 package 24.2 oz pizza,713
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,4,1 package 10.9 oz pizza,354
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,5,1 serving 2 servings per 10.9 oz package,177
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,vegetable pizza,6,1 package 22.85 oz pizza,644
+170720,03f806c0-64d8-4179-8750-0d76300ac2ac,big mac,1,1 item 7.6 oz,219
+170721,5cc84000-2867-4044-8fc8-82fbf4fe3606,french fries,1,1 large serving,154
+170721,5cc84000-2867-4044-8fc8-82fbf4fe3606,french fries,2,1 small serving,71
+170721,5cc84000-2867-4044-8fc8-82fbf4fe3606,french fries,3,1 medium serving,117
+170721,5cc84000-2867-4044-8fc8-82fbf4fe3606,french fries,4,1 kids serving,31
+170721,0335c6c4-8fa5-401d-a209-3e243390d782,fries,1,1 large serving,154
+170721,0335c6c4-8fa5-401d-a209-3e243390d782,fries,2,1 small serving,71
+170721,0335c6c4-8fa5-401d-a209-3e243390d782,fries,3,1 medium serving,117
+170721,0335c6c4-8fa5-401d-a209-3e243390d782,fries,4,1 kids serving,31
+170764,b2042e56-c1b0-45a8-bfe0-e0957a549a4b,chicken taco,1,1 each taco,98
+170857,ca9250cd-0737-4866-82d0-e92379ba73fa,cream,1,"1 container, individual",11.1
+170857,ca9250cd-0737-4866-82d0-e92379ba73fa,cream,2,1 fl oz,30
+170857,ca9250cd-0737-4866-82d0-e92379ba73fa,cream,3,1 tbsp,15
+170857,ca9250cd-0737-4866-82d0-e92379ba73fa,cream,4,1 cup,240
+170899,b3339a11-3f12-4cd1-9337-887a8f52f770,cheddar cheese,1,1 slice (1 oz),28
+170899,b3339a11-3f12-4cd1-9337-887a8f52f770,cheddar cheese,2,1 slice (3/4 oz),21
+170899,b3339a11-3f12-4cd1-9337-887a8f52f770,cheddar cheese,3,1 slice (2/3 oz),19
+170903,46f41d07-bd91-46d9-9771-2aeaf34d4264,greek yogurt,1,1 container (7 oz),200
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,1,1 bottle Gerber First Food (4 fl oz),125
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,2,1 fl oz,31.7
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,3,1 bottle Beech-Nut Stage I (4 fl oz),125
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,4,1 bottle Earth's Best (4.2 fl oz),131
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,5,1 jar,127
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,apple,6,1 bottle Heinz Strained (4 fl oz),125
+171053,4ee31155-d2b9-4b18-b178-168b3d8b5b5e,fried chicken,1,"1 cup, chopped or diced",140
+171053,4ee31155-d2b9-4b18-b178-168b3d8b5b5e,fried chicken,2,1 unit (yield from 1 lb ready-to-cook chicken),155
+171053,4ee31155-d2b9-4b18-b178-168b3d8b5b5e,fried chicken,3,"0.5 chicken, bone and skin removed",258
+171180,5a8d721f-4abb-4e16-8d26-f2f0505094de,broth,1,1 cup,220
+171180,5a8d721f-4abb-4e16-8d26-f2f0505094de,broth,2,1 carton 32 oz,928
+171247,ec030c0e-39a1-470a-867c-fee1a314f5a9,parmesan cheese,1,1 oz,28.35
+171247,ec030c0e-39a1-470a-867c-fee1a314f5a9,parmesan cheese,2,1 cup,100
+171247,ec030c0e-39a1-470a-867c-fee1a314f5a9,parmesan cheese,3,1 tbsp,5
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,orange juice,1,1 fl oz,31.2
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,orange juice,2,1 bottle Gerber Second Foods (4 fl oz),125
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,orange juice,3,1 jar,127
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,orange juice,4,1 bottle Heinz Strained (4 fl oz),125
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,orange juice,5,1 bottle Beech-Nut Stage 3 (4 fl oz),125
+171413,d947b92b-5a56-4cdc-866f-4ad38a1a8386,olive oil,1,1 tablespoon,13.5
+171413,d947b92b-5a56-4cdc-866f-4ad38a1a8386,olive oil,2,1 tsp,4.5
+171413,d947b92b-5a56-4cdc-866f-4ad38a1a8386,olive oil,3,1 cup,216
+171513,a91421cb-f3b8-4068-b465-8a2559aa0d19,grilled chicken patty,1,1 patty,60
+171513,a91421cb-f3b8-4068-b465-8a2559aa0d19,grilled chicken patty,2,3 oz,85
+171534,79d2e29f-c040-4871-9e43-7505ebfe50da,grilled chicken breast,1,3 oz,85
+171534,79d2e29f-c040-4871-9e43-7505ebfe50da,grilled chicken breast,2,1 piece,196
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,avocado,1,"1 cup, pureed",230
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,avocado,2,"1 cup, cubes",150
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,avocado,3,"1 cup, sliced",146
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,avocado,4,1 NLEA Serving,50
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,avocado,5,"1 avocado, NS as to Florida or California",201
+171880,c15b557d-0937-40ff-9089-92742aa4c858,coffee with milk,1,1 cup,262
+171881,6cf4c76f-fd2f-4ec9-8372-722f7a5d5909,black coffee,1,1 cup,248
+171881,00511fec-5452-415f-bc47-205af357e4f6,coffee,1,1 cup,248
+172041,330c9881-1438-4239-8b8b-081b3f4e4e70,pizza crust,1,1 pizza,728
+172041,330c9881-1438-4239-8b8b-081b3f4e4e70,pizza crust,2,1 slice,100
+172041,a006c064-3516-48e9-b5d9-c2f06f2c600d,red paprika pizza,1,1 pizza,728
+172041,a006c064-3516-48e9-b5d9-c2f06f2c600d,red paprika pizza,2,1 slice,100
+172053,738c13d8-c7a2-4106-ba94-d7e13813493d,pepperoni pizza slice,1,1 slice,113
+172053,738c13d8-c7a2-4106-ba94-d7e13813493d,pepperoni pizza slice,2,1 pizza,909
+172074,c498caa1-0408-44cf-8f51-1dd1c220f5ba,salad greens,1,1 item 3.1 oz,87
+172074,33cb5934-96d6-4250-b653-aad81793b835,side salad,1,1 item 3.1 oz,87
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,cheese,1,1 slice (1 oz),28
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,cheese,2,"1 cup, shredded",113
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,cheese,3,"1 cup, diced",132
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,cheese,4,1 oz,28.35
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,cheese,5,1 cubic inch,17
+172225,b065425b-cbc7-4416-ba5d-34d9d52fbe60,buttermilk curry,1,1 cup,245
+172673,792ce926-772c-4f45-a3fb-73cd0e3df2d4,bread slice,1,1 oz,28.35
+172673,792ce926-772c-4f45-a3fb-73cd0e3df2d4,bread slice,2,"1 slice (5"" x 3"" x 1/2"")",40
+172674,f1c4938f-d96c-41d3-8024-119b430ae252,toast,1,"1 slice (5"" x 3"" x 1/2"")",37
+172674,f1c4938f-d96c-41d3-8024-119b430ae252,toast,2,1 oz,28.35
+172751,92c1f5fe-00f9-4c4a-af03-70930930d252,croutons,1,0.5 oz,14.2
+172751,92c1f5fe-00f9-4c4a-af03-70930930d252,croutons,2,1 cup,30
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,1,1 shell,12.9
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,2,"1 miniature (3"" dia)",5
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,3,"1 large (6-1/2"" dia)",21
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,4,1 oz,28.35
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,5,"1 medium (approx 5"" dia)",13.3
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,taco shell,6,1 taco,12.7
+173040,01a38794-4d9f-4711-a123-e6161e779f99,grapes,1,1 grape,6
+173177,5bd76dc3-aaa7-421c-9685-75c07e350a55,whey protein,1,3 scoop,86
+173177,bc275276-e24f-42fb-a9be-8ea1cd043f39,whey protein powder,1,3 scoop,86
+173279,a73119bb-d2b5-4f2d-ab04-3e93652333f0,pepperoni pizza,1,1 pizza,744
+173279,a73119bb-d2b5-4f2d-ab04-3e93652333f0,pepperoni pizza,2,1 slice,96
+173291,ef8d5e96-860b-4b2c-a8a8-8b6ed731b4ea,paneer pizza,1,1 slice,112
+173291,ef8d5e96-860b-4b2c-a8a8-8b6ed731b4ea,paneer pizza,2,1 pizza,897
+173291,a6f03ab1-6511-42ea-89b6-139084a93475,pizza slice,1,1 slice,112
+173291,a6f03ab1-6511-42ea-89b6-139084a93475,pizza slice,2,1 pizza,897
+173291,8463404d-ef51-4cea-952f-a45774eece0a,veg pizza,1,1 slice,112
+173291,8463404d-ef51-4cea-952f-a45774eece0a,veg pizza,2,1 pizza,897
+173410,2f5ae50f-b8f2-42e4-81b6-5c90cc3ecbd8,butter,1,"1 pat (1"" sq, 1/3"" high)",5
+173410,2f5ae50f-b8f2-42e4-81b6-5c90cc3ecbd8,butter,2,1 stick,113
+173410,2f5ae50f-b8f2-42e4-81b6-5c90cc3ecbd8,butter,3,1 cup,227
+173410,2f5ae50f-b8f2-42e4-81b6-5c90cc3ecbd8,butter,4,1 tbsp,14.2
+173424,8c185899-8079-44b4-97e1-2664a5854804,boiled egg,1,1 tbsp,8.5
+173424,8c185899-8079-44b4-97e1-2664a5854804,boiled egg,2,"1 cup, chopped",136
+173424,8c185899-8079-44b4-97e1-2664a5854804,boiled egg,3,1 large,50
+173466,8a425a00-f8c8-4152-a135-1f21aed248d8,ice cream bar,1,1 bar,50
+173688,666f2bf0-7dbc-4186-9358-a16517eb8029,salmon fillet,1,0.5 fillet,198
+173688,666f2bf0-7dbc-4186-9358-a16517eb8029,salmon fillet,2,3 oz,85
+173706,6b8de153-9260-423b-92a5-8ec17f5f6822,tuna sushi,1,3 oz,85
+173889,42c42cec-2e6a-40cb-af0b-a26f7805f2c4,cereal,1,1.5 cup (1 NLEA serving),32
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,1,1 NLEA serving,126
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,2,"1 extra large (9"" or longer)",152
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,3,"1 large (8"" to 8-7/8"" long)",136
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,4,"1 cup, sliced",150
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,5,"1 small (6"" to 6-7/8"" long)",101
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,6,"1 extra small (less than 6"" long)",81
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,7,"1 medium (7"" to 7-7/8"" long)",118
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,banana,8,"1 cup, mashed",225
+174038,260de9a2-e858-4474-a276-44030960f09d,beef patty,1,3 oz,85
+174158,0bcf87fe-e545-4b82-bf87-4c0d8fdf7376,water,1,1 cup,237
+174158,0bcf87fe-e545-4b82-bf87-4c0d8fdf7376,water,2,1 fl oz,29.6
+174158,0bcf87fe-e545-4b82-bf87-4c0d8fdf7376,water,3,1 ml,1
+174842,879052e8-d821-4cbe-bd88-53539d26090e,soda water,1,1 can or bottle (12 fl oz),355
+174842,879052e8-d821-4cbe-bd88-53539d26090e,soda water,2,1 fl oz,29.6
+174842,879052e8-d821-4cbe-bd88-53539d26090e,soda water,3,1 can or bottle (16 fl oz),474
+174913,e4da80ae-9f71-443d-b26c-2bbed715ea9e,bread,1,1 oz,28.35
+174913,e4da80ae-9f71-443d-b26c-2bbed715ea9e,bread,2,1 slice,29
+175165,55086c1d-858a-460c-8e56-09a7db875343,catfish,1,3 oz,85
+175165,55086c1d-858a-460c-8e56-09a7db875343,catfish,2,1 fillet,159
+746784,d0c6e018-b0a5-4582-8f8d-ceac809e549a,sugar,1,1 teaspoon,4
+746784,d0c6e018-b0a5-4582-8f8d-ceac809e549a,sugar,2,1 cup,188
+746784,d0c6e018-b0a5-4582-8f8d-ceac809e549a,sugar,3,1 RACC,8
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,1,1 regular,160
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,2,1 oz yields,20
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,3,1 thick,240
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,4,1 cup,135
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,5,1 cubic inch,17
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,6,"1 piece/slice, any size",30
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,beef steak,7,1 thin,120
+2706538,a6958211-43b7-446c-a785-262846a37ae0,biryani,1,1 cup,196
+2707430,211d91b8-eaa4-4e50-a00e-c1a57cd1e677,sambhar,1,1 cup,248
+2709129,d9493182-3b47-4fd6-8fd3-39b4761d11b7,dosa crepe,1,1 large,523
+2709129,d9493182-3b47-4fd6-8fd3-39b4761d11b7,dosa crepe,2,1 medium,267
+2709129,d9493182-3b47-4fd6-8fd3-39b4761d11b7,dosa crepe,3,1 surface inch,3.4
+2709129,d9493182-3b47-4fd6-8fd3-39b4761d11b7,dosa crepe,4,1 small,113
+2709130,24a866dc-fd87-4fd4-bc4b-0fdfd57b84a7,medu vada,1,"1 item, any size",30
+2709631,1a343a80-011d-4c3b-9e3b-6821503d4b36,palak paneer,1,1 cup,200
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,cappuccino,1,1 fl oz,30
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,cappuccino,2,1 cup (8 fl oz),240
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,cappuccino,3,1 small,360
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,cappuccino,4,1 medium,480
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,cappuccino,5,1 large,600

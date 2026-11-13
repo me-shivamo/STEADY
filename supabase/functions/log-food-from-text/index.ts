@@ -1,11 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  resolveFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, unsureReply, estimateNote,
-  capRoughConfidence, entryQuantityLabel, stripRoughMarker,
-  type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood,
+  resolveFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, usdaModeFromEnv, effectiveUsda, aiMacrosModeFromEnv, effectiveAiMacros, unsureReply, estimateNote,
+  capRoughConfidence, entryQuantityLabel, stripRoughMarker, weighFoods, parseFromDescription, portionColumns,
+  type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood, type ResolveResult,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
-import { SYSTEM_PROMPT } from '../_shared/foodParsePrompt.ts'
+import { SYSTEM_PROMPT, SYSTEM_PROMPT_V2, editInstructionV2 } from '../_shared/foodParsePrompt.ts'
+import { parsedFoodsFromV2 } from '../_shared/parseV2.ts'
+import { effectivePortion, loadRegion, portionModeFromEnv } from '../_shared/portionStore.ts'
+import { calibrationLearnedNote, parseCalibrationStatement } from '../_shared/portionCalibration.ts'
+import {
+  editLessonCandidate, handleCalibrationApi, handleCalibrationStatement, learnFromEdit, loadMealEntries, storedEntryFor,
+  type EditLesson,
+} from '../_shared/portionCalibrationApi.ts'
+import { keptPortion, sameAmount, unitParse } from '../_shared/editPortions.ts'
+import type { PortionResult } from '../_shared/portions.ts'
 import { parseAiContent, AI_PARSE_FAILED_MESSAGE, type AiContentParse } from '../_shared/parseAiContent.ts'
 import { matchPreviousEntries, prevRef } from '../_shared/editMatch.ts'
 
@@ -173,7 +182,29 @@ Deno.serve(async (req) => {
     const editMealLogId: string | undefined = body.meal_log_id ?? undefined
     const previousEntries: PreviousEntry[] = Array.isArray(body.previous_entries) ? body.previous_entries : []
 
+    // v1.2 Phase 5 (PORTION_MODE secret: legacy | shadow | eval_only | table). Unset
+    // or misspelt = legacy, and every line below then runs exactly as before:
+    // V1 prompt, the parse model's grams, no portion columns.
+    const portionEff = effectivePortion(portionModeFromEnv(Deno.env.get('PORTION_MODE')), user.email)
+    const portionOn = portionEff.mode !== 'legacy'
+    const tableMode = portionEff.mode === 'table'
+
+    // The app's personal-calibration API (founder 2026-11-13, spec k16): list / undo the user's own
+    // unit sizes in every mode (they are the user's data: always visible and undoable, founder l4);
+    // saving a follow-up or chip answer only where the engine applies it (portion mode not legacy).
+    // Applying calibrations in legacy mode too (founder l4a) is the tracked follow-up build.
+    if (body.portion_calibration && typeof body.portion_calibration === 'object') {
+      const r = await handleCalibrationApi(supabase, user.id, body.portion_calibration, portionOn)
+      return json(r.body, r.status)
+    }
+
     if (!text) return json({ error: 'text is required' }, 400)
+
+    // The user's region (profiles.timezone) for the portion engine, read alongside the chat history.
+    const regionP = portionOn ? loadRegion(supabase, user.id) : null
+    // Table-mode edit: the meal's stored entries, read once (unchanged foods keep their grams; a gram edit
+    // may teach a calibration). Filtered by user, so another user's meal reads as empty.
+    const storedP = tableMode && editMealLogId ? loadMealEntries(supabase, user.id, editMealLogId) : null
 
     // Captured now, before any DB writes — used to timestamp the user's chat
     // bubble. Without this, saveChatTurn() (called at the very end, after the
@@ -182,6 +213,20 @@ Deno.serve(async (req) => {
     // place the meal card above the user's text instead of below it.
     const requestStartedAt = new Date().toISOString()
 
+    // Table mode: "my cup is 350 ml", "forget my cup size", "what are my portion
+    // sizes" are handled here, deterministically, before any model call. A message
+    // that does not match exactly keeps going to the parse model as a log.
+    if (tableMode && !editMealLogId) {
+      const intent = parseCalibrationStatement(text)
+      if (intent) {
+        const r = await handleCalibrationStatement(supabase, user.id, intent, text)
+        if (r.handled && r.reply) {
+          await saveChatTurn(supabase, user.id, logged_date, text, r.reply, null, requestStartedAt)
+          return json({ success: true, type: 'answer', reply: r.reply, water_logged: false, portion_calibration: r.calibration })
+        }
+      }
+    }
+
     // ── 3. Load today's chat history ───────────────────────────────────────────
     const historyMessages = await loadChatHistory(supabase, user.id, logged_date)
 
@@ -189,7 +234,7 @@ Deno.serve(async (req) => {
     // System prompt sets the persona. History gives context. User message is new.
     // No data dump — the AI calls tools if it needs data.
     const messages: Array<Record<string, unknown>> = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: tableMode ? SYSTEM_PROMPT_V2 : SYSTEM_PROMPT },
       { role: 'system', content: `Current date: ${logged_date}. User's timezone context: messages are in local time.` },
     ]
 
@@ -199,7 +244,16 @@ Deno.serve(async (req) => {
     // even a pure quantity change. This is belt-and-suspenders: the rescale
     // guard after resolveFoods() enforces the same rule deterministically,
     // so a model that ignores this instruction still can't drift the numbers.
-    if (editMealLogId && previousEntries.length > 0) {
+    if (editMealLogId && previousEntries.length > 0 && tableMode) {
+      // V2: the same rule, but the model keeps count/unit/size, not grams (none in the lines either).
+      messages.push({
+        role: 'system',
+        content: editInstructionV2(previousEntries.map((e, i) =>
+          `- [${prevRef(i)}] "${e.name}"` +
+          (e.macro_source === 'label' ? ' [from a nutrition label — these are exact printed values, not estimates]' : '')
+        ).join('\n')),
+      })
+    } else if (editMealLogId && previousEntries.length > 0) {
       // Each food carries a short ref (p1, p2, …) that the model echoes as
       // prev_id on a food it kept, so a RENAMED food still finds its entry
       // (see _shared/editMatch.ts).
@@ -285,6 +339,19 @@ Deno.serve(async (req) => {
         error: "I couldn't find any food in that. Try describing what you ate, e.g. \"2 eggs and toast\".",
       }, 422)
     }
+    // Table mode: the V2 parse names amounts, not grams. Validate each food; a
+    // stated amount whose number is not in the user's text is dropped (counted).
+    let parsedFoods = aiResult.foods as ParsedFood[]
+    if (tableMode) {
+      const v2 = parsedFoodsFromV2(aiResult.foods, text)
+      parsedFoods = v2.foods
+      if (v2.invented > 0) console.log(`[portion] invented_stated ${v2.invented}`)
+      if (parsedFoods.length === 0) {
+        return json({
+          error: "I couldn't find any food in that. Try describing what you ate, e.g. \"2 eggs and toast\".",
+        }, 422)
+      }
+    }
 
     // On an edit, deterministically rescale any food that's the same as one of
     // the previous entries (by normalized name, or by the prev_id ref the
@@ -300,7 +367,7 @@ Deno.serve(async (req) => {
     // edit a rough entry's "· rough estimate" marker comes back in the text.
     // It is a flag, not part of the food: if the parse folded it into a name,
     // strip it before matching/resolving (entryQuantityLabel handles labels).
-    const allParsed = (aiResult.foods as ParsedFood[]).map((f) =>
+    const allParsed = parsedFoods.map((f) =>
       editMealLogId && typeof f.name === 'string' ? { ...f, name: stripRoughMarker(f.name) || f.name } : f)
     // The previous entry each food is (by name, else by the model's prev_id
     // for a renamed food), or undefined for a new food or a fresh log.
@@ -311,12 +378,61 @@ Deno.serve(async (req) => {
     const freshIndices: number[] = []
     const rescaled: ResolvedFood[] = new Array(allParsed.length)
 
+    // Table mode: the grams of a kept food come from the portion engine, run on
+    // the previous entry's row (the V2 parse carries no grams). Legacy: none.
+    const memoryMode = memoryModeFromEnv(Deno.env.get('RESOLVER_MEMORY'))
+    const portionCtx = portionOn ? { ...portionEff, region: await regionP!, userText: text, channel: 'text' as const } : undefined
+    const stored = storedP ? await storedP : null
+    const storedFor = allParsed.map((f, i) => (previousFor[i] ? storedEntryFor(stored, previousFor[i]!.food_item_id, previousFor[i]!.name) : undefined))
+    // a kept food whose amount the edit did not change keeps its stored grams and numbers
+    const unchanged = allParsed.map((f, i) => tableMode && !!previousFor[i] && sameAmount(f.portion_parse, storedFor[i], f.name))
+    // a food whose unit amount became a weight ("2 katori" -> "300 g") may teach this user's unit
+    const lessonOf = allParsed.map((f, i) => (tableMode && !unchanged[i] ? editLessonCandidate(storedFor[i], f.portion_parse) : null))
+    // one weighing batch: every food, plus each lesson's data default (the unit on this food, no personal data)
+    const lessonIdx = lessonOf.flatMap((l, i) => (l && previousFor[i]?.food_item_id ? [i] : []))
+    const weighedAll: Array<PortionResult | null> = tableMode && editMealLogId
+      ? await weighFoods(supabase, [
+          ...allParsed.map((f, i) => ({
+            parse: f.portion_parse ?? parseFromDescription(f),
+            phrase: f.name,
+            foodItemId: previousFor[i]?.food_item_id ?? null,
+            parseG: f.quantity_g,
+          })),
+          ...lessonIdx.map((i) => ({
+            parse: unitParse(lessonOf[i]!.unit, lessonOf[i]!.size), phrase: allParsed[i].name,
+            foodItemId: previousFor[i]!.food_item_id, parseG: 0, personal: false,
+          })),
+        ], { userId: user.id, memory: memoryMode, portion: portionCtx! })
+      : []
+    const weighed = weighedAll.slice(0, allParsed.length)
+    const lessons: EditLesson[] = lessonIdx.flatMap((i, k) => {
+      const w = weighed[i]
+      const d = weighedAll[allParsed.length + k]
+      const l = lessonOf[i]!
+      if (!w || w.portion.source !== 'stated') return []
+      return [{
+        foodItemId: previousFor[i]!.food_item_id!, foodName: previousFor[i]!.name, unit: l.unit, size: l.size,
+        gramsPerUnit: w.grams / l.count,
+        dataDefaultPerUnit: d && d.portion.source !== 'ai' ? d.grams : null,
+      }]
+    })
+
     // Same food, new quantity: the previous entry's numbers × new/old grams.
-    const rescaleFromPrevious = (f: ParsedFood, prev: PreviousEntry): ResolvedFood => {
-      const ratio = f.quantity_g / prev.quantity_g
+    // `w` (table mode) is the engine's weight for it; legacy passes none. `keep` (table mode, the amount
+    // did not change): ratio 1, the stored grams and numbers exactly.
+    const rescaleFromPrevious = (f: ParsedFood, prev: PreviousEntry, w?: PortionResult | null, keep = false, i = -1): ResolvedFood => {
+      if (tableMode && (keep || !w)) {
+        return {
+          ...f, quantity_g: prev.quantity_g, calories: prev.calories, protein_g: prev.protein_g, carbs_g: prev.carbs_g,
+          fat_g: prev.fat_g, fiber_g: prev.fiber_g, food_item_id: prev.food_item_id, macro_source: prev.macro_source ?? 'user_created',
+          resolution: 'edit_rescale', portion: keptPortion(i >= 0 ? storedFor[i] : undefined, prev.quantity_g), options: [],
+        }
+      }
+      const qf = w ? { ...f, quantity_g: w.grams } : f
+      const ratio = qf.quantity_g / prev.quantity_g
       const r1 = (n: number) => Math.round(n * ratio * 10) / 10
       return {
-        ...f,
+        ...qf,
         calories: r1(prev.calories),
         protein_g: r1(prev.protein_g),
         carbs_g: r1(prev.carbs_g),
@@ -325,6 +441,10 @@ Deno.serve(async (req) => {
         food_item_id: prev.food_item_id,
         macro_source: prev.macro_source ?? 'user_created',
         resolution: 'edit_rescale',
+        ...(w ? {
+          portion: { ...w.portion, source: w.portion.source === 'ai' ? 'edit_rescale' as const : w.portion.source, needs_follow_up: w.needs_follow_up },
+          options: w.options,
+        } : {}),
       }
     }
 
@@ -334,7 +454,7 @@ Deno.serve(async (req) => {
       // (e.g. a new label_macros from a re-scanned label) and the previous
       // entry actually has a usable macro_source to trust.
       if (prev && !f.label_macros && prev.food_item_id && prev.quantity_g > 0) {
-        rescaled[i] = rescaleFromPrevious(f, prev)
+        rescaled[i] = rescaleFromPrevious(f, prev, weighed[i], unchanged[i], i)
         rescaledIndices.push(i)
       } else {
         freshIndices.push(i)
@@ -351,8 +471,13 @@ Deno.serve(async (req) => {
           openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
-          memory: memoryModeFromEnv(Deno.env.get('RESOLVER_MEMORY')),
+          memory: memoryMode,
           search: effectiveSearch(searchModeFromEnv(Deno.env.get('RESOLVER_SEARCH')), user.email),
+          // RESOLVER_USDA (api | eval_only | local): USDA from the API tiers, or from the rows 055 stored (Phase 7)
+          usda: effectiveUsda(usdaModeFromEnv(Deno.env.get('RESOLVER_USDA')), user.email),
+          // RESOLVER_AI_MACROS (legacy | eval_only | computed): AI estimates with computed, category-bounded calories
+          aiMacros: effectiveAiMacros(aiMacrosModeFromEnv(Deno.env.get('RESOLVER_AI_MACROS')), user.email),
+          ...(portionCtx ? { portion: portionCtx } : {}),
         })
       : { foods: [] as ResolvedFood[], totals: null, unresolved: [] as UnresolvedFood[] }
 
@@ -370,7 +495,7 @@ Deno.serve(async (req) => {
       const prev = previousFor[origIdx]
       if (prev && !f.label_macros && prev.quantity_g > 0) {
         console.warn(`[edit] no usable estimate for "${f.name}" — keeping its previous entry's numbers`)
-        rescaled[origIdx] = rescaleFromPrevious(f, prev)
+        rescaled[origIdx] = rescaleFromPrevious(f, prev, weighed[origIdx], unchanged[origIdx], origIdx)
         rescaledIndices.push(origIdx)
       } else {
         leftOut.push({ ...u, index: origIdx })
@@ -413,6 +538,9 @@ Deno.serve(async (req) => {
     rescaledIndices.forEach((origIdx) => { placed[origIdx] = rescaled[origIdx] })
     placeFoods(placed, freshIndices, freshResolved)
     const foods: ResolvedFood[] = placed.filter((f): f is ResolvedFood => f !== undefined)
+    // table mode: the resolver's own lines (the cooking-fat rule) go after the user's foods
+    const extras = (freshResolved as Partial<ResolveResult>).extras
+    if (tableMode && extras?.length) foods.push(...extras)
 
     // Founder decision D5, "log the rest, flag the unknown": a food with no
     // usable number at all is left out and named in the coach note, and the
@@ -447,6 +575,7 @@ Deno.serve(async (req) => {
     let mealLog: { id: string }
     // On an edit: the meal's caption, which the edit leaves alone.
     let keptCaption: string | null = null
+    let learnedNote: string | null = null
 
     if (editMealLogId) {
       // Ownership check only. The caption is what the user typed when they
@@ -463,6 +592,18 @@ Deno.serve(async (req) => {
       if (!existing) return json({ error: 'Meal not found' }, 404)
       mealLog = { id: existing.id }
       keptCaption = existing.caption ?? null
+
+      // Table mode: an edit that turns "2 katori" into "300 g" teaches us this user's katori of this
+      // food (spec k16 b), within bounds and at low confidence until a second edit confirms it; the reply
+      // says what was learned and how to undo it.
+      if (tableMode && lessons.length) {
+        const learned = await learnFromEdit(supabase, user.id, lessons)
+        if (learned.length) {
+          console.log(`[calibration] learned ${learned.length} portion size(s) from an edit`)
+          const first = lessons.find((l) => l.unit === learned[0].unit)
+          learnedNote = calibrationLearnedNote(learned.map((x) => x.desc), `${(first?.foodName ?? '').toLowerCase()} ${learned[0].unit}`.trim())
+        }
+      }
 
       const { error: delErr } = await supabase
         .from('food_entries')
@@ -483,27 +624,33 @@ Deno.serve(async (req) => {
     // returned: a shared verified row, or one of this user's own private rows
     // (AI estimates and personal USDA picks — since 050 those are never
     // shared). A single batched insert instead of one round trip per food.
-    const { data: savedEntries, error: entriesErr } = await supabase
-      .from('food_entries')
-      .insert(foods.map((food) => ({
-        meal_log_id: mealLog.id,
-        user_id: user.id,
-        food_item_id: food.food_item_id,
-        food_name: food.name,
-        quantity_g: food.quantity_g,
-        // "1 plate · rough estimate" for a rough entry: the one D5 flag the
-        // installed app shows on the card (see entryQuantityLabel).
-        quantity_label: entryQuantityLabel(food),
-        calories: food.calories,
-        protein_g: food.protein_g,
-        carbs_g: food.carbs_g,
-        fat_g: food.fat_g,
-        fiber_g: food.fiber_g ?? 0,
-        source: 'ai_text',
-        ai_confidence: food.confidence,
-        macro_source: food.macro_source,
-      })))
-      .select()
+    const entryRows = (withPortion: boolean) => foods.map((food) => ({
+      meal_log_id: mealLog.id,
+      user_id: user.id,
+      food_item_id: food.food_item_id,
+      food_name: food.name,
+      quantity_g: food.quantity_g,
+      // "1 plate · rough estimate" for a rough entry: the one D5 flag the
+      // installed app shows on the card (see entryQuantityLabel).
+      quantity_label: entryQuantityLabel(food),
+      calories: food.calories,
+      protein_g: food.protein_g,
+      carbs_g: food.carbs_g,
+      fat_g: food.fat_g,
+      fiber_g: food.fiber_g ?? 0,
+      source: 'ai_text',
+      ai_confidence: food.confidence,
+      macro_source: food.macro_source,
+      // table mode only: what the portion was (054's five columns)
+      ...(withPortion ? portionColumns(food) : {}),
+    }))
+    let { data: savedEntries, error: entriesErr } = await supabase.from('food_entries').insert(entryRows(tableMode)).select()
+    // table mode with 054's columns absent (054 rolled back while the flag still says table): the meal is
+    // still logged, without the portion columns, instead of failing every insert
+    if (entriesErr && tableMode && /portion_(unit|size|count|source|confidence)/.test(String(entriesErr.message ?? ''))) {
+      console.error('[portion] food_entries has no portion columns: logged without them')
+      ;({ data: savedEntries, error: entriesErr } = await supabase.from('food_entries').insert(entryRows(false)).select())
+    }
     if (entriesErr) throw entriesErr
 
     // The coach_note is the AI's personalised insight about this specific meal.
@@ -517,7 +664,7 @@ Deno.serve(async (req) => {
       leftOut.map((u) => u.name),
     )
     const baseNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
-    const coachNote = note ? `${baseNote} ${note}` : baseNote
+    const coachNote = [baseNote, note, learnedNote].filter((x) => !!x).join(' ')
     // Not on an edit: the meal's chat turn was saved when it was logged.
     // Saving the edit too replayed the food summary as a new user bubble on
     // reload and counted the meal twice in the model's history.

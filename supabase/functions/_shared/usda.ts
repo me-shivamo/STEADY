@@ -53,7 +53,21 @@ const NUTRIENT_IDS = {
 const SEARCH_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search'
 const TIMEOUT_MS = 4000
 
-export async function searchUsda(query: string, apiKey: string): Promise<UsdaCandidate[]> {
+// Energy nutrient ids in order of preference. The api path keeps 1008 only (byte-identical to
+// before v1.2 Phase 7). The Branded-only path (RESOLVER_USDA local, spec (g) 8a) falls back
+// 1008 → 2048 (Atwater specific) → 2047 (Atwater general), the order 055 imports Foundation by.
+const ENERGY_API: readonly number[] = [NUTRIENT_IDS.calories]
+export const ENERGY_LOCAL: readonly number[] = [1008, 2048, 2047]
+
+export interface SearchUsdaOpts {
+  // RESOLVER_USDA local: Foundation, SR Legacy and FNDDS live in our own database (migrations 055/056,
+  // search_usda_local), so the API is asked for Branded products only.
+  brandedOnly?: boolean
+}
+
+export async function searchUsda(query: string, apiKey: string, opts: SearchUsdaOpts = {}): Promise<UsdaCandidate[]> {
+  if (opts.brandedOnly) return search(query, apiKey, ['Branded'], ENERGY_LOCAL)
+
   // Three tiers, most trustworthy first:
   //   1. Foundation/SR Legacy — lab-measured generic foods
   //   2. Survey (FNDDS)       — prepared & mixed dishes
@@ -84,7 +98,7 @@ export async function searchUsda(query: string, apiKey: string): Promise<UsdaCan
 // only), 400 on tier 2, get flagged usdaDown, fall through to a pure LLM guess,
 // and — because usdaDown also sets skipCanonicalCache — never get cached, so
 // every repeat log of the same dish re-rolled a fresh guess.
-async function search(query: string, apiKey: string, dataTypes: string[]): Promise<UsdaCandidate[]> {
+async function search(query: string, apiKey: string, dataTypes: string[], energyIds: readonly number[] = ENERGY_API): Promise<UsdaCandidate[]> {
   const params = new URLSearchParams({
     api_key: apiKey,
     query,
@@ -109,11 +123,11 @@ async function search(query: string, apiKey: string, dataTypes: string[]): Promi
   const foods: Array<Record<string, unknown>> = data.foods ?? []
 
   return foods
-    .map(toCandidate)
+    .map((f) => toCandidate(f, energyIds))
     .filter((c): c is UsdaCandidate => c !== null)
 }
 
-function toCandidate(food: Record<string, unknown>): UsdaCandidate | null {
+function toCandidate(food: Record<string, unknown>, energyIds: readonly number[]): UsdaCandidate | null {
   const nutrients = (food.foodNutrients ?? []) as Array<Record<string, unknown>>
 
   const value = (id: number): number | null => {
@@ -123,7 +137,8 @@ function toCandidate(food: Record<string, unknown>): UsdaCandidate | null {
     return n && typeof n.value === 'number' ? n.value : null
   }
 
-  const calories = value(NUTRIENT_IDS.calories)
+  let calories: number | null = null
+  for (const id of energyIds) { calories = value(id); if (calories !== null) break }
   if (calories === null) return null // no energy value → useless candidate
 
   // foodMeasures rides along in the same search response — no extra request.

@@ -12,6 +12,8 @@
 // Run:
 //   npx tsx scripts/eval/run.ts [--dataset=dataset.json] [--ids=a,b,c]
 //                               [--search=fts|ranked] [--repeat=1]
+//                               [--portion=legacy|table|table+proposed] [--region=IN|US]
+//                               [--usda=api|local] [--ai-macros=legacy|computed] [--out=path.json]
 //
 //   --dataset  which dataset file in scripts/eval/ (default dataset.json). The
 //              v4 format works too: optional per-field bands, and 'negative'
@@ -22,6 +24,16 @@
 //              same moment, no deploy, nothing written (spec §(d) run A).
 //   --repeat   run every case N times and report how many give the identical
 //              calories every time. Pass/fail uses the FIRST run.
+//   --portion  v1.2 Phase 5 (spec (g)7, Gate C): legacy (default: V1 prompt, parse grams) or table (the V2
+//              prompt, the same V2 validation production runs (_shared/parseV2.ts), grams from the portion
+//              engine; totals include the cooking-oil rule line exactly as production logs it).
+//              table+proposed also serves 'proposed' rows, i.e. what PORTION_MODE eval_only serves on live,
+//              which production table mode does NOT: run plain table for the go/no-go comparison.
+//   --region   IN (default) or US: the region the engine weighs for (spec (a)9).
+//   --usda     api (default) or local (search_usda_local, migrations 055/056 must be applied where you run).
+//   --ai-macros legacy (default) or computed (RESOLVER_AI_MACROS).
+//   --out      where to write the results (default: a name built from the options; never another run's file).
+//   Calibrations and memory never apply: persist:false + memory:'off' run every case cold.
 // Reads scripts/eval/.env.local for secrets (see .env.local.example). Results go
 // to results.json for the default dataset + fts, else
 // results-<dataset>-inprocess-<search>.json, so an fts and a ranked run of the
@@ -33,8 +45,9 @@ import { fileURLToPath } from 'node:url'
 import { basename, dirname, join } from 'node:path'
 import { config as loadEnv } from 'dotenv'
 
-import { resolveFoods, type ParsedFood } from '../../supabase/functions/_shared/macroResolver.ts'
-import { SYSTEM_PROMPT } from '../../supabase/functions/_shared/foodParsePrompt.ts'
+import { resolveFoods, type ParsedFood, type PortionContext } from '../../supabase/functions/_shared/macroResolver.ts'
+import { SYSTEM_PROMPT, SYSTEM_PROMPT_V2 } from '../../supabase/functions/_shared/foodParsePrompt.ts'
+import { parsedFoodsFromV2 } from '../../supabase/functions/_shared/parseV2.ts'
 import { isConsistent, type Band } from './metrics.ts'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -52,6 +65,21 @@ if (SEARCH !== 'fts' && SEARCH !== 'ranked') {
   process.exit(1)
 }
 const REPEAT = Math.max(1, Number(arg('repeat') ?? 1) || 1)
+const PORTION = arg('portion') ?? 'legacy'
+const REGION = arg('region') ?? 'IN'
+const USDA = arg('usda') ?? 'api'
+const AI_MACROS = arg('ai-macros') ?? 'legacy'
+const OUT = arg('out')
+for (const [name, v, ok] of [
+  ['portion', PORTION, ['legacy', 'table', 'table+proposed']], ['region', REGION, ['IN', 'US']],
+  ['usda', USDA, ['api', 'local']], ['ai-macros', AI_MACROS, ['legacy', 'computed']],
+] as const) {
+  if (!(ok as readonly string[]).includes(v)) { console.error(`--${name} must be one of ${ok.join(', ')} (got "${v}")`); process.exit(1) }
+}
+const TABLE = PORTION !== 'legacy'
+const PORTION_CTX: PortionContext | undefined = TABLE
+  ? { mode: 'table', proposed: PORTION === 'table+proposed', region: REGION as 'IN' | 'US', channel: 'text' }
+  : undefined
 
 const SUPABASE_URL = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -99,6 +127,10 @@ interface ExampleResult {
   // the log) and foods logged as flagged rough estimates — founder decision D5.
   unresolved?: string[]
   roughEstimates?: string[]
+  // table mode: each food's portion source ("food", "category", "ai" = R8, …) and confidence band
+  portionSources?: string[]
+  needsFollowUp?: number
+  timing?: { parse_ms: number; resolve_ms: number }
   parsedFoods?: ParsedFood[]
   // --repeat > 1 only: calories of every run, and whether they all agree.
   runCalories?: number[]
@@ -115,7 +147,7 @@ async function parseFoods(text: string): Promise<{ intent: string; foods: Parsed
     model: 'openai/gpt-4o-mini',
     temperature: 0,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: TABLE ? SYSTEM_PROMPT_V2 : SYSTEM_PROMPT },
       { role: 'system', content: `Current date: ${new Date().toISOString().split('T')[0]}. User's timezone context: messages are in local time.` },
       { role: 'user', content: text },
     ],
@@ -137,6 +169,8 @@ async function parseFoods(text: string): Promise<{ intent: string; foods: Parsed
   const json = await res.json()
   const content = json.choices[0].message.content as string
   const parsed = JSON.parse(content)
+  // table: the same V2 validation production runs (a stated amount not in the text is dropped)
+  if (TABLE) return { intent: String(parsed.intent), foods: parsedFoodsFromV2(parsed.foods, text).foods }
   return { intent: String(parsed.intent), foods: Array.isArray(parsed.foods) ? parsed.foods as ParsedFood[] : [] }
 }
 
@@ -146,7 +180,9 @@ function inRange(value: number, [lo, hi]: Band): boolean {
 
 // One parse → resolve pass, exactly as production runs it for a fresh log.
 async function logOnce(text: string) {
+  const t0 = Date.now()
   const { intent, foods: parsedFoods } = await parseFoods(text)
+  const t1 = Date.now()
   if (intent !== 'log' || parsedFoods.length === 0) {
     throw new Error(`expected a food log, got intent="${intent}"`)
   }
@@ -161,8 +197,13 @@ async function logOnce(text: string) {
     // Phase 4 A/B. Aliases still apply under memory:'off' (they are shared
     // verified data, not per-user memory), so ranked runs measure them too.
     search: SEARCH as 'fts' | 'ranked',
+    usda: USDA as 'api' | 'local',
+    aiMacros: AI_MACROS as 'legacy' | 'computed',
+    ...(PORTION_CTX ? { portion: PORTION_CTX } : {}),
   })
-  return { parsedFoods, ...resolved }
+  // the resolver's own lines (the cooking-oil rule) are logged by production after the user's foods
+  const foods = [...resolved.foods, ...(resolved.extras ?? [])]
+  return { parsedFoods, ...resolved, foods, timing: { parse_ms: t1 - t0, resolve_ms: Date.now() - t1 } }
 }
 
 async function runExample(example: DatasetExample): Promise<ExampleResult> {
@@ -177,7 +218,7 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
       }
     }
 
-    const { parsedFoods, totals, foods, unresolved } = await logOnce(example.text)
+    const { parsedFoods, totals, foods, unresolved, timing } = await logOnce(example.text)
 
     const offFields: string[] = []
     for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
@@ -223,6 +264,11 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
       resolutions: foods.map((f) => String(f.resolution ?? 'unknown')),
       unresolved: unresolved.map((u) => `${u.name} (${u.reason})`),
       roughEstimates: foods.filter((f) => f.resolution === 'rough_estimate').map((f) => f.name),
+      ...(TABLE ? {
+        portionSources: foods.map((f) => f.portion?.source ?? 'none'),
+        needsFollowUp: foods.filter((f) => f.portion?.needs_follow_up).length,
+      } : {}),
+      timing,
       parsedFoods,
       runCalories,
       consistent,
@@ -256,7 +302,7 @@ async function main() {
     dataset = dataset.filter((e) => ids.has(e.id))
   }
 
-  console.log(`Running eval on ${dataset.length} examples from ${DATASET_FILE} (search=${SEARCH}, repeat=${REPEAT}, memory=off, persist=false)...\n`)
+  console.log(`Running eval on ${dataset.length} examples from ${DATASET_FILE} (search=${SEARCH}, portion=${PORTION}, region=${REGION}, usda=${USDA}, ai-macros=${AI_MACROS}, repeat=${REPEAT}, memory=off, persist=false)...\n`)
 
   const results: ExampleResult[] = []
   // Sequential, not Promise.all — keeps OpenRouter/USDA rate limits sane and
@@ -293,7 +339,7 @@ function writeReport(results: ExampleResult[]) {
   const unsure = results.filter((r) => r.unresolved?.length).length
   const rough = results.filter((r) => r.roughEstimates?.length).length
   console.log(`         ${unsure} with a food left out (unsure), ${rough} with a rough estimate`)
-  console.log(`         search=${SEARCH} · dataset=${DATASET_FILE}`)
+  console.log(`         search=${SEARCH} · portion=${PORTION} · region=${REGION} · usda=${USDA} · ai-macros=${AI_MACROS} · dataset=${DATASET_FILE}`)
   if (REPEAT > 1) {
     const logged = results.filter((r) => r.consistent !== undefined)
     const same = logged.filter((r) => r.consistent).length
@@ -306,6 +352,19 @@ function writeReport(results: ExampleResult[]) {
   const tally = new Map<string, number>()
   for (const r of results) for (const res of r.resolutions ?? []) tally.set(res, (tally.get(res) ?? 0) + 1)
   console.log(`\nResolution mix: ${[...tally].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · ')}`)
+  if (TABLE) {
+    // spec (g)7: the mix of portion sources and the fallback (R8) rate
+    const ps = new Map<string, number>()
+    let foodsN = 0
+    for (const r of results) for (const src of r.portionSources ?? []) { ps.set(src, (ps.get(src) ?? 0) + 1); foodsN++ }
+    const r8 = ps.get('ai') ?? 0
+    console.log(`Portion sources: ${[...ps].sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(' · ')}`)
+    console.log(`R8 (fallback_g) rate: ${r8}/${foodsN} foods (${foodsN ? ((r8 / foodsN) * 100).toFixed(1) : '0'}%); ` +
+      `foods flagged for a follow-up: ${results.reduce((s, r) => s + (r.needsFollowUp ?? 0), 0)}`)
+  }
+  const med = (xs: number[]) => { const a = [...xs].sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : 0 }
+  const timed = results.flatMap((r) => (r.timing ? [r.timing] : []))
+  if (timed.length) console.log(`Stage timings (median of first runs): parse ${med(timed.map((t) => t.parse_ms))} ms, resolve ${med(timed.map((t) => t.resolve_ms))} ms`)
 
   // By category
   const categories = [...new Set(results.map((r) => r.category))]
@@ -342,9 +401,12 @@ function writeReport(results: ExampleResult[]) {
     console.log(`  ${field}: ${count}`)
   }
 
-  const outPath = DATASET_FILE === 'dataset.json' && SEARCH === 'fts'
-    ? join(__dirname, 'results.json')
-    : join(__dirname, `results-${basename(DATASET_FILE, '.json')}-inprocess-${SEARCH}.json`)
+  const variant = [PORTION !== 'legacy' ? `portion-${PORTION.replace('+', '-')}-${REGION}` : '', USDA !== 'api' ? `usda-${USDA}` : '',
+    AI_MACROS !== 'legacy' ? `ai-${AI_MACROS}` : ''].filter(Boolean).join('-')
+  const outPath = OUT ? OUT
+    : DATASET_FILE === 'dataset.json' && SEARCH === 'fts' && !variant
+      ? join(__dirname, 'results.json')
+      : join(__dirname, `results-${basename(DATASET_FILE, '.json')}-inprocess-${SEARCH}${variant ? `-${variant}` : ''}.json`)
   writeFileSync(outPath, JSON.stringify(results, null, 2))
   console.log(`\nFull results written to ${outPath}`)
 }
