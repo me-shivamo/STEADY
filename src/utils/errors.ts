@@ -88,6 +88,10 @@ export function classify(err: unknown): ErrorReason {
   // A status we attached ourselves at the invoke site.
   if (typeof e?.status === 'number') return statusToReason(e.status);
 
+  // A machine-readable error_code the food Edge Function put in a 200 body,
+  // attached by foodLogStore. Matched exactly, never by substring.
+  if (e?.code === 'ai_parse_failed') return 'ai_parse_failed';
+
   // PostgrestError — SQLSTATE, or PostgREST's own PGRST* codes.
   if (typeof e?.code === 'string' && PG_CODE_MAP[e.code]) return PG_CODE_MAP[e.code];
 
@@ -181,6 +185,9 @@ export function toUserMessage(err: unknown, context: ErrorContext = 'generic'): 
       return "That didn't look like food. Try describing what you ate.";
     case 'unavailable':
       return "That isn't available yet.";
+    case 'ai_parse_failed':
+      // Covers questions as well as logs, so it doesn't say "meal".
+      return "Something went wrong reading that. Please try again.";
     case 'server_error':
     case 'validation':
     case 'unknown':

@@ -2,7 +2,10 @@ import { create } from 'zustand'
 import { supabase } from '../api/supabase'
 import { Tables } from '../types/database'
 import { todayLocalDate } from '../utils/localDate'
-import { track, calorieBucket, errorReason } from '../utils/analytics'
+import {
+  track, calorieBucket, errorReason, changeBucket, changeDirection, macroSourceBucket, mealMacroSource,
+  correctionBasis, MACRO_FIELDS,
+} from '../utils/analytics'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,8 +43,29 @@ export type LogResult =
   | { type: 'log'; meal: MealCard }
   | { type: 'answer'; reply: string; waterLogged: boolean }
 
-// Photo logging always produces a food log — photos are never Q&A.
-export type LogPhotoResult = { type: 'log'; meal: MealCard }
+// Photos are never Q&A, but the vision model can decline to guess: when it
+// can't identify the food it asks the user to describe it instead, and
+// nothing is saved. That question is an outcome to show, not an error.
+export type LogPhotoResult =
+  | { type: 'log'; meal: MealCard }
+  | { type: 'needs_clarification'; message: string }
+
+// Shown only if the server's clarification arrives with no text at all.
+const PHOTO_CLARIFY_FALLBACK = "I couldn't tell what's in that photo. Could you type what you ate?"
+
+// A failure the Edge Function reported inside a 200 body ({success:false}).
+// `code` carries the server's machine-readable error_code (e.g.
+// 'ai_parse_failed') so errorReason()/toUserMessage() can branch on it
+// exactly; `waterLogged` says a log_water tool call already succeeded before
+// the failure, so the caller can still refresh the water card.
+export type FoodLogError = Error & { code?: string; waterLogged?: boolean }
+
+function bodyError(data: any, fallback: string): FoodLogError {
+  const err: FoodLogError = new Error(typeof data?.error === 'string' ? data.error : fallback)
+  if (typeof data?.error_code === 'string') err.code = data.error_code
+  if (data?.water_logged === true) err.waterLogged = true
+  return err
+}
 
 export interface MacroOverride {
   calories: number
@@ -63,10 +87,19 @@ interface FoodLogState {
   fetchEntriesForDate: (date?: string, skipTotals?: boolean) => Promise<void>
   fetchLoggedDatesForMonth: (year: number, month: number) => Promise<void>
   setSelectedDate: (date: string) => void
-  logMealFromText: (text: string, meal_type?: string) => Promise<LogResult>
-  logMealFromPhoto: (imageBase64: string, mimeType: string, caption?: string) => Promise<LogPhotoResult>
+  // Call when the app comes back to the foreground and before logging. If
+  // the calendar day changed since the last check and the user was on
+  // "today", moves them to the new today and returns true. A past day the
+  // user picked on purpose is left alone.
+  syncToday: () => boolean
+  // loggedDate (YYYY-MM-DD) is the day the meal belongs to — the day the
+  // user is looking at. Defaults to today.
+  logMealFromText: (text: string, meal_type?: string, loggedDate?: string) => Promise<LogResult>
+  logMealFromPhoto: (imageBase64: string, mimeType: string, caption?: string, loggedDate?: string) => Promise<LogPhotoResult>
   editMealFromText: (mealId: string, text: string) => Promise<MealCard>
-  updateEntryMacros: (mealId: string, entryId: string, overrides: MacroOverride) => Promise<void>
+  // Only the fields present in `overrides` that differ from the stored entry
+  // are written. Resolves true if anything was written, false if not.
+  updateEntryMacros: (mealId: string, entryId: string, overrides: Partial<MacroOverride>) => Promise<boolean>
   updateMealDateTime: (mealId: string, newDate: string, newCreatedAt: string) => Promise<void>
   deleteMeal: (mealId: string) => Promise<void>
   deleteEntry: (entryId: string) => Promise<void>
@@ -99,10 +132,32 @@ export function todayDate(): string {
   return todayLocalDate()
 }
 
+// The "today" the store last saw (see syncToday). selectedDate starts as
+// today, so the two start equal.
+let lastSeenToday = todayDate()
+
 // Total calories on a single card — used only to bucket the log for analytics,
 // never sent raw. Kept next to sumTotals so the two stay conceptually paired.
 function cardCalories(meal: MealCard): number {
   return meal.entries.reduce((sum, e) => sum + (e.calories ?? 0), 0)
+}
+
+// Appends a just-logged card to the feed — but only if the user is still
+// looking at the day it was logged to. They can swipe to another day while
+// the AI call is in flight; appending then would show (and total) a meal
+// under a day it doesn't belong to.
+function appendIfShown(
+  get: () => FoodLogState,
+  set: (partial: Partial<FoodLogState>) => void,
+  card: MealCard,
+): void {
+  const { meals, selectedDate } = get()
+  if (card.logged_date !== selectedDate) {
+    set({ isLogging: false })
+    return
+  }
+  const updated = [...meals, card]
+  set({ meals: updated, totals: sumTotals(updated), isLogging: false })
 }
 
 function labelFromType(type: string): string {
@@ -139,6 +194,19 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       get().fetchSummaryForDate(date, user.id)
       get().fetchEntriesForDate(date, true) // skipTotals — summary query handles it
     })
+  },
+
+  // selectedDate is set once at launch and then only by the user, so an app
+  // left open on "today" past midnight kept showing (and, since logging goes
+  // to the viewed day, logging to) yesterday. "Was on today" is judged
+  // against the last today we saw, so a past day picked on purpose stays put.
+  syncToday: () => {
+    const now = todayDate()
+    const previous = lastSeenToday
+    lastSeenToday = now
+    if (now === previous || get().selectedDate !== previous) return false
+    get().setSelectedDate(now)
+    return true
   },
 
   // Fast path: fetch only the pre-aggregated daily_summaries row.
@@ -253,8 +321,13 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   // Call the Edge Function with plain-English text.
   // On success, adds the new MealCard to local state immediately —
   // no need to re-fetch from Supabase, we already have the data.
-  logMealFromText: async (text, meal_type) => {
+  logMealFromText: async (text, meal_type, loggedDate) => {
     set({ isLogging: true, error: null })
+    // The day being viewed, not always today: logging while looking at a
+    // past day used to save to today and then tell the user to switch days.
+    // The server already files the meal, its chat turn and the "Current
+    // date" it gives the model under whatever date we send here.
+    const logged_date = loggedDate ?? todayDate()
 
     try {
       const { data, error } = await supabase.functions.invoke('log-food-from-text', {
@@ -263,16 +336,26 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         // has no timezone of its own, so guessing from its own clock would
         // mislabel meals for anyone outside UTC (e.g. dinner in India would
         // read as UTC afternoon and get called "lunch").
-        body: { text, meal_type, logged_date: todayDate(), logged_hour: new Date().getHours() },
+        body: { text, meal_type, logged_date, logged_hour: new Date().getHours() },
       })
 
       if (error) throw new Error(error.message)
-      if (!data?.success) throw new Error(data?.error ?? 'Logging failed')
+      // Includes the server's typed failures, e.g. error_code 'ai_parse_failed'
+      // when the AI's reply couldn't be read (it used to come back as a fake
+      // chat answer instead).
+      if (!data?.success) throw bodyError(data, 'Logging failed')
 
       // The AI answered a question — no food to store, just hand back the reply.
       if (data.type === 'answer') {
         set({ isLogging: false })
-        track('ai_question_answered', { water_logged: data.water_logged ?? false })
+        if (data.needs_clarification === true) {
+          // An "unsure" log: the user described food but nothing could be
+          // given a number, so the server asked them instead and saved
+          // nothing. That is a failed log attempt, not a Q&A turn.
+          track('meal_log_failed', { source: 'text', reason: 'needs_clarification', is_today: logged_date === todayDate() })
+        } else {
+          track('ai_question_answered', { water_logged: data.water_logged ?? false })
+        }
         return { type: 'answer', reply: data.reply ?? '', waterLogged: data.water_logged ?? false }
       }
 
@@ -281,7 +364,7 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         id: data.meal_log_id,
         meal_name: data.meal_name,
         meal_type: data.meal_type,
-        logged_date: data.logged_date,
+        logged_date: data.logged_date ?? logged_date,
         created_at: new Date().toISOString(),
         // Text logs carry no photo; the Edge Function returns photo_url only
         // once photo-upload logging exists. Default to null until then.
@@ -292,10 +375,8 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       }
 
       // Each logged message is now its own meal_log row (no meal_type merging),
-      // so we always append the new card chronologically (newest at the bottom).
-      const updated = [...get().meals, newCard]
-
-      set({ meals: updated, totals: sumTotals(updated), isLogging: false })
+      // so we append the new card chronologically (newest at the bottom).
+      appendIfShown(get, set, newCard)
       // Captured here rather than in FoodLogChatScreen so that every caller of
       // logMealFromText — the chat screen and Home's inline composer — is
       // counted exactly once, with no chance of the two drifting apart.
@@ -305,20 +386,22 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         calorie_bucket: calorieBucket(cardCalories(newCard)),
         item_count: newCard.entries.length,
         has_photo: newCard.photo_url != null,
+        is_today: newCard.logged_date === todayDate(),
       })
       return { type: 'log', meal: newCard }
     } catch (err: any) {
       set({ isLogging: false, error: err.message ?? 'Failed to log meal' })
-      track('meal_log_failed', { source: 'text', reason: errorReason(err) })
+      track('meal_log_failed', { source: 'text', reason: errorReason(err), is_today: logged_date === todayDate() })
       throw err
     }
   },
 
   // Call the analyze-food-photo Edge Function with a base64-encoded image.
-  // Photos always produce a food log (never a Q&A answer), so the return type
-  // is always { type: 'log', meal: MealCard }.
-  logMealFromPhoto: async (imageBase64, mimeType, caption) => {
+  // Photos never produce a Q&A answer: the result is either a logged meal or
+  // the AI's clarifying question (nothing saved).
+  logMealFromPhoto: async (imageBase64, mimeType, caption, loggedDate) => {
     set({ isLogging: true, error: null })
+    const logged_date = loggedDate ?? todayDate()
 
     try {
       const { data, error } = await supabase.functions.invoke('analyze-food-photo', {
@@ -326,38 +409,53 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
           image_base64: imageBase64,
           mime_type: mimeType,
           caption: caption ?? '',
-          logged_date: todayDate(),
+          logged_date,
           logged_hour: new Date().getHours(),
         },
       })
 
       if (error) throw new Error(error.message)
-      if (!data?.success) throw new Error(data?.error ?? 'Photo analysis failed')
+
+      // The model couldn't identify the food (or nothing in it could be given
+      // a number) and asked the user to describe it. Checked BEFORE `success`:
+      // this shape is {success:false}, and treating it as a failure threw the
+      // question away and showed generic "couldn't log" copy instead.
+      if (data?.type === 'needs_clarification') {
+        set({ isLogging: false })
+        track('meal_log_failed', { source: 'photo', reason: 'needs_clarification', is_today: logged_date === todayDate() })
+        const message =
+          (typeof data.message === 'string' && data.message.trim()) ||
+          (typeof data.error === 'string' && data.error.trim()) ||
+          PHOTO_CLARIFY_FALLBACK
+        return { type: 'needs_clarification', message }
+      }
+
+      if (!data?.success) throw bodyError(data, 'Photo analysis failed')
 
       const newCard: MealCard = {
         id: data.meal_log_id,
         meal_name: data.meal_name,
         meal_type: data.meal_type,
-        logged_date: data.logged_date,
+        logged_date: data.logged_date ?? logged_date,
         created_at: new Date().toISOString(),
         photo_url: data.photo_url ?? null,
         input_text: caption ?? null,
         entries: data.entries ?? [],
       }
 
-      const updated = [...get().meals, newCard]
-      set({ meals: updated, totals: sumTotals(updated), isLogging: false })
+      appendIfShown(get, set, newCard)
       track('meal_logged', {
         source: 'photo',
         meal_type: newCard.meal_type,
         calorie_bucket: calorieBucket(cardCalories(newCard)),
         item_count: newCard.entries.length,
         has_photo: true,
+        is_today: newCard.logged_date === todayDate(),
       })
       return { type: 'log', meal: newCard }
     } catch (err: any) {
       set({ isLogging: false, error: err.message ?? 'Photo logging failed' })
-      track('meal_log_failed', { source: 'photo', reason: errorReason(err) })
+      track('meal_log_failed', { source: 'photo', reason: errorReason(err), is_today: logged_date === todayDate() })
       throw err
     }
   },
@@ -382,7 +480,8 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         // scratch) — without this, editing "60 g" to "90 g" in the text blob
         // re-derives nutrition facts from the AI's own knowledge instead of
         // the verified numbers the entry already had (e.g. a label photo's
-        // exact printed macros).
+        // exact printed macros). The server pairs foods with these by name,
+        // and by a short per-entry ref the model echoes for renamed foods.
         previous_entries: existing?.entries.map(e => ({
           name: e.food_name,
           quantity_g: e.quantity_g,
@@ -402,8 +501,9 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       throw new Error(error.message)
     }
     if (!data?.success) {
-      track('meal_edit_failed', { reason: errorReason(data?.error) })
-      throw new Error(data?.error ?? 'Update failed')
+      const err = bodyError(data, 'Update failed')
+      track('meal_edit_failed', { reason: errorReason(err) })
+      throw err
     }
     // An edit must resolve to food; if the AI read it as a question, surface that.
     if (data.type !== 'log') {
@@ -423,29 +523,82 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
       photo_url: (data.photo_url && String(data.photo_url).startsWith('http'))
         ? data.photo_url
         : existing?.photo_url ?? null,
-      input_text: data.input_text ?? text,
+      // The gray line is what the user TYPED, so an edit leaves it exactly as
+      // it was (null included). The edit text is the AI's own summary
+      // ("Bread (2 slices), Tomato (42 g)"); letting it replace the caption
+      // erased the user's words on every edit.
+      input_text: existing ? existing.input_text : (data.input_text ?? text),
       entries: data.entries ?? [],
+    }
+
+    // Older deployed versions of the function also wrote the edit text into
+    // meal_logs.caption, so put back what the card showed, or the summary
+    // returns on the next reload. The current function leaves the caption
+    // alone and says so with caption_kept. Best effort: the edit itself
+    // already succeeded, and a failure here only costs the caption.
+    if (existing && data.caption_kept !== true && (data.input_text ?? null) !== existing.input_text) {
+      const { error: captionErr } = await supabase
+        .from('meal_logs')
+        .update({ caption: existing.input_text })
+        .eq('id', mealId)
+      if (captionErr) console.warn('editMealFromText: could not restore caption:', captionErr.message)
     }
 
     // Swap the card in place (same index); everything else is untouched.
     const updated = get().meals.map(m => (m.id === mealId ? updatedCard : m))
     set({ meals: updated, totals: sumTotals(updated) })
     track('meal_edited', { item_count: updatedCard.entries.length })
+    if (existing) {
+      // One meal-level correction event: the server replaces every entry on
+      // an edit and returns no per-entry match, so the meal is the unit.
+      const before = cardCalories(existing)
+      const after = cardCalories(updatedCard)
+      track('food_corrected', {
+        method: 'edit',
+        macro_source: mealMacroSource(existing.entries.map(e => e.macro_source)),
+        basis: 'calories',
+        direction: changeDirection(before, after),
+        change_bucket: changeBucket(before, after),
+      })
+    }
     return updatedCard
   },
 
   // Patch a single food_entry's macro values directly in Supabase.
   // This is the "manual override" path — bypasses the AI, lets the user
   // correct values that the AI got slightly wrong.
+  //
+  // Only the fields the user changed are written (the screen passes just
+  // those), so an untouched field keeps its exact stored value instead of
+  // the whole-number copy the form displays. macro_source becomes
+  // 'user_created' because the numbers are now the user's, not USDA's or
+  // the AI's. food_item_id stays: a later text edit rescales from this
+  // entry's own (now corrected) numbers, and that guard needs the id.
+  //
+  // A field already equal to the stored value is dropped, and an entry with
+  // nothing left is neither written nor tracked. The screen compares against
+  // the values it opened with, so a retry after a partial failure (or a
+  // double tap) re-sends rows that were already saved; without this each
+  // one would be re-stamped and counted as a second, fake correction.
   updateEntryMacros: async (mealId, entryId, overrides) => {
+    // Read before patching: for the no-op check and the correction event.
+    const before = get().meals.find(m => m.id === mealId)?.entries.find(e => e.id === entryId)
+    const fields: Partial<MacroOverride> = {}
+    for (const k of MACRO_FIELDS) {
+      const v = overrides[k]
+      if (typeof v !== 'number' || !Number.isFinite(v)) continue
+      // Compared at 0.1, the precision the form saves at.
+      if (before && Math.round((before[k] ?? 0) * 10) === Math.round(v * 10)) continue
+      fields[k] = v
+    }
+    const fieldsChanged = Object.keys(fields).length
+    if (fieldsChanged === 0) return false
+
+    const patch = { ...fields, macro_source: 'user_created' as const }
+
     const { error } = await supabase
       .from('food_entries')
-      .update({
-        calories:  overrides.calories,
-        protein_g: overrides.protein_g,
-        carbs_g:   overrides.carbs_g,
-        fat_g:     overrides.fat_g,
-      })
+      .update(patch)
       .eq('id', entryId)
 
     if (error) throw error
@@ -457,12 +610,31 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
         ...meal,
         entries: meal.entries.map(e =>
           e.id === entryId
-            ? { ...e, ...overrides }
+            ? { ...e, ...patch }
             : e
         ),
       }
     })
     set({ meals: updated, totals: sumTotals(updated) })
+
+    if (before) {
+      // Direction and size are measured on one field: calories when they
+      // changed, else the macro that moved most (a protein-only fix used to
+      // read as "none, 0-5%", the same as no change at all).
+      const basis = correctionBasis(before, fields)
+      const oldValue = before[basis] ?? 0
+      const newValue = fields[basis] ?? oldValue
+      track('food_corrected', {
+        method: 'adjust_macros',
+        // The source the user is correcting — what the pipeline got wrong.
+        macro_source: macroSourceBucket(before.macro_source),
+        basis,
+        direction: changeDirection(oldValue, newValue),
+        change_bucket: changeBucket(oldValue, newValue),
+        fields_changed: fieldsChanged,
+      })
+    }
+    return true
   },
 
   // Move a meal to a different date/time.
@@ -534,5 +706,8 @@ export const useFoodLogStore = create<FoodLogState>((set, get) => ({
   // isFetchingDate resets to true (not false) for the same reason as the
   // initial state above — HomeScreen's merge effect must see "still fetching"
   // until the next login's fetchEntriesForDate() actually resolves.
-  reset: () => set({ meals: [], totals: { ...ZERO }, isLogging: false, isFetchingDate: true, error: null, selectedDate: todayDate(), loggedDates: new Set() }),
+  reset: () => {
+    lastSeenToday = todayDate()
+    set({ meals: [], totals: { ...ZERO }, isLogging: false, isFetchingDate: true, error: null, selectedDate: lastSeenToday, loggedDates: new Set() })
+  },
 }))

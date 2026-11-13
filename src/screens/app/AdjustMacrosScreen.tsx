@@ -53,6 +53,31 @@ function toFixed(n: number): string {
   return Number.isFinite(n) ? String(Math.round(n)) : '0'
 }
 
+const MACRO_FIELDS = ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const
+type MacroField = typeof MACRO_FIELDS[number]
+
+// Parse a draft string to a number; fall back to 0 if invalid/empty.
+function parseMacro(s: string): number {
+  const n = parseFloat(s)
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0
+}
+
+// The fields of one row the user actually changed, with their new values.
+// The form shows whole numbers, so a field counts as changed only when it no
+// longer matches the rounded original — an untouched field is left out
+// entirely and keeps its exact stored value (e.g. 12.4 g, not 12 g).
+export function changedMacroFields(
+  draft: Record<MacroField, string>,
+  original: Record<MacroField, number>,
+): Partial<MacroOverride> {
+  const out: Partial<MacroOverride> = {}
+  for (const f of MACRO_FIELDS) {
+    const next = parseMacro(draft[f])
+    if (next !== Math.round(original[f])) out[f] = next
+  }
+  return out
+}
+
 function titleCase(s: string): string {
   return s.replace(/\b\w/g, c => c.toUpperCase())
 }
@@ -145,6 +170,9 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
   )
 
   const [isSavingAll, setIsSavingAll] = useState(false)
+  // Set once a save succeeds: Save stays disabled for the moment before the
+  // screen closes, so a second tap can't run the whole save again.
+  const [isDone, setIsDone] = useState(false)
   const [saveErrorText, setSaveErrorText] = useState<string | null>(null)
 
   // Update one field of one draft row — immutable map over the array.
@@ -159,12 +187,6 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
     []
   )
 
-  // Parse a draft string to a number; fall back to 0 if invalid/empty.
-  function parseMacro(s: string): number {
-    const n = parseFloat(s)
-    return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0
-  }
-
   // Compute live totals from the current draft values so the summary
   // at the top of the screen updates as the user types.
   const liveTotals = drafts.reduce(
@@ -177,29 +199,42 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   )
 
-  // Save all entries at once.
+  // Per row: just the fields the user changed. Rows with none are skipped.
+  // Drafts are built from initialEntries in the same order, so index i of
+  // one is index i of the other.
+  const changes = drafts
+    .map((d, i) => ({ id: d.id, fields: changedMacroFields(d, initialEntries[i]) }))
+    .filter(c => Object.keys(c.fields).length > 0)
+
+  // Save only what changed. Writing every row (as this used to) re-saved
+  // untouched entries as rounded whole numbers and stamped them all as
+  // user-corrected.
   const handleSaveAll = async () => {
+    if (isSavingAll || isDone) return
+    if (changes.length === 0) {
+      navigation.goBack()
+      return
+    }
     setIsSavingAll(true)
     setSaveErrorText(null)
     try {
-      await Promise.all(
-        drafts.map(d =>
-          updateEntryMacros(mealId, d.id, {
-            calories:  parseMacro(d.calories),
-            protein_g: parseMacro(d.protein_g),
-            carbs_g:   parseMacro(d.carbs_g),
-            fat_g:     parseMacro(d.fat_g),
-          } as MacroOverride)
-        )
-      )
+      // `changes` is measured against the values the screen opened with, so
+      // a retry after a partial failure re-sends rows already saved. The
+      // store skips those (resolves false), so they are neither rewritten
+      // nor counted twice.
+      const written = await Promise.all(changes.map(c => updateEntryMacros(mealId, c.id, c.fields)))
+      const writtenCount = written.filter(Boolean).length
       // Captured here rather than in updateEntryMacros: the store call runs
       // once per entry, so tracking there would emit N events for a single
       // user action. One event with the count is the honest shape. A high
       // rate here means the AI's estimates are off often enough that people
       // correct them by hand — a direct quality signal for the food pipeline.
-      track('meal_macros_adjusted', { entries_changed: drafts.length })
-      // Mark all rows as saved
-      setDrafts(prev => prev.map(d => ({ ...d, saved: true })))
+      // (The store adds one food_corrected per entry with its source/size.)
+      if (writtenCount > 0) track('meal_macros_adjusted', { entries_changed: writtenCount })
+      setIsDone(true)
+      // Mark the rows that were written as saved
+      const savedIds = new Set(changes.map(c => c.id))
+      setDrafts(prev => prev.map(d => (savedIds.has(d.id) ? { ...d, saved: true } : d)))
       // Give the user a moment to see the success state, then pop back
       setTimeout(() => navigation.goBack(), 700)
     } catch (err: any) {
@@ -209,15 +244,7 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
     }
   }
 
-  const hasChanges = drafts.some((d, i) => {
-    const orig = initialEntries[i]
-    return (
-      parseMacro(d.calories)  !== Math.round(orig.calories)  ||
-      parseMacro(d.protein_g) !== Math.round(orig.protein_g) ||
-      parseMacro(d.carbs_g)   !== Math.round(orig.carbs_g)   ||
-      parseMacro(d.fat_g)     !== Math.round(orig.fat_g)
-    )
-  })
+  const hasChanges = changes.length > 0
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
@@ -239,10 +266,10 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
         </View>
 
         <TouchableOpacity
-          style={[styles.saveBtn, (!hasChanges || isSavingAll) && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, (!hasChanges || isSavingAll || isDone) && styles.saveBtnDisabled]}
           onPress={handleSaveAll}
           activeOpacity={0.8}
-          disabled={!hasChanges || isSavingAll}
+          disabled={!hasChanges || isSavingAll || isDone}
         >
           {isSavingAll
             ? <ActivityIndicator size="small" color="#fff" />
@@ -342,10 +369,10 @@ export default function AdjustMacrosScreen({ route, navigation }: Props) {
 
           {/* ── Bottom save button (also reachable without scrolling back up) */}
           <TouchableOpacity
-            style={[styles.bottomSaveBtn, (!hasChanges || isSavingAll) && styles.bottomSaveBtnDisabled]}
+            style={[styles.bottomSaveBtn, (!hasChanges || isSavingAll || isDone) && styles.bottomSaveBtnDisabled]}
             onPress={handleSaveAll}
             activeOpacity={0.85}
-            disabled={!hasChanges || isSavingAll}
+            disabled={!hasChanges || isSavingAll || isDone}
           >
             {isSavingAll
               ? <ActivityIndicator size="small" color="#fff" />

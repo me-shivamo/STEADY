@@ -1,8 +1,8 @@
 // Unit tests for src/store/savedEntriesStore.ts.
 // Covers the three store actions: saveMealAsEntry (snapshot a logged meal),
-// deleteSavedEntry, and logSavedEntry (re-log a saved entry as today's meal
-// via a direct insert — no Edge Function call, since macros were already
-// resolved when the entry was first saved).
+// deleteSavedEntry, and logSavedEntry (re-log a saved entry on the viewed
+// day — today by default — via a direct insert, no Edge Function call, since
+// macros were already resolved when the entry was first saved).
 
 jest.mock('../../src/api/supabase', () => {
   const { createSupabaseMock } = require('../../test-utils/supabaseMock');
@@ -16,7 +16,7 @@ jest.mock('../../src/store/authStore', () => ({
 import { supabase } from '../../src/api/supabase';
 import { useAuthStore } from '../../src/store/authStore';
 import { useSavedEntriesStore, SavedEntry } from '../../src/store/savedEntriesStore';
-import { useFoodLogStore, MealCard } from '../../src/store/foodLogStore';
+import { useFoodLogStore, MealCard, todayDate } from '../../src/store/foodLogStore';
 
 const mockSupabase = supabase as unknown as import('../../test-utils/supabaseMock').SupabaseMock;
 const mockGetState = useAuthStore.getState as jest.Mock;
@@ -162,6 +162,8 @@ describe('savedEntriesStore', () => {
     it('inserts meal_logs + food_entries directly (no Edge Function call) and appends to foodLogStore', async () => {
       const target = savedEntry({ id: 'saved-1' });
       useSavedEntriesStore.setState({ entries: [target] });
+      // The feed is showing the day the insert lands on.
+      useFoodLogStore.setState({ selectedDate: '2026-07-15' });
 
       const insertedLog = { id: 'new-meal-1', logged_date: '2026-07-15', created_at: '2026-07-15T09:00:00.000Z' };
       const insertedEntries = [
@@ -203,6 +205,53 @@ describe('savedEntriesStore', () => {
       const foodLogState = useFoodLogStore.getState();
       expect(foodLogState.meals.map((m) => m.id)).toContain('new-meal-1');
       expect(foodLogState.totals.calories).toBe(150);
+    });
+
+    it('logs to the given day, and only shows the card if that day is on screen (B1)', async () => {
+      useSavedEntriesStore.setState({ entries: [savedEntry({ id: 'saved-1' })] });
+      useFoodLogStore.setState({ selectedDate: '2026-07-14' });
+      const insertedLog = { id: 'new-meal-2', logged_date: '2026-07-14', created_at: '2026-07-15T09:00:00.000Z' };
+      mockSupabase.from
+        .mockReturnValueOnce(makeQueryResult(insertedLog, null))
+        .mockReturnValueOnce(makeQueryResult([{ id: 'e', calories: 150 }], null))
+        .mockReturnValueOnce(makeQueryResult(null, null));
+
+      await useSavedEntriesStore.getState().logSavedEntry('saved-1', '2026-07-14');
+
+      const mealLogsBuilder = mockSupabase.from.mock.results[0].value;
+      expect(mealLogsBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ logged_date: '2026-07-14' })
+      );
+      expect(useFoodLogStore.getState().meals.map((m) => m.id)).toEqual(['new-meal-2']);
+
+      // Same call while a different day is on screen: saved, but not shown there.
+      jest.clearAllMocks();
+      useFoodLogStore.setState({ selectedDate: '2026-07-20', meals: [], totals: { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 } });
+      mockSupabase.from
+        .mockReturnValueOnce(makeQueryResult({ ...insertedLog, id: 'new-meal-3' }, null))
+        .mockReturnValueOnce(makeQueryResult([{ id: 'e2', calories: 150 }], null))
+        .mockReturnValueOnce(makeQueryResult(null, null));
+
+      const card = await useSavedEntriesStore.getState().logSavedEntry('saved-1', '2026-07-14');
+
+      expect(card.id).toBe('new-meal-3');
+      expect(useFoodLogStore.getState().meals).toEqual([]);
+      expect(useFoodLogStore.getState().totals.calories).toBe(0);
+    });
+
+    it('defaults to today when no day is given', async () => {
+      useSavedEntriesStore.setState({ entries: [savedEntry({ id: 'saved-1' })] });
+      mockSupabase.from
+        .mockReturnValueOnce(makeQueryResult({ id: 'm', logged_date: todayDate(), created_at: null }, null))
+        .mockReturnValueOnce(makeQueryResult([], null))
+        .mockReturnValueOnce(makeQueryResult(null, null));
+
+      await useSavedEntriesStore.getState().logSavedEntry('saved-1');
+
+      const mealLogsBuilder = mockSupabase.from.mock.results[0].value;
+      expect(mealLogsBuilder.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ logged_date: todayDate() })
+      );
     });
 
     it('throws if the saved entry cannot be found locally', async () => {

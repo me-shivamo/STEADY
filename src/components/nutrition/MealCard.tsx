@@ -17,6 +17,7 @@ import ImageViewerModal from '../common/ImageViewerModal'
 import { toast } from '../../store/toastStore'
 import { toUserMessage } from '../../utils/errors'
 import { fontFamily } from '../../theme/typography'
+import { buildFoodSummary, cleanQty, formatQty, isUnchangedEdit, titleCase } from '../../utils/mealEditText'
 
 type NavProp = NativeStackNavigationProp<AppStackParamList>
 
@@ -44,22 +45,8 @@ interface Props {
   onEditStart?: () => void
 }
 
-// Human-readable grams fallback when a food entry has no quantity_label.
-function formatQty(grams: number): string {
-  return grams >= 1000 ? `${(grams / 1000).toFixed(1)} kg` : `${Math.round(grams)} g`
-}
-
-// Capitalise the first letter of each word — AI returns lowercase food names.
-function titleCase(s: string): string {
-  return s.replace(/\b\w/g, c => c.toUpperCase())
-}
-
-// The AI sometimes bakes its own brackets into quantity_label (e.g. "2 spoon (30g)").
-// We always wrap the quantity in our own ( ), so strip any inner brackets to avoid
-// double brackets like "(2 spoon (30g))" → "(2 spoon 30g)".
-function cleanQty(s: string): string {
-  return s.replace(/[()]/g, '').trim()
-}
+// formatQty / titleCase / cleanQty / buildFoodSummary live in
+// utils/mealEditText so the edit-text helpers and their tests share one copy.
 
 // Shows the user's own wording AND the gram weight the macros were computed from.
 // Previously we showed one OR the other, so a count-style label ("1 masala dosa")
@@ -78,15 +65,6 @@ function displayQty(label: string | null | undefined, grams: number): string {
 }
 
 // ── LogCard — gray input line · per-food rows · total grid · footer ───────────
-// Build a human-readable summary of AI-parsed foods, e.g.
-// "Bread (2 slices), Tomato (42 g), Egg (2 large)"
-// This is what the user edits — it reflects what the AI understood, not their raw input.
-function buildFoodSummary(entries: MealCardType['entries']): string {
-  return entries
-    .map(e => `${titleCase(e.food_name)} (${cleanQty(e.quantity_label ?? formatQty(e.quantity_g))})`)
-    .join(', ')
-}
-
 export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props) {
   const navigation = useNavigation<NavProp>()
   // The app runs edge-to-edge (android/gradle.properties: edgeToEdgeEnabled=true),
@@ -105,6 +83,9 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
   // ── Per-card edit state (local UI state — no other screen cares about it) ──
   const [isEditing,    setIsEditing]    = useState(false)
   const [draft,        setDraft]        = useState('')
+  // The text the editor opened with, so confirm can tell "unchanged" apart
+  // from a real edit without calling the AI.
+  const [editStart,    setEditStart]    = useState('')
   const [isSaving,     setIsSaving]     = useState(false)
   const [showOptions,  setShowOptions]  = useState(false)
   const [showDateTime, setShowDateTime] = useState(false)
@@ -116,7 +97,9 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
 
   const startEdit = () => {
     setShowOptions(false)
-    setDraft(buildFoodSummary(meal.entries))
+    const start = buildFoodSummary(meal.entries)
+    setDraft(start)
+    setEditStart(start)
     setIsEditing(true)
     onEditStart?.()
   }
@@ -161,8 +144,9 @@ export default function MealCard({ meal, onEdit, onOptions, onEditStart }: Props
 
   const confirmEdit = async () => {
     const text = draft.trim()
-    if (!text || text === (meal.input_text ?? '')) {
+    if (isUnchangedEdit(text, editStart, meal.input_text)) {
       // Nothing changed (or empty) — just exit edit mode, skip the AI call.
+      // Re-running the AI on an unchanged meal could only drift its numbers.
       setIsEditing(false)
       return
     }

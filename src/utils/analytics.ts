@@ -56,6 +56,31 @@ export type ErrorReason =
   | 'validation'
   | 'not_food'
   | 'unavailable'
+  // The AI asked the user a question instead of logging (an "unsure" text
+  // log, or a photo it couldn't identify). Nothing was saved.
+  | 'needs_clarification'
+  // The AI's reply wasn't readable JSON; the server reports this as
+  // `error_code: 'ai_parse_failed'` instead of passing it off as a chat reply.
+  | 'ai_parse_failed'
+  | 'unknown';
+
+// The four numbers a food entry carries — the closed set food_corrected's
+// `basis` names (a field NAME, never its value).
+export const MACRO_FIELDS = ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const;
+export type MacroField = typeof MACRO_FIELDS[number];
+
+// Where an entry's numbers came from — mirrors the food_entries.macro_source
+// CHECK constraint, plus 'mixed' (a meal whose entries disagree) and
+// 'unknown' (null, or a value this build doesn't know). A closed set, so a
+// stray string can never ride along in an event.
+export type MacroSourceBucket =
+  | 'usda'
+  | 'indb'
+  | 'ifct'
+  | 'ai_estimated'
+  | 'user_created'
+  | 'label'
+  | 'mixed'
   | 'unknown';
 
 // Events that carry no properties. `Record<string, never>` means "an object
@@ -110,8 +135,10 @@ export interface AnalyticsEvents {
     calorie_bucket: string;
     item_count: number;
     has_photo: boolean;
+    // Text/photo only: false when the meal went to a past day being viewed.
+    is_today?: boolean;
   };
-  meal_log_failed: { source: LogSource; reason: ErrorReason };
+  meal_log_failed: { source: LogSource; reason: ErrorReason; is_today?: boolean };
   // The text Edge Function answered a nutrition question instead of logging.
   ai_question_answered: { water_logged: boolean };
   meal_edited: { item_count: number };
@@ -119,12 +146,35 @@ export interface AnalyticsEvents {
   meal_deleted: NoProps;
   food_entry_deleted: NoProps;
   meal_macros_adjusted: { entries_changed: number };
+  // The user corrected numbers the pipeline produced: one event per changed
+  // entry from Adjust Macros, one per meal from a text edit. Only enums,
+  // buckets and counts — never the food, the text or the values.
+  // `direction` and `change_bucket` (absolute % change, see changeBucket())
+  // are measured on the `basis` field: calories when they changed, else the
+  // macro that moved most (see correctionBasis()). A text edit is always
+  // measured on the meal's calories.
+  food_corrected: {
+    method: 'edit' | 'adjust_macros';
+    macro_source: MacroSourceBucket;
+    basis: MacroField;
+    direction: 'up' | 'down' | 'none';
+    change_bucket: string;
+    // Adjust Macros only: how many of calories/protein/carbs/fat changed.
+    fields_changed?: number;
+  };
   meal_datetime_changed: { moved_to_different_day: boolean };
   meal_saved_as_entry: { item_count: number };
   saved_entry_logged: { item_count: number };
   saved_entry_deleted: NoProps;
   saved_entries_opened: { saved_count: number };
-  chat_message_sent: { length_bucket: string };
+  // A logging ATTEMPT from the composer (intent, so it lives in the screen).
+  // Every attempt ends in exactly one store outcome: meal_logged or
+  // meal_log_failed with source text|photo, or ai_question_answered (text
+  // only). Filter meal_logged to those two sources first: saved-entry logs
+  // also emit meal_logged (source saved_entry) with no attempt. Then attempts
+  // minus outcomes is the abandonment/crash gap, and meal_log_failed is the
+  // failure rate. is_today is on the attempt and on both meal_* outcomes.
+  chat_message_sent: { length_bucket: string; has_photo?: boolean; is_today?: boolean };
 
   // ── Photo capture funnel ────────────────────────────────────────────────
   photo_capture_started: { source: PhotoSource };
@@ -313,12 +363,84 @@ export function lengthBucket(text: string): string {
   return bucketize(text.trim().length, [0, 10, 25, 50, 100, 200]);
 }
 
+// ── Correction helpers (food_corrected) ───────────────────────────────────
+// A correction is described by its direction and its relative size, never by
+// the numbers themselves: "someone cut a meal by 25-50%" is a quality signal,
+// "someone's lunch went from 812 to 430 kcal" is health data.
+
+// Both helpers work on one field's old and new value (kcal or grams).
+// Compared at 0.1 so float noise (149.99999 vs 150) is not a "change".
+export function changeDirection(oldValue: number, newValue: number): 'up' | 'down' | 'none' {
+  const a = Math.round((Number.isFinite(oldValue) ? oldValue : 0) * 10);
+  const b = Math.round((Number.isFinite(newValue) ? newValue : 0) * 10);
+  if (b > a) return 'up';
+  if (b < a) return 'down';
+  return 'none';
+}
+
+// Absolute % change, bucketed. A percentage has no meaning when the old
+// value was 0, so that case gets its own label instead of Infinity.
+export function changeBucket(oldValue: number, newValue: number): string {
+  if (!Number.isFinite(oldValue) || !Number.isFinite(newValue)) return 'unknown';
+  if (changeDirection(oldValue, newValue) === 'none') return '0-5';
+  if (oldValue <= 0) return 'from_zero';
+  const pct = (Math.abs(newValue - oldValue) / oldValue) * 100;
+  return bucketize(pct, [0, 5, 10, 25, 50, 100]);
+}
+
+// Which field a correction is measured on: calories when they changed (the
+// number the user tracks against), otherwise the macro with the largest
+// relative change, a change from 0 counting as largest. Calories when
+// nothing changed at all.
+export function correctionBasis(
+  before: Partial<Record<MacroField, number | null>>,
+  after: Partial<Record<MacroField, number>>,
+): MacroField {
+  const moved = MACRO_FIELDS.filter((f) => {
+    const next = after[f];
+    return typeof next === 'number' && changeDirection(before[f] ?? 0, next) !== 'none';
+  });
+  if (moved.length === 0 || moved.includes('calories')) return 'calories';
+  let basis: MacroField = moved[0];
+  let largest = -1;
+  for (const f of moved) {
+    const prev = before[f] ?? 0;
+    const rel = prev <= 0 ? Infinity : Math.abs((after[f] as number) - prev) / prev;
+    if (rel > largest) { basis = f; largest = rel; }
+  }
+  return basis;
+}
+
+const KNOWN_MACRO_SOURCES: ReadonlySet<string> = new Set([
+  'usda', 'indb', 'ifct', 'ai_estimated', 'user_created', 'label',
+]);
+
+// Narrows a raw macro_source column value onto the closed set.
+export function macroSourceBucket(source: string | null | undefined): MacroSourceBucket {
+  return source && KNOWN_MACRO_SOURCES.has(source) ? (source as MacroSourceBucket) : 'unknown';
+}
+
+// One label for a whole meal: its entries' shared source, or 'mixed'.
+export function mealMacroSource(sources: Array<string | null | undefined>): MacroSourceBucket {
+  const buckets = new Set(sources.map(macroSourceBucket));
+  if (buckets.size === 0) return 'unknown';
+  if (buckets.size > 1) return 'mixed';
+  return [...buckets][0];
+}
+
 // ── Error classification ──────────────────────────────────────────────────
 // Maps any thrown value onto the closed `ErrorReason` union. This is the only
 // path by which failures are allowed into analytics — raw `err.message` from
 // the food Edge Functions frequently embeds the user's own meal text, so it
 // must never be captured verbatim.
 export function errorReason(err: unknown): ErrorReason {
+  // A machine-readable code the store attached from the server's body (see
+  // foodLogStore's bodyError). Checked against a closed list, so an unknown
+  // code falls through to the message sniffing below rather than leaking.
+  if (typeof err === 'object' && err !== null && 'code' in err) {
+    const code = (err as { code: unknown }).code;
+    if (code === 'ai_parse_failed' || code === 'needs_clarification') return code;
+  }
   const raw =
     err instanceof Error
       ? err.message

@@ -40,7 +40,8 @@ interface SavedEntriesState {
   fetchSavedEntries: () => Promise<void>
   saveMealAsEntry: (meal: MealCard, name?: string) => Promise<void>
   deleteSavedEntry: (id: string) => Promise<void>
-  logSavedEntry: (entryId: string) => Promise<MealCard>
+  // loggedDate (YYYY-MM-DD): the day being viewed. Defaults to today.
+  logSavedEntry: (entryId: string, loggedDate?: string) => Promise<MealCard>
 }
 
 function itemFromMealEntry(e: MealCard['entries'][number]): SavedEntryItem {
@@ -122,17 +123,17 @@ export const useSavedEntriesStore = create<SavedEntriesState>((set, get) => ({
     track('saved_entry_deleted', {})
   },
 
-  // Re-logs a saved entry as today's meal. Everything needed (macros,
-  // food_item_id references) was already resolved when the entry was first
-  // saved, so this is a plain insert — no Edge Function call.
-  logSavedEntry: async (entryId) => {
+  // Re-logs a saved entry on the given day (today by default). Everything
+  // needed (macros, food_item_id references) was already resolved when the
+  // entry was first saved, so this is a plain insert — no Edge Function call.
+  logSavedEntry: async (entryId, loggedDate) => {
     const userId = useAuthStore.getState().session?.user.id
     const entry = get().entries.find((e) => e.id === entryId)
     if (!userId || !entry) throw new Error('Saved entry not found')
 
     const { data: log, error: logError } = await supabase
       .from('meal_logs')
-      .insert({ user_id: userId, logged_date: todayDate(), meal_type: 'other', caption: entry.name })
+      .insert({ user_id: userId, logged_date: loggedDate ?? todayDate(), meal_type: 'other', caption: entry.name })
       .select('id, logged_date, created_at')
       .single()
     if (logError || !log) throw new Error('Could not log this entry. Please try again.')
@@ -176,10 +177,13 @@ export const useSavedEntriesStore = create<SavedEntriesState>((set, get) => ({
     }
 
     // Mirror foodLogStore's own append pattern so Home's feed, Food Log view,
-    // and the calorie totals ring all update immediately.
+    // and the calorie totals ring all update immediately — but only when the
+    // feed is showing the day this was logged to.
     const foodLogState = useFoodLogStore.getState()
-    const updatedMeals = [...foodLogState.meals, newCard]
-    useFoodLogStore.setState({ meals: updatedMeals, totals: sumTotals(updatedMeals) })
+    if (newCard.logged_date === foodLogState.selectedDate) {
+      const updatedMeals = [...foodLogState.meals, newCard]
+      useFoodLogStore.setState({ meals: updatedMeals, totals: sumTotals(updatedMeals) })
+    }
 
     set((s) => ({
       entries: s.entries.map((e) => (e.id === entryId ? { ...e, last_used_at: new Date().toISOString() } : e)),

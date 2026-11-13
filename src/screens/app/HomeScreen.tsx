@@ -12,6 +12,7 @@ import {
   Platform,
   ActivityIndicator,
   PanResponder,
+  AppState,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -23,7 +24,7 @@ import { resizeForUpload } from '../../utils/imageResize';
 import MealCard from '../../components/nutrition/MealCard';
 import WaterHomeCard from '../../components/nutrition/WaterHomeCard';
 import { useWaterStore } from '../../store/waterStore';
-import { useFoodLogStore, MealCard as MealCardType, todayDate } from '../../store/foodLogStore';
+import { useFoodLogStore, MealCard as MealCardType, todayDate, FoodLogError } from '../../store/foodLogStore';
 import { useAuthStore } from '../../store/authStore';
 import { homeColors as C } from '../../theme/homeColors';
 import ProfileDrawer from '../../components/profile/ProfileDrawer';
@@ -37,7 +38,7 @@ import { useStreak } from '../../hooks/useStreak';
 import { fontFamily } from '../../theme/typography';
 import TypewriterText from '../../components/common/TypewriterText';
 import { useScreenChrome } from '../../hooks/useScreenChrome';
-import { track } from '../../utils/analytics';
+import { track, lengthBucket } from '../../utils/analytics';
 import { toUserMessage } from '../../utils/errors';
 
 // ── Chat message types ─────────────────────────────────────────────────────────
@@ -362,6 +363,17 @@ export default function HomeScreen() {
   // Initial load
   useEffect(() => { fetchEntriesForDate(); }, []);
 
+  // Day rollover: logging goes to the day on screen, so an app reopened the
+  // morning after on a stale "today" would file breakfast under yesterday.
+  // On every return to the foreground, a user who was on today follows it
+  // to the new today; a past day they chose stays.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') useFoodLogStore.getState().syncToday();
+    });
+    return () => sub.remove();
+  }, []);
+
   // When the selected date changes: clear messages and trigger a fresh merge load.
   useEffect(() => {
     initialSeedDone.current = false;
@@ -501,8 +513,11 @@ export default function HomeScreen() {
   // Re-logging a saved entry never calls the AI, so there's no "thinking"
   // bubble step — the card just appears in the feed immediately.
   const handleLogSavedEntry = async (entryId: string) => {
+    // Midnight passed with the app open on today: switch to the new today
+    // instead of logging to yesterday (see handleSend).
+    if (useFoodLogStore.getState().syncToday()) return;
     try {
-      const meal = await logSavedEntry(entryId);
+      const meal = await logSavedEntry(entryId, selectedDate);
       push({ id: meal.id, type: 'meal_card', meal });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (err: any) {
@@ -578,11 +593,24 @@ export default function HomeScreen() {
 
   const handleSend = async () => {
     if (isLogging) return;
+    // Midnight passed while the app stayed open on today (no trip to the
+    // background for the AppState listener to catch). Move to the new today
+    // and send nothing this time: the feed reloads for the new day, so a
+    // bubble pushed now would be wiped, and the text or photo stays in the
+    // composer to send again.
+    if (useFoodLogStore.getState().syncToday()) return;
 
     // ── Photo flow: a photo is queued ────────────────────────────────────────
     if (pendingPhoto) {
       const caption = input.trim();
       const photoToSend = pendingPhoto;
+      // The attempt (intent). Its outcome — meal_logged or meal_log_failed —
+      // is tracked by the store, so failed logs are visible as the gap.
+      track('chat_message_sent', {
+        length_bucket: lengthBucket(caption),
+        has_photo: true,
+        is_today: isViewingToday,
+      });
       setPendingPhoto(null);
       setInput('');
       setMode('all');
@@ -601,11 +629,19 @@ export default function HomeScreen() {
       push({ id: thinkingId, type: 'thinking' });
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
       try {
-        const result = await logMealFromPhoto(photoToSend.base64, 'image/jpeg', caption || undefined);
-        // Key the card by the meal id (not the thinking bubble's uid) so it
-        // matches how loadAndMergeHistory builds restored cards — one id
-        // scheme for meal cards, whichever path created them.
-        replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
+        // Logged to the day on screen, like the text flow below.
+        const result = await logMealFromPhoto(photoToSend.base64, 'image/jpeg', caption || undefined, selectedDate);
+        if (result.type === 'needs_clarification') {
+          // The AI couldn't tell what's in the photo and asked instead of
+          // guessing — show its question as a normal AI reply bubble, the
+          // same way the text flow shows an "unsure" reply.
+          replace(thinkingId, { id: thinkingId, type: 'answer', text: result.message, sentAt: new Date().toISOString() });
+        } else {
+          // Key the card by the meal id (not the thinking bubble's uid) so it
+          // matches how loadAndMergeHistory builds restored cards — one id
+          // scheme for meal cards, whichever path created them.
+          replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
+        }
       } catch (err: any) {
         replace(thinkingId, {
           id: thinkingId, type: 'error',
@@ -619,6 +655,11 @@ export default function HomeScreen() {
     // ── Text flow: normal chat message ───────────────────────────────────────
     const text = input.trim();
     if (!text) return;
+    track('chat_message_sent', {
+      length_bucket: lengthBucket(text),
+      has_photo: false,
+      is_today: isViewingToday,
+    });
     initialSeedDone.current = true;
     setInput('');
     setMode('all');
@@ -627,7 +668,9 @@ export default function HomeScreen() {
     push({ id: thinkingId, type: 'thinking' });
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
     try {
-      const result = await logMealFromText(text);
+      // Logged to the day on screen: back-filling yesterday from yesterday's
+      // feed now files the meal under yesterday (it used to go to today).
+      const result = await logMealFromText(text, undefined, selectedDate);
       if (result.type === 'answer') {
         replace(thinkingId, { id: thinkingId, type: 'answer', text: result.reply, sentAt: new Date().toISOString() });
         // The water insert (if any) happened server-side inside the edge
@@ -638,23 +681,20 @@ export default function HomeScreen() {
           useWaterStore.getState().fetchToday();
         }
       } else {
-        if (isViewingToday) {
-          // Same as the photo flow: key by meal id, not the thinking uid.
-          replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
-        } else {
-          const kcal = Math.round(result.meal.entries.reduce((s, e) => s + e.calories, 0));
-          replace(thinkingId, {
-            id: thinkingId, type: 'answer',
-            text: `That looks like about ${kcal} kcal. Switch to Today to log new meals.`,
-            sentAt: new Date().toISOString(),
-          });
-        }
+        // Same as the photo flow: key by meal id, not the thinking uid.
+        replace(thinkingId, { id: result.meal.id, type: 'meal_card', meal: result.meal });
       }
     } catch (err: any) {
       replace(thinkingId, {
         id: thinkingId, type: 'error',
         text: toUserMessage(err, 'logMeal'),
       });
+      // A turn can fail after its log_water tool call already saved water
+      // (e.g. the AI's final reply was unreadable). Refresh so the water card
+      // shows it and the user doesn't log the same glass twice.
+      if ((err as FoodLogError)?.waterLogged) {
+        useWaterStore.getState().fetchToday();
+      }
     }
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   };
