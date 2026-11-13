@@ -1,0 +1,39 @@
+Post-053 held-out comparison — 2026-11-13 (UTC)
+053 applied 16:51:54Z (61 new rows, 71 quarantined, 14 aliases repointed, 4 added). Fingerprints identical; history row 33 statements md5 5a6b3de1…; gate 13/13, 21/21, 6/6 twice; search ~10 ms warm; audit clean; smoke 5/5.
+CTRL = fts 16:54-17:00Z. GATE = ranked+gate (eval_only); first attempt 17:01Z failed on the OpenRouter key limit (live outage 17:01-17:08Z, limit raised by the founder), re-run 17:08-17:14Z.
+
+Indian cases (20), fts: before 053 14/20 strict, median signed +4.2%, consistent 11/20 -> after 053 17/20, -2.1%, 13/20. Ranked after 053: 14/20, -8.1%, 13/20.
+Verdict: ranked still not better on accuracy (strict -3, in-band -1, consistency -2; faster and less protein bias) -> stays off (eval_only).
+
+=== CTRL
+FUNCTION:                    log-food-from-text   (repeat 3, memory cold)
+STRICT (all declared bands): 71/95 logs passed (74.7%)
+CALORIES IN BAND:            74/93 (79.6%)
+CALORIES WITHIN ±25% OF MID: 50/93 (53.8%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        19.7%
+CALORIE LEAN (signed):       median -6.4%   38 above mid / 54 below
+PROTEIN (19 cases):          median error 17.4%, lean +12.9%
+CONSISTENCY (same number ×3): 71/93 (76.3%)
+LATENCY:                     p50 5.27s   p95 8.22s   (300 requests)
+AI COST:                     $0.1856 total, ~$0.00067 per log (467 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 254 · ai_estimate 133 · usda_match 31 · reference_match 17 · rough_estimate 3
+NEGATIVES (no phantom log):  5/5
+ERRORS: 2
+
+=== GATE
+FUNCTION:                    log-food-from-text   (repeat 3, memory cold)
+STRICT (all declared bands): 68/95 logs passed (71.6%)
+CALORIES IN BAND:            73/93 (78.5%)
+CALORIES WITHIN ±25% OF MID: 49/93 (52.7%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        18.8%
+CALORIE LEAN (signed):       median -9.0%   37 above mid / 55 below
+PROTEIN (19 cases):          median error 17.4%, lean +1.5%
+CONSISTENCY (same number ×3): 69/93 (74.2%)
+LATENCY:                     p50 3.70s   p95 7.58s   (300 requests)
+AI COST:                     $0.1833 total, ~$0.00066 per log (450 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 248 · ai_estimate 73 · reference_match 47 · usda_match 42 · verified_alias 27 · rough_estimate 2
+NEGATIVES (no phantom log):  5/5
+ERRORS: 2
+
