@@ -6,6 +6,7 @@ import {
   entryQuantityLabel, type ParsedFood, type ResolvedFood, type Totals, type UnresolvedFood, type ResolveResult,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
+import { openRouterKeyFor } from '../_shared/aiKeys.ts'
 import { PHOTO_PROMPT_V1, PHOTO_PROMPT_V2 } from '../_shared/photoPrompt.ts'
 import { validateParsedFoodV2 } from '../_shared/parseSchema.ts'
 import { effectivePortion, loadRegion, portionModeFromEnv } from '../_shared/portionStore.ts'
@@ -73,6 +74,11 @@ Deno.serve(async (req) => {
     const portionOn = portionEff.mode !== 'legacy'
     const tableMode = portionEff.mode === 'table'
     const prompt = tableMode ? PHOTO_PROMPT_V2 : SYSTEM_PROMPT
+
+    // The eval account bills OPENROUTER_EVAL_API_KEY when it is set (aiKeys.ts), so
+    // test runs can never drain the keys real users' photo logs depend on.
+    const aiImageKey = openRouterKeyFor('image', user.email, (k) => Deno.env.get(k))
+    const aiTextKey = openRouterKeyFor('text', user.email, (k) => Deno.env.get(k))
     // the user's region (profiles.timezone), read while the vision model looks
     const regionP = portionOn ? loadRegion(supabase, user.id) : null
 
@@ -103,7 +109,8 @@ Deno.serve(async (req) => {
       const contextLine = await buildContextLine(supabase, user.id, logged_date)
 
       // Call OpenRouter → gpt-5-mini Vision.
-      // Uses OPENROUTER_IMAGE_API_KEY (separate from text key) for independent cost tracking.
+      // Uses OPENROUTER_IMAGE_API_KEY (separate from text key) for independent cost tracking;
+      // the eval account bills OPENROUTER_EVAL_API_KEY instead (see _shared/aiKeys.ts).
       // detail: 'low' → hints low-res tiling (85 base tokens vs high-detail tiling cost).
       // OpenAI's Responses API has a known bug where GPT-5 models ignore this and process
       // at high detail anyway — but that bug is specific to the Responses API; the Chat
@@ -131,7 +138,7 @@ Deno.serve(async (req) => {
           const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${Deno.env.get('OPENROUTER_IMAGE_API_KEY')}`,
+              'Authorization': `Bearer ${aiImageKey}`,
               'Content-Type': 'application/json',
               'HTTP-Referer': 'https://steadyapp.io',
               'X-Title': 'STEADY-photo',
@@ -239,12 +246,12 @@ Deno.serve(async (req) => {
     // Resolve macros from real data (memory → verified base → USDA → AI estimate).
     // GPT-5 mini only identified foods + grams above; numbers are computed here.
     // The resolver's internal match call uses the text OPENROUTER_API_KEY so
-    // image-key cost tracking stays clean.
+    // image-key cost tracking stays clean (eval account: its own key, see aiKeys.ts).
     const memory = memoryModeFromEnv(Deno.env.get('RESOLVER_MEMORY'))
     const labelPlan = planLabelFoods(labelIndices.map((i) => allFoods[i]))
     const normalResult = normalIndices.length > 0
       ? await resolveFoods(supabase, normalIndices.map((i) => allFoods[i]), {
-          openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
+          openRouterKey: aiTextKey,
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
           memory,

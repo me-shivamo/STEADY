@@ -5,6 +5,7 @@ import {
   type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood, type ResolveResult,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
+import { openRouterKeyFor } from '../_shared/aiKeys.ts'
 import { SYSTEM_PROMPT, SYSTEM_PROMPT_V2, editInstructionV2 } from '../_shared/foodParsePrompt.ts'
 import { parsedFoodsFromV2 } from '../_shared/parseV2.ts'
 import { effectivePortion, loadRegion, portionModeFromEnv } from '../_shared/portionStore.ts'
@@ -189,6 +190,10 @@ Deno.serve(async (req) => {
     const portionOn = portionEff.mode !== 'legacy'
     const tableMode = portionEff.mode === 'table'
 
+    // The eval account bills its own OpenRouter key when OPENROUTER_EVAL_API_KEY is
+    // set, so test runs can never drain the budget real users log against (aiKeys.ts).
+    const aiKey = openRouterKeyFor('text', user.email, (k) => Deno.env.get(k))
+
     // The app's personal-calibration API (founder 2026-11-13, spec k16): list / undo the user's own
     // unit sizes in every mode (they are the user's data: always visible and undoable, founder l4);
     // saving a follow-up or chip answer only where the engine applies it (portion mode not legacy).
@@ -296,7 +301,7 @@ Deno.serve(async (req) => {
     messages.push(...historyMessages, { role: 'user', content: text })
 
     // ── 5. Agent loop: Call 1 → execute tools → Call 2 (if needed) ───────────
-    const { result: parsed, waterLogged, mealDeleted } = await runAgentLoop(supabase, user.id, messages)
+    const { result: parsed, waterLogged, mealDeleted } = await runAgentLoop(supabase, user.id, aiKey, messages)
 
     // The AI's reply couldn't be read (truncated/malformed JSON, or empty).
     // This used to be passed off as a chat answer — broken JSON shown in a
@@ -468,7 +473,7 @@ Deno.serve(async (req) => {
     // RESOLVER_SEARCH (fts | eval_only | ranked) picks the DB search (Phase 4).
     const freshResolved = freshIndices.length > 0
       ? await resolveFoods(supabase, freshIndices.map((i) => allParsed[i]), {
-          openRouterKey: Deno.env.get('OPENROUTER_API_KEY')!,
+          openRouterKey: aiKey,
           fdcApiKey: Deno.env.get('FDC_API_KEY') ?? '',
           userId: user.id,
           memory: memoryMode,
@@ -703,8 +708,8 @@ Deno.serve(async (req) => {
 // If tools requested: execute them, append results, Call 2: AI gives final answer.
 // Max 2 LLM calls. Simple messages (food log, simple Q&A) only use 1 call.
 // deno-lint-ignore no-explicit-any
-async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<{ result: AiContentParse; waterLogged: boolean; mealDeleted: boolean }> {
-  const call1 = await callOpenRouter(supabase, userId, messages, TOOLS)
+async function runAgentLoop(supabase: any, userId: string, aiKey: string, messages: Array<Record<string, unknown>>): Promise<{ result: AiContentParse; waterLogged: boolean; mealDeleted: boolean }> {
+  const call1 = await callOpenRouter(supabase, userId, aiKey, messages, TOOLS)
 
   // No tool calls → AI responded directly (food log JSON or simple answer)
   if (!call1.tool_calls || call1.tool_calls.length === 0) {
@@ -745,7 +750,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
     ...toolResults,
   ]
 
-  const call2 = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS)
+  const call2 = await callOpenRouter(supabase, userId, aiKey, messagesWithTools, TOOLS)
   const call2Content = (call2.content as string | null) ?? ''
 
   // Call 2 can itself come back asking for MORE tools instead of answering, in
@@ -766,7 +771,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
   // (that request is exactly what we're declining to run). Adding them produced
   // a 400. tool_choice 'none' removes the option to ask again, so the model has
   // to answer from the tool results already in the conversation.
-  const finalCall = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS, 'none')
+  const finalCall = await callOpenRouter(supabase, userId, aiKey, messagesWithTools, TOOLS, 'none')
   return { result: parseAiContent(finalCall.content as string | null), waterLogged, mealDeleted }
 }
 
@@ -775,6 +780,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
 async function callOpenRouter(
   supabase: any,
   userId: string,
+  aiKey: string,
   messages: Array<Record<string, unknown>>,
   tools: typeof TOOLS,
   toolChoice: 'auto' | 'none' = 'auto',
@@ -791,7 +797,7 @@ async function callOpenRouter(
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('OPENROUTER_API_KEY')}`,
+          'Authorization': `Bearer ${aiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://steadyapp.io',
           'X-Title': 'STEADY',
