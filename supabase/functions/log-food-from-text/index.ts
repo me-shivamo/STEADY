@@ -1,11 +1,13 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import {
-  resolveFoods, normalizeName, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, unsureReply, estimateNote,
+  resolveFoods, placeFoods, memoryModeFromEnv, searchModeFromEnv, effectiveSearch, unsureReply, estimateNote,
   capRoughConfidence, entryQuantityLabel, stripRoughMarker,
   type ParsedFood, type ResolvedFood, type MacroSource, type UnresolvedFood,
 } from '../_shared/macroResolver.ts'
 import { logAiCall } from '../_shared/aiLogger.ts'
 import { SYSTEM_PROMPT } from '../_shared/foodParsePrompt.ts'
+import { parseAiContent, AI_PARSE_FAILED_MESSAGE, type AiContentParse } from '../_shared/parseAiContent.ts'
+import { matchPreviousEntries, prevRef } from '../_shared/editMatch.ts'
 
 // One entry as it existed before an edit — sent by the client so the AI (and
 // the rescale guard below) can tell "same food, new quantity" apart from
@@ -198,8 +200,11 @@ Deno.serve(async (req) => {
     // guard after resolveFoods() enforces the same rule deterministically,
     // so a model that ignores this instruction still can't drift the numbers.
     if (editMealLogId && previousEntries.length > 0) {
-      const entryLines = previousEntries.map((e) =>
-        `- "${e.name}": ${e.quantity_g}g → ${e.calories} cal, ${e.protein_g}g protein, ${e.carbs_g}g carbs, ${e.fat_g}g fat` +
+      // Each food carries a short ref (p1, p2, …) that the model echoes as
+      // prev_id on a food it kept, so a RENAMED food still finds its entry
+      // (see _shared/editMatch.ts).
+      const entryLines = previousEntries.map((e, i) =>
+        `- [${prevRef(i)}] "${e.name}": ${e.quantity_g}g → ${e.calories} cal, ${e.protein_g}g protein, ${e.carbs_g}g carbs, ${e.fat_g}g fat` +
         (e.macro_source === 'label' ? ' [from a nutrition label — these are exact printed values, not estimates]' : '')
       ).join('\n')
       messages.push({
@@ -209,7 +214,11 @@ Deno.serve(async (req) => {
           `possibly a different quantity), keep quantity_g accurate to the new text — do NOT change your ` +
           `identification of what the food is. Only treat a food as new/different if its name or identity in the ` +
           `edited text genuinely changed. The app recalculates macros from quantity_g after this step, so your ` +
-          `only job here is correct food identification and gram amounts, exactly as with a fresh log.`,
+          `only job here is correct food identification and gram amounts, exactly as with a fresh log.\n\n` +
+          `On each food in "foods" that is the SAME food as one listed above, add "prev_id" set to that food's ref, ` +
+          `e.g. "prev_id": "p1" — also when the edited text renames it or fixes a typo (e.g. "Roti" → "Chapati"). ` +
+          `Leave prev_id out for a new food, or for a different food that replaced one (e.g. "Roti" → "Paratha"). ` +
+          `Use each ref at most once.`,
       })
     }
 
@@ -233,7 +242,35 @@ Deno.serve(async (req) => {
     messages.push(...historyMessages, { role: 'user', content: text })
 
     // ── 5. Agent loop: Call 1 → execute tools → Call 2 (if needed) ───────────
-    const { result: aiResult, waterLogged } = await runAgentLoop(supabase, user.id, messages)
+    const { result: parsed, waterLogged, mealDeleted } = await runAgentLoop(supabase, user.id, messages)
+
+    // The AI's reply couldn't be read (truncated/malformed JSON, or empty).
+    // This used to be passed off as a chat answer — broken JSON shown in a
+    // bubble, saved to history, reported as success. Now it is a real error:
+    // a fixed message plus a machine-readable error_code, and nothing saved.
+    // HTTP 200 + success:false is the shape the installed app already treats
+    // as a failure (it shows its generic "couldn't log" copy), so old builds
+    // behave sanely and new builds can branch on error_code.
+    if (!parsed.ok) {
+      // Except when a tool call already changed the user's data before the
+      // final reply broke (log_water inserted, delete_meal deleted). Calling
+      // that a failure invites a retry that logs the water twice, and the
+      // installed app only refreshes its water card on a success answer. So
+      // report what was done, in fixed copy, in the shape every build reads
+      // as a normal answer. No chat turn is saved: the model's reply is gone.
+      if (waterLogged || mealDeleted) {
+        console.error('[log-food-from-text] AI reply was not readable JSON after a write tool ran — answering with fixed copy')
+        return json({ success: true, type: 'answer', reply: toolDoneReply(waterLogged, mealDeleted), water_logged: waterLogged })
+      }
+      console.error('[log-food-from-text] AI reply was not readable JSON — returning ai_parse_failed')
+      return json({
+        success: false,
+        error: AI_PARSE_FAILED_MESSAGE,
+        error_code: parsed.code,
+        water_logged: waterLogged,
+      }, 200)
+    }
+    const aiResult = parsed.value
 
     // ── 6. Route on intent ─────────────────────────────────────────────────────
     if (aiResult.intent === 'answer') {
@@ -250,7 +287,8 @@ Deno.serve(async (req) => {
     }
 
     // On an edit, deterministically rescale any food that's the same as one of
-    // the previous entries (by normalized name) — quantity_g × old_per100g,
+    // the previous entries (by normalized name, or by the prev_id ref the
+    // model echoes for a renamed food) — quantity_g × old_per100g,
     // reusing the SAME food_item_id/macro_source rather than re-resolving.
     // This is the enforcement layer for the system-prompt instruction above:
     // even if the model ignores that instruction and re-derives nutrition
@@ -258,13 +296,17 @@ Deno.serve(async (req) => {
     // a pure quantity edit can never change the macro ratio. Foods with no
     // match (genuinely new/changed identity) fall through to the normal
     // resolveFoods() pipeline, exactly as a fresh log would.
-    const previousByName = new Map(previousEntries.map((e) => [normalizeName(e.name), e]))
     // The card's edit text is built from each entry's quantity_label, so on an
     // edit a rough entry's "· rough estimate" marker comes back in the text.
     // It is a flag, not part of the food: if the parse folded it into a name,
     // strip it before matching/resolving (entryQuantityLabel handles labels).
     const allParsed = (aiResult.foods as ParsedFood[]).map((f) =>
       editMealLogId && typeof f.name === 'string' ? { ...f, name: stripRoughMarker(f.name) || f.name } : f)
+    // The previous entry each food is (by name, else by the model's prev_id
+    // for a renamed food), or undefined for a new food or a fresh log.
+    const previousFor: Array<PreviousEntry | undefined> = editMealLogId
+      ? matchPreviousEntries(allParsed as Array<ParsedFood & { prev_id?: unknown }>, previousEntries)
+      : new Array(allParsed.length).fill(undefined)
     const rescaledIndices: number[] = []
     const freshIndices: number[] = []
     const rescaled: ResolvedFood[] = new Array(allParsed.length)
@@ -287,7 +329,7 @@ Deno.serve(async (req) => {
     }
 
     allParsed.forEach((f, i) => {
-      const prev = editMealLogId ? previousByName.get(normalizeName(f.name)) : undefined
+      const prev = previousFor[i]
       // Only rescale when the food itself carries no fresher ground truth
       // (e.g. a new label_macros from a re-scanned label) and the previous
       // entry actually has a usable macro_source to trust.
@@ -316,7 +358,7 @@ Deno.serve(async (req) => {
 
     // An edit must never silently delete a food the meal already had. The
     // edit replaces ALL of the meal's entries, so a food that matches a
-    // previous entry by name but had to be re-resolved (its entry predates the
+    // previous entry but had to be re-resolved (its entry predates the
     // resolver and has no food_item_id — 429 such entries on 2026-11-12) and
     // then got no usable number would vanish from the user's history. It keeps
     // its previous numbers, rescaled, instead. Only genuinely new foods can be
@@ -325,7 +367,7 @@ Deno.serve(async (req) => {
     for (const u of freshResolved.unresolved) {
       const origIdx = freshIndices[u.index]
       const f = allParsed[origIdx]
-      const prev = editMealLogId ? previousByName.get(normalizeName(f.name)) : undefined
+      const prev = previousFor[origIdx]
       if (prev && !f.label_macros && prev.quantity_g > 0) {
         console.warn(`[edit] no usable estimate for "${f.name}" — keeping its previous entry's numbers`)
         rescaled[origIdx] = rescaleFromPrevious(f, prev)
@@ -341,7 +383,11 @@ Deno.serve(async (req) => {
     // app's previous_entries carry neither, so ask the row itself — by the id,
     // server-side, rather than trusting anything else the client sent. Not
     // fatal: without the answer the entry just logs unflagged, as before.
-    const rescaledIds = [...new Set(rescaledIndices.map((i) => rescaled[i].food_item_id).filter((id): id is string => !!id))]
+    // Not for an entry the user corrected in Adjust Macros (user_created):
+    // those numbers are the user's own now, even though the entry still
+    // points at the rough food_items row.
+    const roughCandidates = rescaledIndices.filter((i) => rescaled[i].macro_source !== 'user_created')
+    const rescaledIds = [...new Set(roughCandidates.map((i) => rescaled[i].food_item_id).filter((id): id is string => !!id))]
     if (rescaledIds.length > 0) {
       const { data: rows, error: roughErr } = await supabase
         .from('food_items')
@@ -353,7 +399,7 @@ Deno.serve(async (req) => {
           .filter((r: { status_reason: unknown }) => typeof r.status_reason === 'string' && r.status_reason.startsWith('rough_'))
           .map((r: { id: string }) => r.id),
       )
-      for (const i of rescaledIndices) {
+      for (const i of roughCandidates) {
         const f = rescaled[i]
         if (f.food_item_id && roughIds.has(f.food_item_id)) {
           rescaled[i] = { ...f, rough: true, confidence: capRoughConfidence(f.confidence) }
@@ -399,19 +445,24 @@ Deno.serve(async (req) => {
 
     // Get or create meal_log
     let mealLog: { id: string }
+    // On an edit: the meal's caption, which the edit leaves alone.
+    let keptCaption: string | null = null
 
     if (editMealLogId) {
-      const { data: existing, error: updErr } = await supabase
+      // Ownership check only. The caption is what the user typed when they
+      // logged the meal; the edit text is the AI's own food summary, so
+      // writing it over the caption (as this used to) erased their words.
+      const { data: existing, error: selErr } = await supabase
         .from('meal_logs')
-        .update({ caption: text })
+        .select('id, caption')
         .eq('id', editMealLogId)
         .eq('user_id', user.id)
-        .select('id')
-        .single()
+        .maybeSingle()
 
-      if (updErr) throw updErr
+      if (selErr) throw selErr
       if (!existing) return json({ error: 'Meal not found' }, 404)
-      mealLog = existing
+      mealLog = { id: existing.id }
+      keptCaption = existing.caption ?? null
 
       const { error: delErr } = await supabase
         .from('food_entries')
@@ -467,7 +518,12 @@ Deno.serve(async (req) => {
     )
     const baseNote = aiResult.coach_note ?? `Logged ${aiResult.meal_name} — ${Math.round(totals.calories)} cal`
     const coachNote = note ? `${baseNote} ${note}` : baseNote
-    await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id, requestStartedAt, note)
+    // Not on an edit: the meal's chat turn was saved when it was logged.
+    // Saving the edit too replayed the food summary as a new user bubble on
+    // reload and counted the meal twice in the model's history.
+    if (!editMealLogId) {
+      await saveChatTurn(supabase, user.id, logged_date, text, coachNote, mealLog.id, requestStartedAt, note)
+    }
 
     return json({
       success: true,
@@ -475,7 +531,12 @@ Deno.serve(async (req) => {
       meal_log_id: mealLog.id,
       meal_name: aiResult.meal_name,
       coach_note: coachNote,
-      input_text: text,
+      // On an edit, the caption as stored (untouched). caption_kept tells
+      // the app it no longer needs to restore the caption itself (builds
+      // made before this change did, after older function versions
+      // overwrote it).
+      input_text: editMealLogId ? keptCaption : text,
+      ...(editMealLogId ? { caption_kept: true } : {}),
       logged_date,
       meal_type,
       foods,
@@ -495,19 +556,21 @@ Deno.serve(async (req) => {
 // If tools requested: execute them, append results, Call 2: AI gives final answer.
 // Max 2 LLM calls. Simple messages (food log, simple Q&A) only use 1 call.
 // deno-lint-ignore no-explicit-any
-async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<{ result: Record<string, unknown>; waterLogged: boolean }> {
+async function runAgentLoop(supabase: any, userId: string, messages: Array<Record<string, unknown>>): Promise<{ result: AiContentParse; waterLogged: boolean; mealDeleted: boolean }> {
   const call1 = await callOpenRouter(supabase, userId, messages, TOOLS)
 
   // No tool calls → AI responded directly (food log JSON or simple answer)
   if (!call1.tool_calls || call1.tool_calls.length === 0) {
-    return { result: parseAIContent(call1.content ?? ''), waterLogged: false }
+    return { result: parseAiContent(call1.content as string | null), waterLogged: false, mealDeleted: false }
   }
 
   // AI requested tool calls — execute them against Supabase.
   // Track whether log_water actually succeeded so the client knows to refresh
   // its water store — the water insert happens server-side here, so nothing
-  // on the client would otherwise know a new row exists.
+  // on the client would otherwise know a new row exists. mealDeleted is the
+  // same for delete_meal; the handler needs both if the final reply breaks.
   let waterLogged = false
+  let mealDeleted = false
 
   const toolResults = await Promise.all(
     call1.tool_calls.map(async (tc: Record<string, unknown>) => {
@@ -516,6 +579,9 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
       const result = await executeTool(supabase, userId, fnName, fnArgs)
       if (fnName === 'log_water' && (result as Record<string, unknown>)?.success) {
         waterLogged = true
+      }
+      if (fnName === 'delete_meal' && (result as Record<string, unknown>)?.success) {
+        mealDeleted = true
       }
       return {
         role: 'tool',
@@ -544,7 +610,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
   // produce an actual answer from what it already has, turning a dead end into
   // a usable response.
   if (call2Content.trim()) {
-    return { result: parseAIContent(call2Content), waterLogged }
+    return { result: parseAiContent(call2Content), waterLogged, mealDeleted }
   }
 
   // Re-ask with the SAME message list call 2 saw — deliberately not appending
@@ -554,7 +620,7 @@ async function runAgentLoop(supabase: any, userId: string, messages: Array<Recor
   // a 400. tool_choice 'none' removes the option to ask again, so the model has
   // to answer from the tool results already in the conversation.
   const finalCall = await callOpenRouter(supabase, userId, messagesWithTools, TOOLS, 'none')
-  return { result: parseAIContent((finalCall.content as string | null) ?? ''), waterLogged }
+  return { result: parseAiContent(finalCall.content as string | null), waterLogged, mealDeleted }
 }
 
 // ── OpenRouter call wrapper ───────────────────────────────────────────────────
@@ -703,12 +769,16 @@ async function executeTool(supabase: any, userId: string, name: string, args: Re
 
     case 'get_water_intake': {
       const date = (args.date as string) ?? today()
+      // By the user's LOCAL day (logged_date), the same key log_water writes
+      // and the app's water card reads. Filtering logged_at by UTC midnight
+      // shifted the day by the user's offset: in India, water drunk before
+      // 05:30 local landed on the previous day, and the totals disagreed with
+      // the water card and with get_daily_summary.
       const { data } = await supabase
         .from('water_logs')
         .select('amount_ml, logged_at')
         .eq('user_id', userId)
-        .gte('logged_at', `${date}T00:00:00.000Z`)
-        .lte('logged_at', `${date}T23:59:59.999Z`)
+        .eq('logged_date', date)
       const total = (data ?? []).reduce((sum: number, r: Record<string, number>) => sum + (r.amount_ml ?? 0), 0)
       return { date, total_ml: total, entries: data ?? [] }
     }
@@ -750,14 +820,16 @@ function json(data: unknown, status = 200) {
   })
 }
 
-// Parse the AI's text content as JSON. The AI always returns JSON per the system prompt.
-function parseAIContent(content: string): Record<string, unknown> {
-  try {
-    return JSON.parse(content)
-  } catch {
-    // Fallback: treat as plain answer if JSON parse fails
-    return { intent: 'answer', reply: content.trim() || "Something went wrong. Try again." }
-  }
+// The AI's text content is parsed by parseAiContent (_shared/parseAiContent.ts):
+// JSON → used, prose → a chat answer, a broken JSON attempt or nothing → an
+// ai_parse_failed error (see the handler, step 5).
+
+// What the user is told when a write tool ran but the model's final reply was
+// unreadable. Fixed copy, never the model's text.
+function toolDoneReply(waterLogged: boolean, mealDeleted: boolean): string {
+  if (waterLogged && mealDeleted) return 'Done — I logged that water and deleted that meal.'
+  if (mealDeleted) return 'Done — I deleted that meal.'
+  return 'Done — I logged that water.'
 }
 
 // Load today's chat history as OpenAI message format for context replay.
