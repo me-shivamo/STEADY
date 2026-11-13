@@ -1837,3 +1837,18 @@ A compare-and-swap migration carries a snapshot of the exact rows it expects to 
 *2026-11-13 · Tool*
 
 API providers like OpenRouter let you cap a key's monthly spend. That protects your wallet, but when the cap is hit every request fails, which is an outage. For STEADY, tests that run through the live functions spend from the same key as real users, so they must use a separate key with its own cap. The production key's cap should sit comfortably above expected use, with an alert well before it's reached.
+
+### Passing the environment in (dependency injection for config)
+*2026-11-13 · Pattern*
+
+Our edge functions run on Deno and read secrets with `Deno.env.get`, which doesn't exist in jest, where our unit tests run. So the key-choosing function takes the environment as an argument, `env: (name) => string | undefined`: production passes `(k) => Deno.env.get(k)` and tests pass a plain lookup table. It's the same idea as constructor injection in Java. For STEADY it means a rule that protects production (which key a request bills) is tested on every run instead of trusted.
+
+### The Atwater check: a 10-second audit for any nutrition label
+*2026-11-13 · Pattern*
+
+Protein and carbohydrate give about 4 kcal per gram and fat about 9, factors worked out by W. O. Atwater over a century ago. So on any label, 4×protein + 4×carbs + 9×fat should land close to the printed calories (fibre and alcohol make small differences). For STEADY it's the cheapest data-quality gate we have: it caught 78 impossible rows in brands' own official documents, it will check every number from a live web lookup, and it costs one line of arithmetic.
+
+### Let the component that knows the data make the data decision
+*2026-11-13 · Architecture*
+
+Whether to log "poha" as one dish or as its ingredients only helps if the pieces exist in our database, and the language model can't see the database. So the better design is for the model to return both the dish and an optional ingredient list, and for the resolver, the code that queries the database, to pick: the verified dish row when one exists, otherwise the ingredients plus oil. It's the same principle as keeping business rules in the service layer instead of the UI. For STEADY it turns a fuzzy prompt instruction ("split compound foods") into a deterministic rule we can test.
