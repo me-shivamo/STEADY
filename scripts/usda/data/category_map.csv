@@ -1,0 +1,31 @@
+dataset,usda_category_code,usda_category,portion_category,note
+fndds,1002,"Milk, whole",milk,plain cow milk: glass 200 ml / teacup 120 ml (054 milk rows)
+fndds,1004,"Milk, reduced fat",milk,plain cow milk
+fndds,1006,"Milk, lowfat",milk,plain cow milk
+fndds,1008,"Milk, nonfat",milk,plain cow milk
+fndds,1202,"Flavored milk, whole",milk,a flavoured milk is drunk by the glass like milk
+fndds,1204,"Flavored milk, reduced fat",milk,a flavoured milk is drunk by the glass like milk
+fndds,1206,"Flavored milk, lowfat",milk,a flavoured milk is drunk by the glass like milk
+fndds,1208,"Flavored milk, nonfat",milk,a flavoured milk is drunk by the glass like milk
+fndds,1820,"Yogurt, regular",curd,yogurt = curd (dahi): katori 150 g (054 curd rows)
+fndds,1822,"Yogurt, Greek",curd,yogurt = curd (dahi)
+fndds,2804,Nuts and seeds,nuts,"nuts, peanuts and seeds by the handful (33 g) or level tbsp (9 g); nut butters are in 8xxx/SR, not here"
+fndds,3804,"Soups, broth-based",liquid_dish,a soup is a liquid dish: katori/bowl by volume at ~1 g/ml
+fndds,3806,"Soups, cream-based",liquid_dish,a soup is a liquid dish
+fndds,3808,Ramen and Asian broth-based soups,liquid_dish,a soup is a liquid dish
+fndds,3602,Pizza,pizza,pizza by the slice (110 g hint row); FNDDS rows carry their own slice weights first
+fndds,4002,Rice,cooked_rice,"every WWEIA 4002 row is cooked rice (white, brown, yellow, wild, congee)"
+fndds,4202,Yeast breads,bread,bread by the slice (25 g hint row); FNDDS rows carry their own slice weights first
+fndds,4602,"Ready-to-eat cereal, higher sugar (>21.2g/100g)",cereal_dry,a bowl of dry cereal (35 g); milk is its own food
+fndds,4604,"Ready-to-eat cereal, lower sugar (=<21.2g/100g)",cereal_dry,a bowl of dry cereal (35 g)
+fndds,4802,Oatmeal,porridge,"cooked oatmeal (made with water or milk), ~1 g/ml"
+fndds,5802,Ice cream and frozen dairy desserts,ice_cream,by the scoop (66 g)
+fndds,6004,Bananas,banana,banana by the piece (118 g edible)
+fndds,7002,Citrus juice,juice,by the glass at 1.04 g/ml
+fndds,7004,Apple juice,juice,by the glass at 1.04 g/ml
+fndds,7006,Other fruit juice,juice,by the glass at 1.04 g/ml
+fndds,7008,Vegetable juice,juice,by the glass at 1.04 g/ml
+fndds,7502,Beer,alcohol_beer,"pint, can or bottle"
+fndds,7504,Wine,alcohol_wine,glass 150 ml
+fndds,8002,Butter and animal fats,fat,"butter, ghee, lard by the tsp (5 g) / tbsp (13 g)"
+fndds,9802,Protein and nutritional powders,protein_powder,by the scoop (32 g)

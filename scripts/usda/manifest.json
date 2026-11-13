@@ -1,0 +1,129 @@
+{
+ "inputs_sha256": "eac493a3f01430435860082699d37ba1d8598e7ab7822bd5fc72a9021523c86d",
+ "releases": {
+  "foundation": {
+   "release": "2026-10-29",
+   "file": "FoodData_Central_foundation_food_json_2026-10-29.zip",
+   "sha256": "dd414cc9f1a132626bad354ef6655972c78b44aff14f16114dc899708663c579"
+  },
+  "sr": {
+   "release": "2018-04",
+   "file": "FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+   "sha256": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0"
+  },
+  "fndds": {
+   "release": "2024-10-31",
+   "file": "FoodData_Central_survey_food_csv_2024-10-31.zip",
+   "sha256": "5ccc25ec2777a8982fbb61378a42f415316173eb11e48c9a8ba4cb19f5a4f29c"
+  }
+ },
+ "subset": {
+  "foundation": 374,
+  "sr": 6636,
+  "fndds": 5280,
+  "total": 12290
+ },
+ "excluded": {
+  "fndds: baby food, infant formula or human milk": 152,
+  "foundation: Foundation food with no energy value": 50,
+  "sr: American Indian / Alaska Native food": 165,
+  "sr: SR row replaced by a Foundation food with the same NDB number": 193,
+  "sr: baby food": 345,
+  "sr: fast food, restaurant or brand row": 454
+ },
+ "energy_ids": {
+  "fndds:208": 5280,
+  "foundation:1008": 95,
+  "foundation:2047": 79,
+  "foundation:2048": 200,
+  "sr:1008": 6636
+ },
+ "invalid": {
+  "foundation": 0,
+  "sr": 35,
+  "fndds": 35,
+  "total": 70
+ },
+ "skipped_verified_fdc": {
+  "foundation": 5,
+  "sr": 119,
+  "fndds": 11,
+  "total": 135
+ },
+ "duplicates": {
+  "foundation": 1,
+  "sr": 1,
+  "fndds": 97,
+  "total": 99
+ },
+ "foods": {
+  "foundation": 368,
+  "sr": 6481,
+  "fndds": 5137,
+  "total": 11986
+ },
+ "flags": {
+  "clamp:carbs": 10,
+  "fibre:2033": 17,
+  "fibre:missing": 555
+ },
+ "portions": {
+  "usda_foundation": 91,
+  "usda_sr": 6606,
+  "usda_fndds": 15778,
+  "total": 22475,
+  "defaults": 5207,
+  "on_imported_foods": 22313,
+  "replay": {
+   "usda_foundation": 88,
+   "usda_sr": 6465,
+   "usda_fndds": 15760,
+   "defaults": 5196
+  },
+  "on_verified_rows": 162,
+  "by_unit": {
+   "bottle": 110,
+   "can": 430,
+   "cup": 6035,
+   "ml": 869,
+   "packet": 869,
+   "piece": 5915,
+   "scoop": 36,
+   "serving": 5963,
+   "slice": 1234,
+   "tbsp": 798,
+   "tsp": 216
+  },
+  "report": {
+   "measures": 34265,
+   "unclassified": 8059,
+   "same_unit_size": 3585,
+   "covered_by_054": 146,
+   "over_10kg": 0,
+   "rows": 22475,
+   "verified_targets_in_files": 178,
+   "verified_targets_not_in_files": 8
+  }
+ },
+ "category_map": {
+  "total": 667,
+  "by_category": {
+   "alcohol_beer": 7,
+   "alcohol_wine": 12,
+   "banana": 2,
+   "bread": 101,
+   "cereal_dry": 42,
+   "cooked_rice": 30,
+   "curd": 31,
+   "fat": 9,
+   "ice_cream": 58,
+   "juice": 43,
+   "liquid_dish": 75,
+   "milk": 50,
+   "nuts": 78,
+   "pizza": 91,
+   "porridge": 21,
+   "protein_powder": 17
+  }
+ }
+}

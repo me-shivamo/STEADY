@@ -73,5 +73,9 @@ docs/social/
 # licences forbid committing them — `python3 -I scripts/recalc/recalc.py fetch` re-downloads)
 .cache/recalc/
 
+# USDA FoodData Central bulk files for scripts/import-usda.ts (pinned by SHA-256 in scripts/usda/sources.json;
+# `npx tsx scripts/import-usda.ts fetch` re-downloads them). Public domain, but ~10 MB of zips: never committed.
+.cache/usda/
+
 # Python bytecode (scripts/recalc and gen-notification-*.py)
 __pycache__/

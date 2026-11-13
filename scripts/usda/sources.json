@@ -1,0 +1,32 @@
+{
+ "_note": "Pinned USDA FoodData Central bulk files for the local import (migrations 055 + 056). `npx tsx scripts/import-usda.ts fetch` downloads them into the gitignored .cache/usda/ and refuses any file whose SHA-256 or size differs; every later command re-hashes them. Raw files are never committed. FoodData Central data is in the public domain (CC0 1.0); cite: U.S. Department of Agriculture, Agricultural Research Service. FoodData Central, fdc.nal.usda.gov.",
+ "foundation": {
+  "dataset": "foundation",
+  "release": "2026-10-29",
+  "format": "json",
+  "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_foundation_food_json_2026-10-29.zip",
+  "file": "FoodData_Central_foundation_food_json_2026-10-29.zip",
+  "bytes": 696866,
+  "sha256": "dd414cc9f1a132626bad354ef6655972c78b44aff14f16114dc899708663c579",
+  "why": "The October 2026 Foundation CSV zip has no food, nutrient or portion tables, so the JSON release is used (spec (f))."
+ },
+ "sr": {
+  "dataset": "sr",
+  "release": "2018-04",
+  "format": "csv",
+  "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+  "file": "FoodData_Central_sr_legacy_food_csv_2018-04.zip",
+  "bytes": 6074592,
+  "sha256": "b80817294b8850530aaedf2e515c02593b1824f763a0ff356e5c2081643e6fd0"
+ },
+ "fndds": {
+  "dataset": "fndds",
+  "release": "2024-10-31",
+  "format": "csv",
+  "url": "https://fdc.nal.usda.gov/fdc-datasets/FoodData_Central_survey_food_csv_2024-10-31.zip",
+  "file": "FoodData_Central_survey_food_csv_2024-10-31.zip",
+  "bytes": 3325692,
+  "sha256": "5ccc25ec2777a8982fbb61378a42f415316173eb11e48c9a8ba4cb19f5a4f29c",
+  "why": "FNDDS 2021-2023. Its food_nutrient.csv keys nutrients by the OLD numbers (208 energy, 203 protein, 204 fat, 205 carbohydrate, 291 fibre), not the 1008/1003/1004/1005/1079 ids SR uses."
+ }
+}

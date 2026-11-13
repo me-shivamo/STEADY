@@ -1,0 +1,245 @@
+fdc_id,food_item_id,source,normalized_name,has_portions
+167533,a68a994d-1d80-4484-b401-2fd42a18b683,usda,bagel,false
+167587,5add0bba-bb05-419b-8fcb-73b046261756,usda,dairy milk chocolate,false
+167598,198d0de0-05ff-49b4-9427-1915b4c8ff59,usda,sandwich bread,false
+167672,34847ead-4308-46f8-b2f8-8888e77f58d3,usda,large fries,false
+167672,6389dbbb-ee91-48aa-915a-87299bdf444f,usda,medium fries,false
+167672,8dbf8d05-41cc-49a3-a33d-8d4ee0e2b0b3,usda,seasoned fries,false
+167711,aef79a47-d6f5-45d8-b18b-29f4e0bdc058,usda,flavored milk,true
+167765,bc403596-dc00-420f-8aa0-ed4bb56b122a,usda,watermelon,true
+167785,82dbd115-1e9c-4be3-b9c8-6772d9ce3269,usda,mango juice,true
+167787,2fa88a80-30fb-4bb8-9b25-a53ca1e65094,usda,pomegranate juice,true
+167802,61bd39f5-2ae3-455a-822d-2eeb9fd8fe54,usda,lemon,false
+168156,242dbdbd-3b19-4cba-ac68-cefb11e5591f,usda,lime juice,true
+168157,a3f0550c-392c-498c-8a2a-6c51683afde3,usda,fresh lime juice,false
+168166,28312ec8-c368-47fa-85c4-c18dd5c15474,usda,raisins,false
+168191,9909cb73-fef0-4d60-bbec-a36bcb748fc7,usda,medjool date,false
+168538,e639300e-e01c-49ce-8100-364f678aaae1,usda,sweet corn,false
+168540,72e6e7dc-7ef8-444c-8bf8-30a1b4ef9933,usda,boiled corn,true
+168746,78b4d8ad-0705-4e60-a4e3-2dc053752117,usda,beer,true
+168853,ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e,usda,potato chips,true
+168871,68cb4775-a30c-4aaf-aec3-39d35f47022b,usda,kodo millet,false
+168871,c1f3917c-72a5-42d9-aa1d-002581476961,usda,kodo millet upma,false
+168879,4015d8de-62b0-49eb-bad4-ce575a907869,usda,grain of rice,true
+168914,dd59ec5c-8d92-4220-a3cb-f1f55ff6a965,usda,red noodles,false
+168917,be6c6ab6-d346-4180-aa8d-f4a39471b37e,usda,quinoa,false
+168920,7015a05b-5326-4209-a31b-01194691e760,usda,extra corn,false
+168930,1b658efe-2725-533c-b62f-e23aa974aed8,usda,cooked basmati rice,true
+168930,1d7de53e-e1eb-56c4-98b5-5ebb75c029e6,usda,cooked rice,true
+168930,c00b0db4-d5dd-526a-858b-10f8974a29ec,usda,steamed white rice,true
+168930,d4043769-d2f2-5413-afd8-18a21da162aa,usda,cooked white rice,true
+168930,db851c61-ef57-5f7d-bad8-c1dcdf45b0bc,usda,chawal,true
+168930,fb88e535-7422-5276-a5b7-17a3812c772a,usda,boiled rice uble chawal,true
+169013,557b0a42-40e6-44f6-9918-590f7bbde8f2,usda,finger chips,false
+169013,a594e86f-aa42-4791-967a-7c2ce375d896,usda,kitkat 4 finger bar,false
+169013,fa07c981-044d-44df-8c18-b20457e00cc9,usda,kitkat 4 finger,false
+169032,e8c1a6ba-e936-49e0-b191-c274a725b8d9,usda,beans ki sabji,false
+169055,9ed3d048-2b22-42f9-83fd-499da5c346a0,usda,caesar dressing,true
+169085,37bf80b1-fd85-446b-92dd-c9d3d0133a6f,usda,mixed vegetables peas carrot corn,false
+169134,e6550972-0dee-4976-8fdf-229e7eafe248,usda,pomegranate seeds garnish,false
+169225,10641c9a-252c-4d1f-87e1-3a91f340e268,usda,cucumber slices,false
+169225,c5eb64c1-c4fd-4414-8471-ae63bfa9c377,usda,cucumber,true
+169247,2b6e415e-d9e5-4b6f-a63d-dbb27643d3e8,usda,romaine lettuce,true
+169247,eeb02ec3-97b7-48f9-9544-7744cca00c49,ifct,lettuce,true
+169248,71d2520d-c536-4db8-be0c-362c77dc0aa1,usda,shredded iceberg lettuce,false
+169305,be2b9326-da7c-49e2-b600-aab558c52df6,usda,sweet potato,false
+169364,f73239bb-896d-4350-8aaa-b0695476b80d,usda,boiled sweet corn kernels,false
+169400,b8959023-1056-46dc-8c5b-29137fb91374,usda,cooked leafy greens spinach or similar spiced,false
+169427,ff093390-371e-441b-8312-010c36a89e1f,usda,mixed nuts,false
+169589,9bbdfa79-7a08-4ab4-82c5-88848f1f2a38,usda,snickers bar,false
+169640,b30aea97-0fca-4787-90c2-74a5fbfecf45,usda,honey,true
+169641,361438b1-e1f5-4dd4-bba1-0afc00bd77e8,usda,jam,true
+169677,cd4306fd-a064-48d8-8daf-700ead3e5d9f,usda,lays potato chips,false
+169732,6c3c915d-8147-4642-b381-805477205024,usda,cooked instant noodles,false
+169768,01e3b4ee-31c6-46e3-bc3d-fcd717a3446f,usda,mashed potatoes,true
+169868,b0f7f540-704b-4cd6-89c4-b8efa01fced9,usda,skim milk,false
+169868,c8f9be41-d39f-431e-ad87-6f46b43c77e2,usda,skimmed milk,false
+169869,3bd3eecc-6b51-4309-97e2-8c1735988a32,usda,pantola peanut butter,false
+169869,b5d768db-42eb-409f-b3c6-379e49c7a3af,usda,peanut butter,true
+169910,ddffe188-1b90-4596-84e4-f3356d83dbab,usda,mango pulp,false
+169926,217aabd0-5321-440a-848a-b144807b1b6f,usda,papaya,false
+169977,d7f6e065-777a-4909-aa89-a3a8304721a6,usda,red cabbage shredded,false
+169988,8c3b3491-8cb9-43b8-b0ca-8001c38dc451,usda,celery,false
+169997,2fca7e56-d514-4fb6-9803-750f87aa71ff,usda,coriander garnish,false
+169997,a65e2550-8427-47e7-a998-d9dd35e88175,usda,coriander,false
+169997,aaabacb1-23ba-4771-8c77-6b217a314e25,usda,cilantro garnish,true
+169997,c50e744a-50b0-4e1b-b686-4df7d0705b72,usda,fresh coriander garnish,false
+170000,4dcdf4b4-2b60-49c2-ad62-899dbb19d364,usda,onion diced,false
+170000,79b20cb1-0f56-4c9d-9932-aef8124bc750,usda,onion,true
+170000,a1380750-20cd-4a13-ab51-44d63dcba6bc,usda,raw onion slice,false
+170000,cc749f3f-f16c-4c87-8fed-dccfc3154d80,usda,onion slices,false
+170050,050cc57e-63a6-4721-a3e0-93abe1e8aa3f,usda,tomato cooked chopped,false
+170051,1139fd69-7509-4a60-8164-8f7337722b04,usda,tomato,true
+170051,7153e708-eb58-42ca-9676-7ea6f2f9922c,usda,cherry tomato,true
+170114,767ad010-b60c-4eff-bad8-c4682fff54cc,usda,medium boiled potato,false
+170114,98d43a5d-e07d-431a-a766-c1579ab88ad5,usda,boiled potato,false
+170162,7e297640-f3f5-447b-8ce7-b9e22d18453c,usda,cashews,false
+170187,a471e1c7-d9d3-4a27-8939-74be33962687,usda,walnut half,false
+170276,bd26fb02-e3e9-4dc1-a987-fc63bb487d91,usda,maple syrup,false
+170291,19e7ca08-87a0-42a2-b89d-e9d1dda13c37,usda,nachos,false
+170306,2b903c02-8852-48c9-a5a5-d57dd41feab7,usda,vegetables lettuce tomatoes onions etc,false
+170320,58d1a365-5699-4a3d-9485-26b7169bdbd8,usda,cheeseburger,true
+170328,8ab5fb07-ba31-49ac-9baa-6028d1e10bf1,usda,small onion burger,false
+170328,ff0eea36-a1f5-43ce-a30e-ff09f99a31e7,usda,burger,true
+170375,58d69b56-3569-4035-9000-5a43c8e68d12,usda,mixed greens,false
+170393,bbd88d9a-c2e2-4b17-b93a-045dc700e957,usda,carrots,false
+170463,71d0d6b6-0fb4-4e9a-a0ac-34635c7153d4,usda,tomato garlic chutney,false
+170471,ec567ced-ce88-4e69-ab0d-bb578533ed66,usda,mixed vegetables,true
+170491,afa16578-8a67-42c8-9b6f-52e7b814c9a1,usda,carrot juice,false
+170591,aadc9ec4-24d6-4ccb-b379-d0da422ceef7,usda,pine nuts,false
+170595,de121695-cfa6-4b11-b5b3-bd80448e1bc9,usda,methi seeds,false
+170654,f709cf43-b3cf-4b11-86c3-425240052e5c,usda,trail mix,true
+170655,539ae331-87e9-4e5f-9ce7-bfb02a341060,usda,mixed nuts snack,true
+170705,20d3b00e-22f9-4140-ae24-2e8a27e429bf,usda,chicken teriyaki,false
+170711,5b9653d3-a7bb-497e-9421-04ec9e34f221,usda,turkey sub,false
+170715,94a28304-ed24-46ee-b86f-b04728ffa900,usda,vegetable pizza,true
+170720,03f806c0-64d8-4179-8750-0d76300ac2ac,usda,big mac,true
+170721,0335c6c4-8fa5-401d-a209-3e243390d782,usda,fries,true
+170721,46728ad2-4f2c-4b75-af4e-61dba74aacdb,usda,peri peri fries,false
+170721,5cc84000-2867-4044-8fc8-82fbf4fe3606,usda,french fries,true
+170727,71532274-8543-4968-89f6-4c0fef54ae33,usda,whopper,false
+170737,17ba7f5e-5644-405a-aa6d-2a6011758736,usda,popcorn chicken,false
+170764,b2042e56-c1b0-45a8-bfe0-e0957a549a4b,usda,chicken taco,true
+170785,c9f53cea-685a-4866-b4c7-c93452e41d39,usda,wrap,false
+170795,4a7a9577-3fbb-43af-bdea-4117a5b2b5a0,usda,chicken nugget,false
+170857,ca9250cd-0737-4866-82d0-e92379ba73fa,usda,cream,true
+170886,6b1238d9-4cd3-440c-a507-4945b5eef1b7,usda,plain yogurt dollop,false
+170899,7f2a2f45-839c-4cd5-9833-f16bbd7bf7e9,usda,cheese slice,false
+170899,b3339a11-3f12-4cd1-9337-887a8f52f770,usda,cheddar cheese,true
+170903,46f41d07-bd91-46d9-9771-2aeaf34d4264,usda,greek yogurt,true
+170934,d79d222d-8dd4-44ba-9402-33107bf925d3,usda,saffron,false
+170959,726a34bf-37a3-4931-b3b1-e8d81ed96868,usda,apple,true
+171044,2f489102-cc03-4732-895c-e40eefc4e519,usda,creamy dressing on side,false
+171053,4ee31155-d2b9-4b18-b178-168b3d8b5b5e,usda,fried chicken,true
+171180,5a8d721f-4abb-4e16-8d26-f2f0505094de,usda,broth,true
+171247,6f3d57f5-9830-414e-991e-2abb7aac0eca,usda,shaved parmesan cheese,false
+171247,ec030c0e-39a1-470a-867c-fee1a314f5a9,usda,parmesan cheese,true
+171280,3cae9f81-8f2d-4a6e-aff6-bda85220857c,usda,buffalo milk,false
+171314,10b5d736-342b-4432-ae3e-7ad1e42ef3b9,usda,ghee on parathas,false
+171314,777d20f9-d7d1-4dbe-af8b-4e918d8ec72f,usda,ghee,false
+171328,69cefbb0-ffef-401a-9497-098c4f255bb2,usda,oregano,false
+171354,9547ab76-cccf-4b4f-a793-d81b8320b985,usda,orange juice,true
+171354,aa539d44-e857-4fc7-9434-907d9dbcca3c,usda,tropicana orange juice,false
+171413,d947b92b-5a56-4cdc-866f-4ad38a1a8386,usda,olive oil,true
+171513,a91421cb-f3b8-4068-b465-8a2559aa0d19,usda,grilled chicken patty,true
+171534,79d2e29f-c040-4871-9e43-7505ebfe50da,usda,grilled chicken breast,true
+171576,ce5a6b74-761a-4aff-87ed-d1bc22611a4b,usda,corn soup,false
+171583,bd3880b1-2291-4081-b9c8-4bdcd4bd5284,usda,vegetable broth,false
+171595,e9ed8fba-e02f-4be2-a10f-46b1476a4674,usda,tomato chili sauce,false
+171638,a38d77bc-a186-475e-b70d-07b3d555adc0,usda,meatballs,false
+171646,7c63152b-ccc8-4a14-ad6a-f1c16b47b55c,usda,granola,false
+171705,6f936e12-646d-4e3a-9626-f9b4aead9270,usda,avocado,true
+171706,6bbf4015-f0f4-462d-a51a-eec8c3f97e1d,usda,avocado sliced,false
+171880,c15b557d-0937-40ff-9089-92742aa4c858,usda,coffee with milk,true
+171881,00511fec-5452-415f-bc47-205af357e4f6,usda,coffee,true
+171881,6cf4c76f-fd2f-4ec9-8372-722f7a5d5909,usda,black coffee,true
+171881,88221799-1e89-4c15-b25d-5c0b8b2ad6a1,usda,filter coffee,false
+171911,717067dc-2937-407c-b990-1d9e1d38f244,usda,green tea,false
+172041,330c9881-1438-4239-8b8b-081b3f4e4e70,usda,pizza crust,true
+172041,9ca4e046-6ed6-4ad6-b5bc-14a0a21c0129,usda,medium pizza slice,false
+172041,a006c064-3516-48e9-b5d9-c2f06f2c600d,usda,red paprika pizza,true
+172053,738c13d8-c7a2-4106-ba94-d7e13813493d,usda,pepperoni pizza slice,true
+172074,33cb5934-96d6-4250-b653-aad81793b835,usda,side salad,true
+172074,aa4b5a53-6b6a-45bd-82c7-8df549776535,usda,mixed salad greens,false
+172074,c498caa1-0408-44cf-8f51-1dd1c220f5ba,usda,salad greens,true
+172176,6dba4c0a-4c27-40ae-94e5-0d37fd270728,usda,cheese,true
+172182,07af1cfa-793a-4fb8-a6f3-6f78a273585a,usda,cottage cheese,false
+172187,fe81a21e-da16-4e4f-a336-0b5bbffdfc77,usda,scrambled eggs,false
+172225,29c65def-14f9-424e-b9e8-fa04bb2f78fd,usda,buttermilk chaas,false
+172225,32f1fade-96e0-4d68-b619-840c414e3ad3,usda,buttermilk,false
+172225,b065425b-cbc7-4416-ba5d-34d9d52fbe60,usda,buttermilk curry,true
+172225,b44bb4fe-7829-41e7-a820-60d23b4b5a7a,usda,buttermilk kadhi,false
+172231,894fddf8-4b41-411c-be07-38e1803cfc6c,usda,turmeric,false
+172241,f13fe9e7-06fa-47ba-998c-812f770e667e,usda,balsamic vinegar,false
+172451,4bf254af-9ece-436f-8ede-f2bc1775d885,usda,tofu sandwich,false
+172451,9a7fe101-57fd-45a0-a49b-803c6bc8ac3b,usda,tofu,false
+172673,792ce926-772c-4f45-a3fb-73cd0e3df2d4,usda,bread slice,true
+172674,f1c4938f-d96c-41d3-8024-119b430ae252,usda,toast,true
+172686,114bb5aa-2354-4038-91ea-84274d6e8e96,usda,wheat bread,false
+172699,03d244e9-88b6-4827-ab6d-a53849fb31eb,usda,cheese cake,false
+172711,04c3323c-7498-4e6c-b53b-d5137ee8d0b5,usda,cheesecake,false
+172751,92c1f5fe-00f9-4c4a-af03-70930930d252,usda,croutons,true
+172800,e06933a3-7ecd-43cb-b176-7701031b7695,usda,taco shell,true
+173040,01a38794-4d9f-4711-a123-e6161e779f99,usda,grapes,true
+173177,5bd76dc3-aaa7-421c-9685-75c07e350a55,usda,whey protein,true
+173177,bc275276-e24f-42fb-a9be-8ea1cd043f39,usda,whey protein powder,true
+173180,981841f4-e04f-4eca-9875-3cea48b01d3c,usda,mb protein powder,false
+173180,c251fb00-a4ad-4993-8755-07d44bcb5050,usda,muscle based protein,false
+173190,8fa47daf-0920-4f3c-8849-d20bb505a4b4,usda,red wine,false
+173206,50660e0f-c52f-4d3c-9702-37117bc3de2b,usda,sprite zero,false
+173210,4b6d2873-6183-409c-85e5-6d39ba56262c,usda,red bull,false
+173279,a73119bb-d2b5-4f2d-ab04-3e93652333f0,usda,pepperoni pizza,true
+173282,634f4024-b89c-4ebb-b2fa-37946a0a06be,usda,domino s margherita pizza,false
+173291,2726aa65-657e-43b9-b977-810402194eea,usda,margherita pizza slice,false
+173291,68315a4d-1a41-4c94-b1d1-d18f0f7c4758,usda,margarita pizza,false
+173291,8463404d-ef51-4cea-952f-a45774eece0a,usda,veg pizza,true
+173291,a6f03ab1-6511-42ea-89b6-139084a93475,usda,pizza slice,true
+173291,aac6e87c-2ca3-42bf-98e8-b4c1ede4ca42,usda,margherita pizza,false
+173291,ef8d5e96-860b-4b2c-a8a8-8b6ed731b4ea,usda,paneer pizza,true
+173304,7db7f97b-4a6b-46cf-ad2b-f86b17422f95,usda,oreo mcflurry,false
+173305,b47190ba-1dfc-449b-ab69-d272dfce3cf6,usda,mcchicken burger,false
+173410,2f5ae50f-b8f2-42e4-81b6-5c90cc3ecbd8,usda,butter,true
+173418,eb6c9777-9cfb-436a-a890-fb81267b9b8b,usda,cream cheese,false
+173424,8c185899-8079-44b4-97e1-2664a5854804,usda,boiled egg,true
+173431,a2178c9e-aaeb-4884-bd91-f0e36299d37a,usda,shredded parmesan cheese,false
+173459,5421fa93-48d3-4f21-86c2-a0a2fbb68d27,usda,muscle blaze protein powder,false
+173466,8a425a00-f8c8-4152-a135-1f21aed248d8,usda,ice cream bar,true
+173468,be6e98b6-000f-4401-a884-1db01f64e3e5,usda,salt,false
+173688,666f2bf0-7dbc-4186-9358-a16517eb8029,usda,salmon fillet,true
+173706,6b8de153-9260-423b-92a5-8ec17f5f6822,usda,tuna sushi,true
+173865,55689bf4-71b2-4ceb-a887-27600a48e1e9,usda,ham,false
+173889,42c42cec-2e6a-40cb-af0b-a26f7805f2c4,usda,cereal,true
+173944,397ab1fa-1643-4e92-a356-33bfab2526e4,usda,banana,true
+174038,260de9a2-e858-4474-a276-44030960f09d,usda,beef patty,true
+174119,db028b60-fbd7-4a40-9be7-c03c76653bb7,usda,iced latte mocha,false
+174155,4075dd5c-c36c-47d8-8627-14fc4d4927e3,usda,black tea,false
+174158,0bcf87fe-e545-4b82-bf87-4c0d8fdf7376,usda,water,true
+174158,103a3d3a-ef6f-439e-8e3f-a3971108bc41,usda,hot water,false
+174158,f692198d-fd1c-4bb1-88ec-a530b0079c84,usda,water bottle,false
+174260,aae2266e-7d0e-447a-9dd2-c750930f0516,usda,boiled peanuts,false
+174524,01b52352-7524-4633-ae39-567864b93028,usda,salsa,false
+174524,8d5f7bf8-4b1b-4939-b342-1d08ff77508c,usda,salsa side cup,false
+174584,628b4f97-bf01-4cd9-b70e-316f12df0f33,usda,sausage,false
+174648,b47118ae-b966-4d37-9b08-5aa8d00d5598,usda,kellogg s corn flakes,false
+174832,2d763d29-87be-46be-b64f-094fd0c3c0c0,usda,almond milk unsweetened,false
+174832,74076651-a8aa-4f5b-b547-d769684c8106,usda,almond milk,false
+174842,879052e8-d821-4cbe-bd88-53539d26090e,usda,soda water,true
+174907,82d77cce-16f8-4e88-af5b-862894b3e2f9,usda,brown bread,false
+174913,e4da80ae-9f71-443d-b26c-2bbed715ea9e,usda,bread,true
+174949,48f68fd6-702a-4268-b705-bb30367489f7,usda,brownie,false
+174998,484441f7-1a55-4123-9fe4-fb0b28230f00,usda,french toast,false
+175039,b1491145-de43-4ba0-a0fa-ba393e98de57,usda,waffle,false
+175084,1f7b975e-d2aa-46ed-b382-ea9f52f65cb9,usda,oreo cookies,false
+175084,9c7a0b25-fdab-4777-9e53-8b3c79a75b5d,usda,oreo cookie,false
+175165,55086c1d-858a-460c-8e56-09a7db875343,usda,catfish,true
+175207,2abdac6f-3bac-4b88-81b9-c11f9ee11649,usda,chili,false
+334536,1f192f0e-df89-44fe-ada1-bfafb0748a5f,usda,fried rice,false
+746784,d0c6e018-b0a5-4582-8f8d-ceac809e549a,usda,sugar,true
+747693,0c97701a-7821-4d8e-98b7-744a87aa99fc,usda,ketchup red dipping sauce,false
+747693,29ec0ccd-b5ba-42f1-a49e-90363255856a,usda,tomato ketchup mixed in,false
+748967,07613345-982d-43c4-bd9e-0a31b71561f3,usda,large egg,false
+748967,3d3e2c25-938d-4923-a457-2b5e7ae4ffb7,usda,egg,false
+790577,4934f300-9d2f-4313-ab3d-c87eaf6d5c33,usda,red onion slices,false
+790577,71a1d7a1-d360-47f8-8a1d-c55ef27bac45,usda,red onion sliced,false
+904996,c625b040-ed72-4c66-bb71-1931b646e581,usda,haldiram bhujia sev,false
+1892102,44be7974-b8c7-4766-a641-1bf6479489dd,usda,amul lassi,false
+1913634,87d56173-fa7a-478f-87b5-f986b77dcad7,usda,paani patashe,false
+2031599,cba8f58c-dd36-41d9-8de1-35aa8c88438d,usda,baingan bharta,false
+2490375,c4de0397-04fd-42cc-b5b0-d6f052bcaa58,usda,lassi,false
+2651751,50d9a39a-bd2c-4f55-a78e-0416f7a4d63f,usda,dahi,false
+2678662,53a674af-67e0-4222-8a3d-478948c4a020,usda,americano,false
+2705740,0d4c5ed9-07e8-5ea6-8bb3-c42e7b17d21f,ifct,cottage cheese paneer cubes,false
+2705740,1807172a-318f-420c-a731-df230d4c8123,usda,paneer tikka,false
+2705740,1e06517d-5317-4034-bc91-e5e4dea1b97d,usda,paneer parantha,false
+2705740,42528f88-2dff-4cda-951e-d7c55fe6c32e,ifct,paneer,false
+2705825,555be345-8eff-4e89-ac20-9e792f45ed67,usda,beef steak,true
+2706538,a6958211-43b7-446c-a785-262846a37ae0,usda,biryani,true
+2707430,211d91b8-eaa4-4e50-a00e-c1a57cd1e677,usda,sambhar,true
+2708347,98ec8567-9d7c-4331-978c-bc6784e7efe7,usda,dosa,false
+2708730,2b57d4e1-b860-46fc-aa59-67937641a114,usda,samosa,false
+2709129,d9493182-3b47-4fd6-8fd3-39b4761d11b7,usda,dosa crepe,true
+2709130,24a866dc-fd87-4fd4-bc4b-0fdfd57b84a7,usda,medu vada,true
+2709130,3ea22a99-b40a-4c3c-8ba3-9af0d14d7c78,usda,medu vada urad dal fritter,false
+2709309,397c24c0-7e82-4e3b-8d42-0ed5cafd64b8,usda,chutney,false
+2709631,1a343a80-011d-4c3b-9e3b-6821503d4b36,usda,palak paneer,true
+2710472,1607ef08-555b-4f70-9661-72428e959a5a,usda,cappuccino,true
