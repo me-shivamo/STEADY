@@ -2511,3 +2511,8 @@ Instead of asking the founder to weigh 25 foods at home, we had three researcher
 *2026-11-13 · Feature*
 
 Phase 4's search failed our go-live test because a word inside a longer dish name scored as a perfect match ("oats" matched oats burfi). So we labelled 834 search results for 194 real phrases as the right food, the right food in the wrong state, or a different dish. From those we chose a filter in the spirit of Intake24's food-matching research: drop a result with too many extra words, too many missing words, or a different form (curry, porridge, juice, raw…). The reviewers caught it hiding eggs because of a spelling bug, dropping "boiled corn" for "corn", and claiming a cleaner held-out score than it had earned. After the fixes it is level with today's search on our practice set, not better, so only a back-to-back held-out run can decide whether it ships.
+
+### Our search fix tied with today's search, so it waits for the Indian recalculation
+*2026-11-13 · Decision*
+
+We deployed the Phase 4.1 filter for our test account only, then ran today's search and the filtered search back to back on the 100-case held-out test, three times each. A network outage killed the first attempt, so we threw it away and ran it again. The filtered search gave the same answer more often (78.5% vs 73.1%), was faster (4.1 s vs 5.8 s typical), guessed less (80 AI estimates vs 133) and over-counted protein less. But it got 2 fewer of 95 logs fully right, which is within run-to-run noise. It doesn't beat today on every target, so it stays off for users. Several of its misses land on Indian rows our next migration recalculates, so we'll re-run the same test once that's live.
