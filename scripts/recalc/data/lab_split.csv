@@ -1,0 +1,101 @@
+lab_id,role,indb_code,cooking_class,match,test_fold,components,usda_row,usda_protein_g,usda_carbs_g,usda_fat_g,usda_kcal,note
+1,raw_control,ASC001,raw_asis,close,A,,,,,,,Pune tea is milky+sweet (63 kcal); INDB chai is mostly water
+2,raw_control,ASC002,raw_asis,close,B,,c15b557d coffee with milk FDC 171880,1.98,12.6,1.38,71,milky sweet coffee
+4,matched,ASC096,flatbread_dry,exact,A,,b84a7f73 chapati FDC 174075,7.85,46.1,9.2,299,lab chapati carries 9.2 g fat; INDB roti 1 tsp ghee per 80 g atta
+5,class_only,,flatbread_dry,,,,,,,,,no jowar roti in INDB (OSR151 is jowar dosa)
+6,class_only,,flatbread_dry,,,,,,,,,no bajra roti in INDB
+7,class_only,,flatbread_dry,,,,,,,,,no rice-flour roti in INDB
+8,matched,ASC150,flatbread_dry,exact,B,,,,,,,makki ki roti
+9,class_only,,flatbread_dry,,,,,,,,,no ragi roti in INDB
+10,class_only,,flatbread_fat,,,,,,,,,no thalipeeth in INDB
+11,composite,ASC098,composite,exact,B,"dough:flatbread_fat:0,7,9,10|filling:keep:1,2,3,4,5,6,8,11",3c27389b aloo paratha FDC 174076,6.36,45.4,13.2,326,aloo paratha
+12,matched,BFP110,flatbread_fat,exact,A,,89e283bc methi paratha FDC 174076,6.36,45.4,13.2,326,methi paratha (OSR104 methi thepla is a close alternative)
+13,matched,ASC107,fried_bread,exact,B,,,,,,,poori
+14,matched,ASC467,flatbread_fat,exact,B,,,,,,,puran poli
+15,matched,ASC113,grain_boiled,close,A,,5f20d673 cooked white rice FDC 168930,2.38,28.6,0.21,130,lab = pressure-cooked rice; INDB = parboiled rice + 2x water
+16,matched,ASC115,grain_boiled,close,B,,,,,,,vegetable pulao
+17,matched,BFP144,grain_boiled,exact,A,,,,,,,rice + split moong khichdi
+18,matched,ASC125,grain_dish_dry,exact,A,,,,,,,meethe chawal
+19,class_only,,grain_boiled,,,,,,,,,no varai/samak rice in INDB
+20,class_only,,legume_curry,,,,,,,,,no plain toor/arhar dal in INDB; arhar+spinach is nearest (ASC167 sambar also toor)
+21,matched,ASC156,legume_curry,close,A,,bcfe8cca moong dal FDC 2707427,8.6,19.17,4.31,145,whole moong preparation (BFP178 whole moong with tadka is an alternative)
+22,matched,OSR142,legume_curry,close,A,,564c59a2 chana dal FDC 2707427,8.6,19.17,4.31,145,chana dal
+23,excluded,ASC168,,proxy,,,,,,,,kadhi: proxy only (INDB recipe has fried pakodi)
+24,matched,ASC193,legume_curry,close,A,,,,,,,matar ki sabzi
+25,class_only,,legume_curry,,,,,,,,,lab = sprouted moth usal; INDB = whole moth dal
+26,class_only,,legume_curry,,,,,,,,,no field-bean (val/avarai) dish in INDB
+27,matched,ASC163,legume_curry,close,B,,,,,,,lobia curry
+28,class_only,,legume_curry,,,,,,,,,"lab = dried French beans (Phaseolus vulgaris), nearest INDB = rajmah curry"
+29,class_only,,legume_curry,,,,,,,,,no sprouted field bean dish
+30,matched,ASC162,legume_curry,close,B,,09598a51 chole FDC 2367967 (unverified),5.38,17.7,2.69,115,kabuli chana curry
+31,matched,ASC161,legume_curry,close,A,,,,,,,kala chana curry
+32,matched,OSR143,legume_curry,close,A,,,,,,,paper methods say whole horse gram; INDB kulthi dal
+33,matched,ASC164,legume_curry,close,B,,,,,,,soyabean curry
+34,matched,ASC157,legume_curry,close,B,,7e0fac32 dal FDC 2707427,8.6,19.17,4.31,145,whole masoor
+35,class_only,,veg_dry,,,,,,,,,cabbage+peas
+36,class_only,,veg_dry,,,,,,,,,
+37,class_only,,veg_dry,,,,,,,,,
+38,class_only,,veg_dry,,,,,,,,,
+39,class_only,,veg_dry,,,,,,,,,
+40,class_only,,veg_dry,,,,,,,,,palak aloo (no plain spinach sabzi)
+41,class_only,,veg_dry,,,,,,,,,
+42,class_only,,veg_dry,,,,,,,,,
+43,class_only,,veg_dry,,,,,,,,,
+44,class_only,,veg_dry,,,,,,,,,
+45,class_only,,veg_dry,,,,,,,,,
+46,class_only,,veg_dry,,,,,,,,,
+47,class_only,,veg_dry,,,,,,,,,
+48,class_only,,veg_dry,,,,,,,,,
+49,class_only,,veg_dry,,,,,,,,,stuffed karela (dry)
+50,class_only,,veg_dry,,,,,,,,,stuffed lauki
+51,class_only,,veg_dry,,,,,,,,,potato capsicum
+52,class_only,,veg_dry,,,,,,,,,aloo gobhi
+53,class_only,,veg_dry,,,,,,,,,
+54,class_only,,veg_dry,,,,,,,,,beans foogath (ASC179 beans thoran alternative)
+55,class_only,,veg_dry,,,,,,,,,
+56,matched,BFP269,veg_dry,close,A,,,,,,,bhindi sabzi
+57,class_only,,veg_dry,,,,,,,,,
+58,class_only,,veg_dry,,,,,,,,,
+59,class_only,,veg_dry,,,,,,,,,
+60,class_only,,veg_dry,,,,,,,,,
+61,class_only,,veg_dry,,,,,,,,,
+62,class_only,,veg_dry,,,,,,,,,
+63,class_only,,veg_dry,,,,,,,,,
+64,class_only,,veg_dry,,,,,,,,,baingan bharta
+65,class_only,,veg_dry,,,,,,,,,
+66,class_only,,veg_dry,,,,,,,,,
+67,class_only,,veg_dry,,,,,,,,,zunka/pithla-type; not in INDB
+68,matched,ASC178,veg_dry,close,A,,,,,,,sookhe aloo
+69,matched,BFP258,veg_dry,close,B,,,,,,,mooli bhujia
+70,class_only,,veg_dry,,,,,,,,,
+71,class_only,,veg_dry,,,,,,,,,
+72,class_only,,veg_dry,,,,,,,,,
+78,raw_control,ASC273,raw_asis,close,A,,,,,,,cucumber raita (BFP303 alternative)
+89,raw_control,BFP448,raw_asis,close,B,,,,,,,gun powder (dry dal chutney)
+90,raw_control,ASC386,raw_asis,close,B,,,,,,,coconut chutney
+91,raw_control,ASC387,raw_asis,close,A,,,,,,,mint-coriander chutney
+93,raw_control,OSR024,raw_asis,exact,B,,,,,,,shrikhand
+94,matched,ASC348,fried_syrup,exact,A,,,,,,,gulab jamun with khoya
+95,excluded,OSR025,,close,,,,,,,,"basundi: evaporative reduction, no analogue class"
+96,class_only,,fried_syrup,,,,,,,,,motichoor vs besan ladoo
+99,matched,BFP044,grain_dish_dry,exact,A,,,,,,,kanda poha
+100,matched,ASC293,grain_dish_dry,exact,A,,,,,,,suji halwa/sheera
+101,matched,BFP039,grain_dish_dry,exact,B,,,,,,,rava upma
+102,excluded,ASC144,,close,,,,,,,,idli: lab sample includes chutney
+103,composite,ASC146,composite,exact,A,"dosa:batter_griddle:0,3,8,12,13,15|filling:keep:1,2,4,5,6,7,9,10,11,14",98ec8567 dosa FDC 2708347,5.7,37.04,4.05,210,"masala dosa (lab dosa has potato filling, shallow fried)"
+104,matched,BFP439,batter_steamed,exact,A,,,,,,,khaman (chana-dal dhokla); ASC474 besan+curd dhokla is the alternative
+105,class_only,,batter_steamed,,,,,,,,,no alu wadi/patra in INDB
+106,composite,OSR112,composite,exact,B,"pav:asis:36|bhaji:veg_dry:0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35",,,,,,pav bhaji
+107,matched,BFP436,fritter,exact,A,,24a866dc medu vada FDC 2709130,12.75,33.25,9.73,266,medu vada
+108,composite,ASC360,composite,close,A,"coat:fried_bread:12,13,14,17,18,20|filling:keep:0,1,2,3,4,5,6,7,8,9,10,11,15,19",,,,,,batata vada vs aloo bonda
+109,matched,ASC365,fried_bread,close,A,,,,,,,lab = moong-dal kachori; INDB khasta kachori uses urad dal
+110,matched,ASC379,fritter,exact,B,,,,,,,sabudana vada (BFP425 alternative)
+111,composite,ASC361,composite,exact,A,"shell:fried_bread:0,11,13,14|filling:keep:1,2,3,4,5,6,7,8,10,12,15",2b57d4e1 samosa FDC 2708730,5.14,33.16,17.47,310,potato-pea samosa (BFP431 vegetable samosa alternative)
+112,matched,ASC366,fritter,exact,B,,,,,,,vegetable cutlet
+113,matched,ASC352,fritter,exact,A,,,,,,,onion pakoda
+115,class_only,,fried_namkeen,,,,,,,,,no bakarwadi
+117,matched,OSR147,fried_namkeen,exact,A,,c625b040 bhujia sev FDC 904996 (branded),12,36,44,580,sev
+118,class_only,,fried_namkeen,,,,,,,,,farsan/chivda mix; not in INDB
+119,matched,OSR099,grain_dish_dry,exact,B,,,,,,,sabudana khichdi
+120,raw_control,OSR021,raw_asis,close,A,,,,,,,rajgira wadi vs rajgira ladoo
+121,class_only,,grain_dish_dry,,,,,,,,,no ratalyacha kees

@@ -1,0 +1,43 @@
+{
+ "_note": "Ingredient values INDB used that are in no public table (NIN_fct.xlsx is not published): four IFCT 2004 items and IFCT 2017 lemon juice (E033) carbohydrate, which INDB filled differently from the npm IFCT 2017 value. Back-solved by least squares from INDB.xlsx's published recipe values (indb.fit_overrides; `recalc.py verify` re-derives them). Values per 100 g.",
+ "D091": {
+  "energy_kj": 979.056,
+  "energy_kcal": 234.0,
+  "carb_g": 51.4,
+  "protein_g": 4.1,
+  "fat_g": 1.3,
+  "fibre_g": 25.0,
+  "provenance": "backsolved from INDB.xlsx (NIN_fct.xlsx not public)"
+ },
+ "D501": {
+  "energy_kj": 0.0036,
+  "energy_kcal": 0.0007,
+  "carb_g": 0.0001,
+  "protein_g": 0.0,
+  "fat_g": 0.0,
+  "fibre_g": 0.0,
+  "provenance": "backsolved from INDB.xlsx (NIN_fct.xlsx not public)"
+ },
+ "E033": {
+  "carb_g": 6.97,
+  "provenance": "backsolved from INDB.xlsx (NIN_fct.xlsx not public)"
+ },
+ "F500": {
+  "energy_kj": 0.0,
+  "energy_kcal": 0.0,
+  "carb_g": 0.0,
+  "protein_g": 0.0,
+  "fat_g": 0.0,
+  "fibre_g": 0.0,
+  "provenance": "backsolved from INDB.xlsx (NIN_fct.xlsx not public)"
+ },
+ "O064": {
+  "energy_kj": 811.6961,
+  "energy_kcal": 194.0,
+  "carb_g": 0.0,
+  "protein_g": 18.5,
+  "fat_g": 13.3,
+  "fibre_g": 0.0,
+  "provenance": "backsolved from INDB.xlsx (NIN_fct.xlsx not public)"
+ }
+}

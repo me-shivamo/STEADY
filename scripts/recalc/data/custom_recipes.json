@@ -1,0 +1,14 @@
+{
+ "_note": "STEADY-defined recipes (no INDB recipe matches the founder's definition). Lines use INDB's own ingredient codes, so they go through the same engine (indb.load_fct) as every INDB recipe: IFCT 2017 for L002, UK CoFID via INDB's UK_fct for I502. Grams as weighed for ONE serving.",
+ "STEADY:chai_standard_v1": {
+  "name": "Standard home chai, one 120 ml Indian teacup",
+  "decided": "founder 2026-11-12, spec section (h) decision 5; re-based per 120 ml cup founder 2026-11-13 (was one 240 ml US cup: 120 g milk + 120 g water + 8 g sugar, 49 kcal/100 g, 118 a cup)",
+  "cooking_class": "beverage",
+  "lines": [
+   {"code": "L002", "g": 60, "label": "Milk, whole, Cow (IFCT 2017 L002; the 052 'milk' default 3857270e serves the same code at 72.9 kcal)"},
+   {"code": "K505", "g": 60, "label": "Water"},
+   {"code": "I502", "g": 8, "label": "Sugar, white, 2 tsp (INDB's sugar code, UK CoFID 17-063)"},
+   {"code": "V510", "g": 0, "label": "Tea leaves, ~2 g, strained out (INDB codes tea as an infusion, ~0 kcal); 0 g so they add no mass"}
+  ]
+ }
+}

@@ -1,0 +1,33 @@
+{
+ "_note": "Pinned upstream sources for recalc_v1 (migration 053). `python3 -I scripts/recalc/recalc.py fetch` downloads them into the gitignored .cache/recalc/ and refuses any file whose SHA-256 differs; every later command re-hashes them. Raw files are untrusted data and are never committed (licences below): only derived values, with attribution.",
+ "indb_repo": {
+  "repo": "lindsayjaacks/Indian-Nutrient-Databank-INDB-",
+  "commit": "fbdb62bec519c6e2468582a799fb47e194b42558",
+  "license": "No LICENSE file in the repo (GitHub API: none). The paper (Vijayakumar et al., Curr Dev Nutr 2024;8(7):103790, doi 10.1016/j.cdnut.2024.103790) is CC BY 4.0 and states 'All analysis codes and files are publicly and freely available on GitHub'. Attribute; commit derived values only.",
+  "files": {
+   "INDB.do": "1d341668c5b146457c8d5e0e159987acae644ca828a3d14c00c446c6b9187a62",
+   "INDB.xlsx": "65f91911de09ebdb4b80c4a3dc3ff372a35420e05444239d8df8a42e8b5b9ecf",
+   "UK_fct.xlsx": "729b3e5b8fe48a0b3fc4e69a9d8a0a53f4f31315cf07603dff431d85a2c9f37f",
+   "US_fct.xlsx": "29748f1dfa5d72686b3175648a0cec1b7d0646a592b6ed57a9f7cfa490259149",
+   "Units.xlsx": "d5b67731b5453584f8c77a5ee1a7613476872b82375b6a1c952dcd7fb36cda34",
+   "recipes.xlsx": "5cc0e914c2660b165f25b539e12e7cfba092379a76504d8f068c0f23f7b64aff",
+   "recipes_servingsize.xlsx": "779a1ecccd07dcf82537c2888bbd58b35f925107894d9f4d26f125da958e125e"
+  }
+ },
+ "ifct2017_npm": {
+  "url": "https://registry.npmjs.org/@ifct2017/compositions/-/compositions-2.0.9.tgz",
+  "tarball": "compositions-2.0.9.tgz",
+  "integrity": "sha512-ir8tb2r9k8OWAOWBDiljLuB5MD6dy4/ct+kLuNgyRGqH0PVpI+totq+NCkvP7+gX12O3qp0uPPbuHGzwgN2uLA==",
+  "sha256": "623e31d4ea355cc829429c2d8e776fbdb5eba953ea713bad2b01c962d3e2cfd5",
+  "index_csv_sha256": "678c9285b01290ad5cc318a560fa5634618ebd413dd9fe3164d5539125c4aeef",
+  "license": "MIT for the packaging (Subhajit Sahu); the values are ICMR-NIN IFCT 2017 (Longvah et al.), NIN copyright, no open data licence stated. Already used by scripts/seed-ifct.ts via npm pack."
+ },
+ "references_not_fetched": {
+  "apjcn_2007": {
+   "url": "https://apjcn.qdu.edu.cn/16_2_22.pdf",
+   "sha256": "e9b69bee3ffaee0eb755b2e511897201e65a5174760435bb8bcc1165adac73a6",
+   "citation": "Chiplonkar SA, Agte VV. Extent of error in estimating nutrient intakes from food tables versus laboratory estimates of cooked foods. Asia Pac J Clin Nutr 2007;16(2):227-239.",
+   "license": "Journal copyright (HEC Press), free to read, no open licence. data/lab.csv transcribes its Appendix I numbers (facts) with this citation; the PDF is never committed. Download it by hand to audit lab.csv."
+  }
+ }
+}

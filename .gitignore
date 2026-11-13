@@ -68,3 +68,10 @@ steady-*-*.json
 
 # Social post drafts (private; see "Social post drafts" in CLAUDE.md)
 docs/social/
+
+# INDB/IFCT source files for scripts/recalc (pinned by SHA-256 in scripts/recalc/data/sources.json;
+# licences forbid committing them — `python3 -I scripts/recalc/recalc.py fetch` re-downloads)
+.cache/recalc/
+
+# Python bytecode (scripts/recalc and gen-notification-*.py)
+__pycache__/

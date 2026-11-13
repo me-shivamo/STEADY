@@ -1,0 +1,5063 @@
+{
+ "_note": "Output of data/snapshot.sql (read-only) against the live project. Counts only: no user id, email or private food name. Re-take it right before `db push`; the migration compares every touched row against these values and refuses to run if any changed.",
+ "aliases": [
+  {
+   "alias": "aalu ki sabzi",
+   "food_item_id": "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09",
+   "note": "1 real log"
+  },
+  {
+   "alias": "almonds",
+   "food_item_id": "a1f3ed09-8be4-4cb9-9431-e70715a9f90b",
+   "note": "17 real logs / 5 users"
+  },
+  {
+   "alias": "aloo sabji",
+   "food_item_id": "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09",
+   "note": "2 real logs"
+  },
+  {
+   "alias": "bhindi ki sabzi",
+   "food_item_id": "bd763856-cf67-4ca1-a8e3-661668d969ee",
+   "note": "3 real logs"
+  },
+  {
+   "alias": "chaas",
+   "food_item_id": "29c65def-14f9-424e-b9e8-fa04bb2f78fd",
+   "note": "founder: chaas -> Indian buttermilk; same row as the exact key buttermilk chaas"
+  },
+  {
+   "alias": "chawal",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; 3 real logs / 2 users"
+  },
+  {
+   "alias": "chawal cooked rice",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; parser bilingual pair; 2 real logs"
+  },
+  {
+   "alias": "chawal rice",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; parser bilingual pair; 3 real logs"
+  },
+  {
+   "alias": "coconut chutney",
+   "food_item_id": "9ca15288-e06a-4ef4-9a93-772bd439d2a6",
+   "note": "4 real logs / 3 users"
+  },
+  {
+   "alias": "curd",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "founder: curd = dahi; 6 real logs / 2 users"
+  },
+  {
+   "alias": "curd yogurt",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "parser bilingual pair; 1 real log"
+  },
+  {
+   "alias": "dahi yogurt",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "parser bilingual pair; 1 real log"
+  },
+  {
+   "alias": "dal lentil curry",
+   "food_item_id": "7e0fac32-ada1-4dbb-9db4-e7869967551a",
+   "note": "parser bilingual pair; 6 real logs / 4 users"
+  },
+  {
+   "alias": "maggi noodles",
+   "food_item_id": "6c3c915d-8147-4642-b381-805477205024",
+   "note": "2 real users"
+  },
+  {
+   "alias": "maggie noodles",
+   "food_item_id": "6c3c915d-8147-4642-b381-805477205024",
+   "note": "3 real logs"
+  },
+  {
+   "alias": "matar paneer",
+   "food_item_id": "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+   "note": "1 real log"
+  },
+  {
+   "alias": "milk",
+   "food_item_id": "3857270e-27e9-487c-bc51-bb97dea319c7",
+   "note": "founder default; 25 real logs / 10 users"
+  },
+  {
+   "alias": "mutter paneer",
+   "food_item_id": "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+   "note": "1 real log"
+  },
+  {
+   "alias": "pasteurized cow milk",
+   "food_item_id": "3857270e-27e9-487c-bc51-bb97dea319c7",
+   "note": "founder default; 2 real logs"
+  },
+  {
+   "alias": "phulka",
+   "food_item_id": "b84a7f73-62d6-4a46-b24a-3b2ded14dc45",
+   "note": "founder: roti = chapati = phulka; the chapati row (299, 1 piece = 43 g) like the exact key chapati"
+  },
+  {
+   "alias": "potato",
+   "food_item_id": "98d43a5d-e07d-431a-a766-c1579ab88ad5",
+   "note": "founder default; 2 real users"
+  },
+  {
+   "alias": "rajma",
+   "food_item_id": "20752111-d150-4ecd-8128-821f1324c79f",
+   "note": "search alone ranks raw rajmah 299 first; 1 real log"
+  },
+  {
+   "alias": "rice",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; 16 real logs / 7 users"
+  },
+  {
+   "alias": "roti chapati",
+   "food_item_id": "6f236ba8-be48-419f-9925-ba4e937635f4",
+   "note": "parser bilingual pair; 1 real log; same row as the exact key chapati roti"
+  },
+  {
+   "alias": "sabudana khichdi",
+   "food_item_id": "92ef8305-7232-4636-8a90-190e109ad67d",
+   "note": "2 real users"
+  },
+  {
+   "alias": "steamed rice",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; 10 real logs / 2 users"
+  },
+  {
+   "alias": "upma",
+   "food_item_id": "23c96f47-d375-406e-81d3-4654a4a88c55",
+   "note": "2 real users; search alone ranks rice upma first"
+  },
+  {
+   "alias": "white rice",
+   "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "note": "founder default; 2 real users"
+  },
+  {
+   "alias": "whole wheat roti chapati",
+   "food_item_id": "6f236ba8-be48-419f-9925-ba4e937635f4",
+   "note": "1 real log; same row as the exact key chapati roti"
+  }
+ ],
+ "fts": {
+  "aaloo onion paratha": {
+   "base": [],
+   "exact": "730f3d2e-c1a4-4f3a-9e6e-64cd427034d3",
+   "live": [
+    "730f3d2e-c1a4-4f3a-9e6e-64cd427034d3"
+   ],
+   "new_names": [],
+   "plan": [
+    "730f3d2e-c1a4-4f3a-9e6e-64cd427034d3"
+   ]
+  },
+  "aalu ki sabzi": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "almonds": {
+   "base": [
+    "2d763d29-87be-46be-b64f-094fd0c3c0c0",
+    "74076651-a8aa-4f5b-b547-d769684c8106",
+    "8be8fb5b-713f-4903-8759-9993ff810343"
+   ],
+   "exact": null,
+   "live": [
+    "2d763d29-87be-46be-b64f-094fd0c3c0c0",
+    "74076651-a8aa-4f5b-b547-d769684c8106",
+    "8be8fb5b-713f-4903-8759-9993ff810343"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "aloo paratha": {
+   "base": [],
+   "exact": "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289",
+   "live": [
+    "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289"
+   ],
+   "new_names": [],
+   "plan": [
+    "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289"
+   ]
+  },
+  "aloo sabji": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "arhar with spinach arhar dal aur palak": {
+   "base": [],
+   "exact": "bdee1292-f1de-4d17-bc35-39067adc07d4",
+   "live": [
+    "bdee1292-f1de-4d17-bc35-39067adc07d4"
+   ],
+   "new_names": [],
+   "plan": [
+    "bdee1292-f1de-4d17-bc35-39067adc07d4"
+   ]
+  },
+  "bajra roti": {
+   "base": [],
+   "exact": "ce06b7e9-87e3-4fd8-9739-1c75780aae8b",
+   "live": [
+    "ce06b7e9-87e3-4fd8-9739-1c75780aae8b"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "banana appam": {
+   "base": [],
+   "exact": "efb38b91-267d-4adf-b133-43d15214747b",
+   "live": [
+    "efb38b91-267d-4adf-b133-43d15214747b"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "bhatura": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": [
+    "87ebed4d-5322-45c2-8266-b65c37db027c"
+   ]
+  },
+  "bhel puri": {
+   "base": [],
+   "exact": "3f194ff7-b64d-427e-9c3d-d34140a16149",
+   "live": [
+    "3f194ff7-b64d-427e-9c3d-d34140a16149"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "bhindi ki sabzi": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "black channa curry bengal gram curry kale chane ki curry": {
+   "base": [],
+   "exact": "63ca6146-3475-45eb-889f-f04591a2df85",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "boiled rice uble chawal": {
+   "base": [],
+   "exact": "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+   "live": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e"
+   ],
+   "new_names": [],
+   "plan": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e"
+   ]
+  },
+  "bread roll": {
+   "base": [],
+   "exact": "23874458-49f3-443d-8315-62f1e0caeecf",
+   "live": [
+    "23874458-49f3-443d-8315-62f1e0caeecf"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "brinjal bhartha baingan ka bhartha": {
+   "base": [],
+   "exact": "d78b3726-3176-451c-b742-b2ee8c06d733",
+   "live": [
+    "d78b3726-3176-451c-b742-b2ee8c06d733"
+   ],
+   "new_names": [],
+   "plan": [
+    "d78b3726-3176-451c-b742-b2ee8c06d733"
+   ]
+  },
+  "butter roti": {
+   "base": [],
+   "exact": "caceb539-f8f0-42d6-b622-5afe9b945822",
+   "live": [
+    "caceb539-f8f0-42d6-b622-5afe9b945822"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "cabbage manchurian pattagobhi manchurian": {
+   "base": [],
+   "exact": "f53d472a-a92a-444e-8f67-b2d14fcd19e3",
+   "live": [
+    "f53d472a-a92a-444e-8f67-b2d14fcd19e3"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "chaas": {
+   "base": [
+    "29c65def-14f9-424e-b9e8-fa04bb2f78fd"
+   ],
+   "exact": null,
+   "live": [
+    "29c65def-14f9-424e-b9e8-fa04bb2f78fd"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "chai": {
+   "base": [
+    "ad73a078-8182-44f4-a6e8-ca384f844abc"
+   ],
+   "exact": null,
+   "live": [
+    "ad73a078-8182-44f4-a6e8-ca384f844abc"
+   ],
+   "new_names": [
+    "Tea (home-style chai with milk and sugar)"
+   ],
+   "plan": []
+  },
+  "chana dal": {
+   "base": [],
+   "exact": "564c59a2-0797-4c6d-8dab-d6a65ffa7907",
+   "live": [
+    "564c59a2-0797-4c6d-8dab-d6a65ffa7907"
+   ],
+   "new_names": [],
+   "plan": [
+    "564c59a2-0797-4c6d-8dab-d6a65ffa7907"
+   ]
+  },
+  "chapati": {
+   "base": [],
+   "exact": "b84a7f73-62d6-4a46-b24a-3b2ded14dc45",
+   "live": [
+    "b84a7f73-62d6-4a46-b24a-3b2ded14dc45"
+   ],
+   "new_names": [],
+   "plan": [
+    "b84a7f73-62d6-4a46-b24a-3b2ded14dc45"
+   ]
+  },
+  "chapati roti": {
+   "base": [],
+   "exact": "6f236ba8-be48-419f-9925-ba4e937635f4",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "chawal": {
+   "base": [
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5bf7354a-795f-4791-b67d-03b3ec6a2acc",
+    "bbac4d3e-de3e-4b84-ab4a-62e20de305ae"
+   ],
+   "exact": null,
+   "live": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5bf7354a-795f-4791-b67d-03b3ec6a2acc"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e"
+   ]
+  },
+  "chawal cooked rice": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": []
+  },
+  "chawal dal": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "chawal rice": {
+   "base": [
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5bf7354a-795f-4791-b67d-03b3ec6a2acc",
+    "bbac4d3e-de3e-4b84-ab4a-62e20de305ae"
+   ],
+   "exact": null,
+   "live": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5bf7354a-795f-4791-b67d-03b3ec6a2acc"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e"
+   ]
+  },
+  "chickpeas curry safed channa curry": {
+   "base": [],
+   "exact": "d0cb71a4-b746-4c23-9337-67f07fb58baa",
+   "live": [
+    "d0cb71a4-b746-4c23-9337-67f07fb58baa"
+   ],
+   "new_names": [],
+   "plan": [
+    "d0cb71a4-b746-4c23-9337-67f07fb58baa"
+   ]
+  },
+  "chole": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [
+    "Chole (chickpea curry)"
+   ],
+   "plan": []
+  },
+  "coconut chutney": {
+   "base": [
+    "9ca15288-e06a-4ef4-9a93-772bd439d2a6",
+    "a6b7df17-c6cc-4ffb-855e-ee17beadf409"
+   ],
+   "exact": null,
+   "live": [
+    "9ca15288-e06a-4ef4-9a93-772bd439d2a6",
+    "a6b7df17-c6cc-4ffb-855e-ee17beadf409"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "cooked basmati rice": {
+   "base": [],
+   "exact": "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+   "live": [
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e"
+   ],
+   "new_names": [],
+   "plan": [
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e"
+   ]
+  },
+  "cooked rice": {
+   "base": [],
+   "exact": "532c9124-4284-4924-9dc5-cc68a17d23fb",
+   "live": [
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+    "532c9124-4284-4924-9dc5-cc68a17d23fb",
+    "5f20d673-2247-44bf-9517-6f7d58ff4930"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+    "532c9124-4284-4924-9dc5-cc68a17d23fb",
+    "5f20d673-2247-44bf-9517-6f7d58ff4930"
+   ]
+  },
+  "cooked white rice": {
+   "base": [],
+   "exact": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "live": [
+    "5f20d673-2247-44bf-9517-6f7d58ff4930"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "5f20d673-2247-44bf-9517-6f7d58ff4930"
+   ]
+  },
+  "cottage cheese paneer cubes": {
+   "base": [],
+   "exact": "0c34952a-1e04-4b07-8af7-0ad879948160",
+   "live": [
+    "0c34952a-1e04-4b07-8af7-0ad879948160"
+   ],
+   "new_names": [],
+   "plan": [
+    "0c34952a-1e04-4b07-8af7-0ad879948160"
+   ]
+  },
+  "curd": {
+   "base": [
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5776a978-fe8f-4009-b939-8a2687e35b4f",
+    "9d3144c5-f618-492a-b476-29d71146f2c2"
+   ],
+   "exact": null,
+   "live": [
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "5776a978-fe8f-4009-b939-8a2687e35b4f",
+    "9d3144c5-f618-492a-b476-29d71146f2c2"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "curd yogurt": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "daal": {
+   "base": [],
+   "exact": "4baf43ea-0605-48f6-a853-941578936751",
+   "live": [
+    "4baf43ea-0605-48f6-a853-941578936751"
+   ],
+   "new_names": [],
+   "plan": [
+    "4baf43ea-0605-48f6-a853-941578936751"
+   ]
+  },
+  "dahi yogurt": {
+   "base": [
+    "a2feabba-a040-43e2-b83f-2047699ebba6"
+   ],
+   "exact": null,
+   "live": [
+    "a2feabba-a040-43e2-b83f-2047699ebba6"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "dal": {
+   "base": [
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8",
+    "14bd18a2-e691-40ed-b467-432ad09041c9"
+   ],
+   "exact": "7e0fac32-ada1-4dbb-9db4-e7869967551a",
+   "live": [
+    "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8"
+   ],
+   "new_names": [],
+   "plan": [
+    "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+    "130cac2c-2698-4c1c-a5cc-dc8f606f363a",
+    "17defa02-de55-41e8-a161-6a32bbb461e9",
+    "2a06fe4f-4ebd-46c5-bdba-8fec96455cbe",
+    "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc",
+    "564c59a2-0797-4c6d-8dab-d6a65ffa7907",
+    "5742990e-7eef-465e-875d-ebbb30796c57",
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473",
+    "590dc32b-6fc1-45ab-bd78-afa3f1d53f57",
+    "7e0fac32-ada1-4dbb-9db4-e7869967551a",
+    "8f8ed882-378c-4385-8f87-cfc4f84ee075",
+    "973a8605-a04b-424d-a0c7-e5ac07d7deaf",
+    "b07737fd-c493-40e6-b8e9-9cad0119b914",
+    "bcfe8cca-3bc2-4128-bebc-59bd1fe279a0",
+    "bdee1292-f1de-4d17-bc35-39067adc07d4",
+    "c1c042cf-acc4-43e3-aced-180a49c0a769",
+    "e9f5b52f-ff9f-4b4a-8c12-f6f9b8fa1474"
+   ]
+  },
+  "dal chawal": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "dal lentil curry": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "dal moong": {
+   "base": [
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8",
+    "14bd18a2-e691-40ed-b467-432ad09041c9"
+   ],
+   "exact": "973a8605-a04b-424d-a0c7-e5ac07d7deaf",
+   "live": [
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8",
+    "14bd18a2-e691-40ed-b467-432ad09041c9"
+   ],
+   "new_names": [],
+   "plan": [
+    "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc",
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473",
+    "590dc32b-6fc1-45ab-bd78-afa3f1d53f57",
+    "973a8605-a04b-424d-a0c7-e5ac07d7deaf",
+    "bcfe8cca-3bc2-4128-bebc-59bd1fe279a0"
+   ]
+  },
+  "dal tadka": {
+   "base": [],
+   "exact": "17defa02-de55-41e8-a161-6a32bbb461e9",
+   "live": [
+    "17defa02-de55-41e8-a161-6a32bbb461e9",
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473"
+   ],
+   "new_names": [],
+   "plan": [
+    "17defa02-de55-41e8-a161-6a32bbb461e9",
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473"
+   ]
+  },
+  "dhokla": {
+   "base": [
+    "0cb08385-3c77-4d2e-a475-2b5d8cf65600",
+    "6e385784-bbc3-4348-a97f-5102d9f3ac70",
+    "73be406c-e9ea-4af5-bbd9-1dcb89e9f958"
+   ],
+   "exact": "6c96a806-9a85-4215-b996-3f13f725199e",
+   "live": [
+    "0cb08385-3c77-4d2e-a475-2b5d8cf65600",
+    "6c96a806-9a85-4215-b996-3f13f725199e",
+    "6e385784-bbc3-4348-a97f-5102d9f3ac70"
+   ],
+   "new_names": [],
+   "plan": [
+    "6c96a806-9a85-4215-b996-3f13f725199e"
+   ]
+  },
+  "dry potato sookhe aloo": {
+   "base": [],
+   "exact": "693df2ca-9a80-4c2c-aa41-991b4bea0d67",
+   "live": [
+    "693df2ca-9a80-4c2c-aa41-991b4bea0d67"
+   ],
+   "new_names": [],
+   "plan": [
+    "693df2ca-9a80-4c2c-aa41-991b4bea0d67"
+   ]
+  },
+  "egg": {
+   "base": [
+    "048e585c-64a3-4dc8-9cd3-2f76905fbe86",
+    "07613345-982d-43c4-bd9e-0a31b71561f3",
+    "090358eb-02e5-4ee8-8b9c-dc6e9f2b4b63"
+   ],
+   "exact": "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7",
+   "live": [
+    "048e585c-64a3-4dc8-9cd3-2f76905fbe86",
+    "07613345-982d-43c4-bd9e-0a31b71561f3",
+    "090358eb-02e5-4ee8-8b9c-dc6e9f2b4b63"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "eggs": {
+   "base": [
+    "048e585c-64a3-4dc8-9cd3-2f76905fbe86",
+    "07613345-982d-43c4-bd9e-0a31b71561f3",
+    "090358eb-02e5-4ee8-8b9c-dc6e9f2b4b63"
+   ],
+   "exact": null,
+   "live": [
+    "048e585c-64a3-4dc8-9cd3-2f76905fbe86",
+    "07613345-982d-43c4-bd9e-0a31b71561f3",
+    "090358eb-02e5-4ee8-8b9c-dc6e9f2b4b63"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "gobi 65": {
+   "base": [],
+   "exact": "12ffb549-63e5-4591-ae4c-667c898cfa4d",
+   "live": [
+    "12ffb549-63e5-4591-ae4c-667c898cfa4d"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "green gram whole with baghar sabut moong dal with tadka": {
+   "base": [],
+   "exact": "58b3443d-0f76-4c3c-bd8d-3e882cd0a473",
+   "live": [
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473"
+   ],
+   "new_names": [],
+   "plan": [
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473"
+   ]
+  },
+  "gulab jamun with khoya": {
+   "base": [],
+   "exact": "cfbb9270-0f25-423b-a50e-712d2e731a83",
+   "live": [
+    "cfbb9270-0f25-423b-a50e-712d2e731a83"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "gulab jamun with milk powder": {
+   "base": [],
+   "exact": "a8d7c5b6-22f7-41f2-b07d-60aecdd164c1",
+   "live": [
+    "a8d7c5b6-22f7-41f2-b07d-60aecdd164c1"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "jackfruit fritters ponsa mulik kathal ka pakora": {
+   "base": [],
+   "exact": "1aaa7f9b-c479-46b5-acdb-3b0da026ced2",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "khakhra chaat": {
+   "base": [],
+   "exact": "c10d9e0f-84b8-4ba2-8041-fda6ea1f1856",
+   "live": [
+    "c10d9e0f-84b8-4ba2-8041-fda6ea1f1856"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "kidney bean curry rajmah curry": {
+   "base": [],
+   "exact": "20752111-d150-4ecd-8128-821f1324c79f",
+   "live": [
+    "20752111-d150-4ecd-8128-821f1324c79f"
+   ],
+   "new_names": [],
+   "plan": [
+    "20752111-d150-4ecd-8128-821f1324c79f"
+   ]
+  },
+  "lobia curry": {
+   "base": [],
+   "exact": "607df67f-a4e4-4aef-8063-22a6849e5b32",
+   "live": [
+    "607df67f-a4e4-4aef-8063-22a6849e5b32"
+   ],
+   "new_names": [],
+   "plan": [
+    "607df67f-a4e4-4aef-8063-22a6849e5b32"
+   ]
+  },
+  "maggi noodles": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "maggie noodles": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "masala chai": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "matar paneer": {
+   "base": [
+    "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+    "f9eedc03-d4b3-4ab0-b412-beaf8b7ec61d"
+   ],
+   "exact": null,
+   "live": [
+    "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+    "f9eedc03-d4b3-4ab0-b412-beaf8b7ec61d"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "methi parantha paratha": {
+   "base": [],
+   "exact": "bfc5ff00-2736-49f5-8fde-741af6789bbd",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "methi paratha": {
+   "base": [],
+   "exact": "89e283bc-e9fe-4132-bbba-608652756f54",
+   "live": [
+    "89e283bc-e9fe-4132-bbba-608652756f54"
+   ],
+   "new_names": [],
+   "plan": [
+    "89e283bc-e9fe-4132-bbba-608652756f54"
+   ]
+  },
+  "milk": {
+   "base": [
+    "07459cd5-8647-4261-949f-1aa05e0967cf",
+    "2d763d29-87be-46be-b64f-094fd0c3c0c0",
+    "2f27adfb-e307-4207-a0c6-785d72ccd625"
+   ],
+   "exact": null,
+   "live": [
+    "07459cd5-8647-4261-949f-1aa05e0967cf",
+    "2d763d29-87be-46be-b64f-094fd0c3c0c0",
+    "2f27adfb-e307-4207-a0c6-785d72ccd625"
+   ],
+   "new_names": [
+    "Tea (home-style chai with milk and sugar)"
+   ],
+   "plan": []
+  },
+  "milk tea": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [
+    "Tea (home-style chai with milk and sugar)"
+   ],
+   "plan": []
+  },
+  "mixed dal": {
+   "base": [
+    "fadce167-e8f9-49f2-910b-976572937a84"
+   ],
+   "exact": "c1c042cf-acc4-43e3-aced-180a49c0a769",
+   "live": [
+    "c1c042cf-acc4-43e3-aced-180a49c0a769",
+    "fadce167-e8f9-49f2-910b-976572937a84"
+   ],
+   "new_names": [],
+   "plan": [
+    "c1c042cf-acc4-43e3-aced-180a49c0a769"
+   ]
+  },
+  "mixed vegetable pakora pakoda": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "mixed vegetable pulao": {
+   "base": [],
+   "exact": "61e55069-51c1-43c0-862d-824bef43fd63",
+   "live": [
+    "61e55069-51c1-43c0-862d-824bef43fd63"
+   ],
+   "new_names": [],
+   "plan": [
+    "61e55069-51c1-43c0-862d-824bef43fd63"
+   ]
+  },
+  "moong dal": {
+   "base": [
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8",
+    "14bd18a2-e691-40ed-b467-432ad09041c9"
+   ],
+   "exact": "bcfe8cca-3bc2-4128-bebc-59bd1fe279a0",
+   "live": [
+    "028fca09-1dc0-4ac1-a5e7-a0aa5724218d",
+    "046582b5-b545-4c15-a040-688f6ee959a8",
+    "14bd18a2-e691-40ed-b467-432ad09041c9"
+   ],
+   "new_names": [],
+   "plan": [
+    "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc",
+    "58b3443d-0f76-4c3c-bd8d-3e882cd0a473",
+    "590dc32b-6fc1-45ab-bd78-afa3f1d53f57",
+    "973a8605-a04b-424d-a0c7-e5ac07d7deaf",
+    "bcfe8cca-3bc2-4128-bebc-59bd1fe279a0"
+   ]
+  },
+  "mutter paneer": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "okra lady s fingers fry bhindi sabzi sabji subji": {
+   "base": [],
+   "exact": "bd763856-cf67-4ca1-a8e3-661668d969ee",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "onion pakora pakoda pyaaz ke pakode": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "paneer": {
+   "base": [
+    "097b3d32-2c66-4a37-b1c5-c3cb3b81cec6",
+    "1807172a-318f-420c-a731-df230d4c8123",
+    "1a343a80-011d-4c3b-9e3b-6821503d4b36"
+   ],
+   "exact": "42528f88-2dff-4cda-951e-d7c55fe6c32e",
+   "live": [
+    "097b3d32-2c66-4a37-b1c5-c3cb3b81cec6",
+    "0c34952a-1e04-4b07-8af7-0ad879948160",
+    "1807172a-318f-420c-a731-df230d4c8123"
+   ],
+   "new_names": [],
+   "plan": [
+    "0c34952a-1e04-4b07-8af7-0ad879948160"
+   ]
+  },
+  "paratha": {
+   "base": [
+    "10b5d736-342b-4432-ae3e-7ad1e42ef3b9"
+   ],
+   "exact": "6e626ad7-975a-4f54-9bfa-24a759f116cf",
+   "live": [
+    "10b5d736-342b-4432-ae3e-7ad1e42ef3b9",
+    "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289",
+    "6e626ad7-975a-4f54-9bfa-24a759f116cf"
+   ],
+   "new_names": [],
+   "plan": [
+    "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289",
+    "6e626ad7-975a-4f54-9bfa-24a759f116cf",
+    "730f3d2e-c1a4-4f3a-9e6e-64cd427034d3",
+    "89e283bc-e9fe-4132-bbba-608652756f54"
+   ]
+  },
+  "pasteurized cow milk": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "pea potato curry aloo matar": {
+   "base": [],
+   "exact": "a3c98fb7-d54e-4268-95a3-9a06963144e5",
+   "live": [
+    "a3c98fb7-d54e-4268-95a3-9a06963144e5"
+   ],
+   "new_names": [],
+   "plan": [
+    "a3c98fb7-d54e-4268-95a3-9a06963144e5"
+   ]
+  },
+  "phulka": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [
+    "Phulka (plain roti)"
+   ],
+   "plan": []
+  },
+  "plain khitchdi plain khichri khichdi": {
+   "base": [],
+   "exact": "67d06648-33d0-464e-9194-a3e4b06cdbf2",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "plain parantha paratha": {
+   "base": [],
+   "exact": "caa17c6f-4b26-4690-8237-b1ef0da685ca",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "plain urad dal vada uzunne vada minapa garelu ulundu vadai medu vada": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "poori": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": [
+    "aaa262bc-09ee-4cda-998d-678dfdde579e"
+   ]
+  },
+  "poshtik namak paras": {
+   "base": [],
+   "exact": "2144a31e-da72-4f43-80d8-0ea145a4f8b4",
+   "live": [
+    "2144a31e-da72-4f43-80d8-0ea145a4f8b4"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "potato": {
+   "base": [
+    "01e3b4ee-31c6-46e3-bc3d-fcd717a3446f",
+    "04b560c0-e183-4876-a3a3-1c448146bf84",
+    "095c2c54-30ba-4742-acc2-a00c2e066906"
+   ],
+   "exact": null,
+   "live": [
+    "01e3b4ee-31c6-46e3-bc3d-fcd717a3446f",
+    "04b560c0-e183-4876-a3a3-1c448146bf84",
+    "095c2c54-30ba-4742-acc2-a00c2e066906"
+   ],
+   "new_names": [],
+   "plan": [
+    "693df2ca-9a80-4c2c-aa41-991b4bea0d67",
+    "a3c98fb7-d54e-4268-95a3-9a06963144e5",
+    "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09",
+    "aba7561f-2f79-4b1c-867e-8f1de1e46a9b",
+    "fbce5da1-e766-47ec-9c58-66fa82d5f1ca"
+   ]
+  },
+  "potato cauliflower aloo gobhi": {
+   "base": [],
+   "exact": "aba7561f-2f79-4b1c-867e-8f1de1e46a9b",
+   "live": [
+    "aba7561f-2f79-4b1c-867e-8f1de1e46a9b"
+   ],
+   "new_names": [],
+   "plan": [
+    "aba7561f-2f79-4b1c-867e-8f1de1e46a9b"
+   ]
+  },
+  "potato curry aloo ki sabzi": {
+   "base": [],
+   "exact": "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09",
+   "live": [
+    "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09"
+   ],
+   "new_names": [],
+   "plan": [
+    "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09"
+   ]
+  },
+  "potato parantha paratha aloo ka parantha paratha": {
+   "base": [],
+   "exact": "fbce5da1-e766-47ec-9c58-66fa82d5f1ca",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "rajma": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "rice": {
+   "base": [
+    "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "1f192f0e-df89-44fe-ada1-bfafb0748a5f",
+    "2c6be792-b521-4220-ba4b-8264c4109a52"
+   ],
+   "exact": null,
+   "live": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+    "1796a1e7-1c74-4782-a729-838eddb264f4"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+    "532c9124-4284-4924-9dc5-cc68a17d23fb",
+    "5f20d673-2247-44bf-9517-6f7d58ff4930",
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ]
+  },
+  "rice murukku": {
+   "base": [],
+   "exact": "5c0b0b52-dd5a-44a4-8df4-c17db6429649",
+   "live": [
+    "5c0b0b52-dd5a-44a4-8df4-c17db6429649"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "roti": {
+   "base": [
+    "4746a516-22de-40f4-bd90-902c4d043e07",
+    "5c6a2da6-2ca2-489a-9bb6-8802dfbbfd25",
+    "7a80d57d-3cc0-45e2-b58d-3aed99c5d07c"
+   ],
+   "exact": "7d360df0-5ad0-4307-a6cf-9bedfa7545de",
+   "live": [
+    "4746a516-22de-40f4-bd90-902c4d043e07",
+    "5aca1a95-e516-484b-8bf5-c2653b262c94",
+    "5c6a2da6-2ca2-489a-9bb6-8802dfbbfd25"
+   ],
+   "new_names": [
+    "Phulka (plain roti)"
+   ],
+   "plan": [
+    "5aca1a95-e516-484b-8bf5-c2653b262c94",
+    "7d360df0-5ad0-4307-a6cf-9bedfa7545de"
+   ]
+  },
+  "roti chapati": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "sabudana khichdi": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "sago khitchdi khichri sabudana khitchdi khichri": {
+   "base": [],
+   "exact": "92ef8305-7232-4636-8a90-190e109ad67d",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "sambar": {
+   "base": [
+    "00a58e4b-24db-4dc1-bff1-3c12251b24a0"
+   ],
+   "exact": "34bf6420-4493-4b14-b958-3ca75c15c0e6",
+   "live": [
+    "00a58e4b-24db-4dc1-bff1-3c12251b24a0",
+    "34bf6420-4493-4b14-b958-3ca75c15c0e6"
+   ],
+   "new_names": [],
+   "plan": [
+    "34bf6420-4493-4b14-b958-3ca75c15c0e6"
+   ]
+  },
+  "semolina upma suji rava upma": {
+   "base": [],
+   "exact": "23c96f47-d375-406e-81d3-4654a4a88c55",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "sev omapodi karapusa": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "soyabean curry": {
+   "base": [],
+   "exact": "5143a84d-bc67-4e85-b648-42a5a0c0f111",
+   "live": [
+    "5143a84d-bc67-4e85-b648-42a5a0c0f111"
+   ],
+   "new_names": [],
+   "plan": [
+    "5143a84d-bc67-4e85-b648-42a5a0c0f111"
+   ]
+  },
+  "split bengal gram dal channa dal": {
+   "base": [
+    "b788b9d8-2fa6-4551-9736-dd6c6196dcd4",
+    "c680edce-855c-453d-829e-9eb8265c3b80",
+    "f05d1626-f0b4-42ab-82a3-834c7f979063"
+   ],
+   "exact": "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+   "live": [
+    "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+    "8f8ed882-378c-4385-8f87-cfc4f84ee075",
+    "b788b9d8-2fa6-4551-9736-dd6c6196dcd4"
+   ],
+   "new_names": [],
+   "plan": [
+    "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+    "8f8ed882-378c-4385-8f87-cfc4f84ee075"
+   ]
+  },
+  "split bengal gram with bottle gourd channa dal with ghiya lauki": {
+   "base": [],
+   "exact": "8f8ed882-378c-4385-8f87-cfc4f84ee075",
+   "live": [],
+   "new_names": [],
+   "plan": []
+  },
+  "steamed rice": {
+   "base": [],
+   "exact": null,
+   "live": [
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ],
+   "new_names": [],
+   "plan": [
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ]
+  },
+  "steamed white rice": {
+   "base": [],
+   "exact": "de152ca1-35e0-4766-904b-c58d2decc4d3",
+   "live": [
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ],
+   "new_names": [],
+   "plan": [
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ]
+  },
+  "tea": {
+   "base": [
+    "0337eaef-6ae5-4332-aac3-9919d6ae3c3c",
+    "4075dd5c-c36c-47d8-8627-14fc4d4927e3",
+    "717067dc-2937-407c-b990-1d9e1d38f244"
+   ],
+   "exact": null,
+   "live": [
+    "0337eaef-6ae5-4332-aac3-9919d6ae3c3c",
+    "4075dd5c-c36c-47d8-8627-14fc4d4927e3",
+    "717067dc-2937-407c-b990-1d9e1d38f244"
+   ],
+   "new_names": [
+    "Tea (home-style chai with milk and sugar)"
+   ],
+   "plan": []
+  },
+  "upma": {
+   "base": [
+    "519858a4-45e1-44a7-8e97-400490640dbb",
+    "58339566-740e-4aa8-82b6-8af840b45ce5",
+    "c1f3917c-72a5-42d9-aa1d-002581476961"
+   ],
+   "exact": null,
+   "live": [
+    "23c96f47-d375-406e-81d3-4654a4a88c55",
+    "519858a4-45e1-44a7-8e97-400490640dbb",
+    "58339566-740e-4aa8-82b6-8af840b45ce5"
+   ],
+   "new_names": [],
+   "plan": [
+    "23c96f47-d375-406e-81d3-4654a4a88c55"
+   ]
+  },
+  "vada pav": {
+   "base": [],
+   "exact": "22698752-ccc4-47c5-9332-c8605046070d",
+   "live": [
+    "22698752-ccc4-47c5-9332-c8605046070d"
+   ],
+   "new_names": [],
+   "plan": []
+  },
+  "washed moong dal dhuli moong ki dal": {
+   "base": [],
+   "exact": "590dc32b-6fc1-45ab-bd78-afa3f1d53f57",
+   "live": [
+    "590dc32b-6fc1-45ab-bd78-afa3f1d53f57"
+   ],
+   "new_names": [],
+   "plan": [
+    "590dc32b-6fc1-45ab-bd78-afa3f1d53f57"
+   ]
+  },
+  "washed urad dal dhuli urad ki dal": {
+   "base": [],
+   "exact": "130cac2c-2698-4c1c-a5cc-dc8f606f363a",
+   "live": [
+    "130cac2c-2698-4c1c-a5cc-dc8f606f363a"
+   ],
+   "new_names": [],
+   "plan": [
+    "130cac2c-2698-4c1c-a5cc-dc8f606f363a"
+   ]
+  },
+  "wheat roti": {
+   "base": [],
+   "exact": "5aca1a95-e516-484b-8bf5-c2653b262c94",
+   "live": [
+    "5aca1a95-e516-484b-8bf5-c2653b262c94"
+   ],
+   "new_names": [],
+   "plan": [
+    "5aca1a95-e516-484b-8bf5-c2653b262c94"
+   ]
+  },
+  "white rice": {
+   "base": [],
+   "exact": null,
+   "live": [
+    "5f20d673-2247-44bf-9517-6f7d58ff4930",
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ],
+   "new_names": [
+    "Cooked white rice (chawal)"
+   ],
+   "plan": [
+    "5f20d673-2247-44bf-9517-6f7d58ff4930",
+    "de152ca1-35e0-4766-904b-c58d2decc4d3"
+   ]
+  },
+  "whole masoor masoor ki dal": {
+   "base": [],
+   "exact": "b07737fd-c493-40e6-b8e9-9cad0119b914",
+   "live": [
+    "b07737fd-c493-40e6-b8e9-9cad0119b914"
+   ],
+   "new_names": [],
+   "plan": [
+    "b07737fd-c493-40e6-b8e9-9cad0119b914"
+   ]
+  },
+  "whole moong moong ki dal": {
+   "base": [],
+   "exact": "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc",
+   "live": [
+    "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc"
+   ],
+   "new_names": [],
+   "plan": [
+    "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc"
+   ]
+  },
+  "whole moth moth ki dal": {
+   "base": [],
+   "exact": "e9f5b52f-ff9f-4b4a-8c12-f6f9b8fa1474",
+   "live": [
+    "e9f5b52f-ff9f-4b4a-8c12-f6f9b8fa1474"
+   ],
+   "new_names": [],
+   "plan": [
+    "e9f5b52f-ff9f-4b4a-8c12-f6f9b8fa1474"
+   ]
+  },
+  "whole urad urad ki dal": {
+   "base": [],
+   "exact": "5742990e-7eef-465e-875d-ebbb30796c57",
+   "live": [
+    "5742990e-7eef-465e-875d-ebbb30796c57"
+   ],
+   "new_names": [],
+   "plan": [
+    "5742990e-7eef-465e-875d-ebbb30796c57"
+   ]
+  },
+  "whole wheat roti chapati": {
+   "base": [],
+   "exact": null,
+   "live": [],
+   "new_names": [],
+   "plan": []
+  }
+ },
+ "fts_rows": {
+  "00a58e4b-24db-4dc1-bff1-3c12251b24a0": {
+   "kcal": "297.46",
+   "name": "Sambar powder (Sambar masala)",
+   "portions": null,
+   "source": "indb"
+  },
+  "0126212d-cdb8-41f9-8fb0-ec4094de8755": {
+   "kcal": "77",
+   "name": "potato",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "01e3b4ee-31c6-46e3-bc3d-fcd717a3446f": {
+   "kcal": "106",
+   "name": "mashed potatoes",
+   "portions": [
+    {
+     "description": "1 container",
+     "gramWeight": 700
+    },
+    {
+     "description": "1 cup",
+     "gramWeight": 229
+    }
+   ],
+   "source": "usda"
+  },
+  "028fca09-1dc0-4ac1-a5e7-a0aa5724218d": {
+   "kcal": "32.47",
+   "name": "Sprouted moong dal chat",
+   "portions": null,
+   "source": "indb"
+  },
+  "0337eaef-6ae5-4332-aac3-9919d6ae3c3c": {
+   "kcal": "24.9",
+   "name": "Kashmiri tea (Kehwa)",
+   "portions": null,
+   "source": "indb"
+  },
+  "046582b5-b545-4c15-a040-688f6ee959a8": {
+   "kcal": "154.89",
+   "name": "Moong dal stuffed cheela/chilla (Moong dal ka cheela/chilla)",
+   "portions": null,
+   "source": "indb"
+  },
+  "048e585c-64a3-4dc8-9cd3-2f76905fbe86": {
+   "kcal": "97.14",
+   "name": "Egg nog",
+   "portions": null,
+   "source": "indb"
+  },
+  "04b560c0-e183-4876-a3a3-1c448146bf84": {
+   "kcal": "135.15",
+   "name": "Potato fenugreek (Aloo methi)",
+   "portions": null,
+   "source": "indb"
+  },
+  "07459cd5-8647-4261-949f-1aa05e0967cf": {
+   "kcal": "102.18",
+   "name": "Saffron milk (Kesariya doodh)",
+   "portions": null,
+   "source": "indb"
+  },
+  "07613345-982d-43c4-bd9e-0a31b71561f3": {
+   "kcal": "148",
+   "name": "large egg",
+   "portions": null,
+   "source": "usda"
+  },
+  "090358eb-02e5-4ee8-8b9c-dc6e9f2b4b63": {
+   "kcal": "123.87",
+   "name": "Poached egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "095c2c54-30ba-4742-acc2-a00c2e066906": {
+   "kcal": "135.77",
+   "name": "Baked potato with skin",
+   "portions": null,
+   "source": "indb"
+  },
+  "097340b8-da3d-4e16-9118-779e6a94392e": {
+   "kcal": "222.11",
+   "name": "Egg and tomato sandwich (Ande aur tamatar ka sandwich)",
+   "portions": null,
+   "source": "indb"
+  },
+  "097b3d32-2c66-4a37-b1c5-c3cb3b81cec6": {
+   "kcal": "95.08",
+   "name": "Paneer, apple and pineapple salad",
+   "portions": null,
+   "source": "indb"
+  },
+  "0c34952a-1e04-4b07-8af7-0ad879948160": {
+   "kcal": "72",
+   "name": "cottage cheese (paneer) cubes",
+   "portions": null,
+   "source": "usda"
+  },
+  "0cb08385-3c77-4d2e-a475-2b5d8cf65600": {
+   "kcal": "194.91",
+   "name": "Semolina dhokla (Suji/Rava dhokla)",
+   "portions": null,
+   "source": "indb"
+  },
+  "0da4ef7d-ded7-4431-89a5-c6afb5333d0e": {
+   "kcal": "117.19",
+   "name": "Boiled rice (Uble chawal)",
+   "portions": null,
+   "source": "indb"
+  },
+  "10b5d736-342b-4432-ae3e-7ad1e42ef3b9": {
+   "kcal": "900",
+   "name": "Ghee (on parathas)",
+   "portions": null,
+   "source": "usda"
+  },
+  "13ee594f-f2d4-4441-aa0c-ea3333b101a5": {
+   "kcal": "155.97",
+   "name": "Scrambled egg (Ande ki bhurji)",
+   "portions": null,
+   "source": "indb"
+  },
+  "14bd18a2-e691-40ed-b467-432ad09041c9": {
+   "kcal": "349.8",
+   "name": "Moong dal halwa",
+   "portions": null,
+   "source": "indb"
+  },
+  "1796a1e7-1c74-4782-a729-838eddb264f4": {
+   "kcal": "195.74",
+   "name": "Curd rice (Dahi bhaat/Dahi chawal/ Perugu annam/Daddojanam/Thayir saadam)",
+   "portions": null,
+   "source": "indb"
+  },
+  "1807172a-318f-420c-a731-df230d4c8123": {
+   "kcal": "299",
+   "name": "paneer tikka",
+   "portions": null,
+   "source": "usda"
+  },
+  "196356ec-4bab-42a3-8348-94a11df106bc": {
+   "kcal": "181.6",
+   "name": "Egg, duck, whole, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "1a343a80-011d-4c3b-9e3b-6821503d4b36": {
+   "kcal": "101",
+   "name": "palak paneer",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 200
+    }
+   ],
+   "source": "usda"
+  },
+  "1b85a9c9-5664-4b24-890d-91d749581566": {
+   "kcal": "169.7",
+   "name": "Egg, poultry, omlet (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "1db27891-ad7c-4f0c-96c5-204bba65fda9": {
+   "kcal": "105.31",
+   "name": "Paneer kheer",
+   "portions": null,
+   "source": "indb"
+  },
+  "1e06517d-5317-4034-bc91-e5e4dea1b97d": {
+   "kcal": "299",
+   "name": "paneer parantha",
+   "portions": null,
+   "source": "usda"
+  },
+  "1e221bcf-ac0c-4f87-8f47-70101a68b4da": {
+   "kcal": "140",
+   "name": "maggie noodles",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "1edccf47-3b3c-4c16-ba77-95dfe850246a": {
+   "kcal": "192.2",
+   "name": "Egg, duck, whole, omlet (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "1f192f0e-df89-44fe-ada1-bfafb0748a5f": {
+   "kcal": "174",
+   "name": "fried rice",
+   "portions": null,
+   "source": "usda"
+  },
+  "2214f05e-c0e6-4e61-af7f-be33f59c897a": {
+   "kcal": "176.4",
+   "name": "Egg, duck, whole, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "22698752-ccc4-47c5-9332-c8605046070d": {
+   "kcal": "266",
+   "name": "vada pav",
+   "portions": null,
+   "source": "usda"
+  },
+  "255d8c03-4444-4c2f-b413-f04d7087499c": {
+   "kcal": "57.17",
+   "name": "Spinach and potato (Palak aloo)",
+   "portions": null,
+   "source": "indb"
+  },
+  "26c4a4fe-c79f-4c63-bf1b-61e713b5a5c0": {
+   "kcal": "61",
+   "name": "Curd",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "270c9235-0549-4024-8c6e-a064d4947f07": {
+   "kcal": "140",
+   "name": "Maggi noodles",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "292434ab-080b-4d88-99cd-824b35eff38b": {
+   "kcal": "299.74",
+   "name": "Egg halwa (Ande ka halwa)",
+   "portions": null,
+   "source": "indb"
+  },
+  "29c65def-14f9-424e-b9e8-fa04bb2f78fd": {
+   "kcal": "62",
+   "name": "buttermilk (chaas)",
+   "portions": null,
+   "source": "usda"
+  },
+  "2b64e0b8-bbbd-49fb-b720-fce74b52da4c": {
+   "kcal": "16.79",
+   "name": "Cauliflower potato canjee",
+   "portions": null,
+   "source": "indb"
+  },
+  "2be49c80-9436-42f5-a074-c10cadc59ac7": {
+   "kcal": "119.51",
+   "name": "Parsley potato",
+   "portions": null,
+   "source": "indb"
+  },
+  "2becabf4-4ca0-4fda-a174-5355ab001ebf": {
+   "kcal": "243.12",
+   "name": "Masala dosa paneer fillings",
+   "portions": null,
+   "source": "indb"
+  },
+  "2c3293cc-98d6-4466-a034-bc9a0c1f998b": {
+   "kcal": "223.67",
+   "name": "Fried Egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "2c6be792-b521-4220-ba4b-8264c4109a52": {
+   "kcal": "351.6",
+   "name": "Rice, parboiled, milled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "2d763d29-87be-46be-b64f-094fd0c3c0c0": {
+   "kcal": "15",
+   "name": "almond milk, unsweetened",
+   "portions": null,
+   "source": "usda"
+  },
+  "2e581e55-e913-4fef-bc9a-b0e52f310443": {
+   "kcal": "228.67",
+   "name": "Vanilla ice cream without egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "2ed5d498-0516-4198-b7be-84ba7262e7e0": {
+   "kcal": "120.58",
+   "name": "Chinese fried rice",
+   "portions": null,
+   "source": "indb"
+  },
+  "2f27adfb-e307-4207-a0c6-785d72ccd625": {
+   "kcal": "459.43",
+   "name": "Milk cookies",
+   "portions": null,
+   "source": "indb"
+  },
+  "2fdb857b-3a5f-4fb4-886e-5b09fc433efa": {
+   "kcal": "333.4",
+   "name": "Rice flakes and roasted channa",
+   "portions": null,
+   "source": "indb"
+  },
+  "3066f49f-fe08-4175-8de1-09d80ca72e45": {
+   "kcal": "184.8",
+   "name": "Eggplant/Brinjal rice (Vangi bhat)",
+   "portions": null,
+   "source": "indb"
+  },
+  "34bf6420-4493-4b14-b958-3ca75c15c0e6": {
+   "kcal": "96.92",
+   "name": "Sambar",
+   "portions": null,
+   "source": "indb"
+  },
+  "3857270e-27e9-487c-bc51-bb97dea319c7": {
+   "kcal": "72.9",
+   "name": "Milk, whole, Cow",
+   "portions": null,
+   "source": "ifct"
+  },
+  "39629cd0-ce73-4d86-a050-cba0d5ef6d64": {
+   "kcal": "324.1",
+   "name": "Black gram, dal (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "3b767658-bdd4-40c2-bf08-d50aff3021fd": {
+   "kcal": "105.6",
+   "name": "Milk fish (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289": {
+   "kcal": "326",
+   "name": "Aloo Paratha",
+   "portions": null,
+   "source": "usda"
+  },
+  "3cae9f81-8f2d-4a6e-aff6-bda85220857c": {
+   "kcal": "97",
+   "name": "buffalo milk",
+   "portions": null,
+   "source": "usda"
+  },
+  "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7": {
+   "kcal": "148",
+   "name": "egg",
+   "portions": null,
+   "source": "usda"
+  },
+  "3ea22a99-b40a-4c3c-8ba3-9af0d14d7c78": {
+   "kcal": "266",
+   "name": "medu vada (urad dal fritter)",
+   "portions": null,
+   "source": "usda"
+  },
+  "4015d8de-62b0-49eb-bad4-ce575a907869": {
+   "kcal": "360",
+   "name": "grain of rice",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 195
+    }
+   ],
+   "source": "usda"
+  },
+  "40458a17-33af-46f2-8529-4c24fb976fd6": {
+   "kcal": "176.52",
+   "name": "Paneer curry",
+   "portions": null,
+   "source": "indb"
+  },
+  "4075dd5c-c36c-47d8-8627-14fc4d4927e3": {
+   "kcal": "1",
+   "name": "black tea",
+   "portions": null,
+   "source": "usda"
+  },
+  "41c4a55a-9163-4932-9d38-45249f4a1357": {
+   "kcal": "34.79",
+   "name": "Sour lentils (Khatti dal)",
+   "portions": null,
+   "source": "indb"
+  },
+  "42528f88-2dff-4cda-951e-d7c55fe6c32e": {
+   "kcal": "257.9",
+   "name": "Paneer",
+   "portions": null,
+   "source": "ifct"
+  },
+  "44448ffb-6829-413f-a5ae-82e18be701c8": {
+   "kcal": "147.94",
+   "name": "Black rice kheer (Chak-hao kheer)",
+   "portions": null,
+   "source": "indb"
+  },
+  "45480530-55e4-4072-a7d4-594f4b01a622": {
+   "kcal": "353.7",
+   "name": "Rice flakes (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "45c6257d-bd49-43a8-a9a1-738fb9c8421d": {
+   "kcal": "140.54",
+   "name": "Ducheese potato",
+   "portions": null,
+   "source": "indb"
+  },
+  "46e20e2c-3c4c-45d4-a68c-b717f62178d6": {
+   "kcal": "111.62",
+   "name": "Potato nests",
+   "portions": null,
+   "source": "indb"
+  },
+  "46e62525-6a6a-49f5-a9e2-050a73c4f474": {
+   "kcal": "151.8",
+   "name": "Egg, quial, whole, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "4746a516-22de-40f4-bd90-902c4d043e07": {
+   "kcal": "366.59",
+   "name": "Sweet split chickpea roti (Sweet channa dal roti/Puranpoli)",
+   "portions": null,
+   "source": "indb"
+  },
+  "47999ef8-3143-46a5-9b22-4c18d16ee896": {
+   "kcal": "218.85",
+   "name": "Baked egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "47edb8c1-13e1-4b68-a62d-40ac01e7017d": {
+   "kcal": "52.6",
+   "name": "Egg, poultry, white, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "4898ba0c-bef8-44f1-9f95-0b5d1dc5ff8c": {
+   "kcal": "158.84",
+   "name": "Moong dal mixture",
+   "portions": null,
+   "source": "indb"
+  },
+  "4b6aea03-be82-4552-8f60-8d23f612bb89": {
+   "kcal": "298.8",
+   "name": "Atta dal burfi",
+   "portions": null,
+   "source": "indb"
+  },
+  "4baf43ea-0605-48f6-a853-941578936751": {
+   "kcal": "145",
+   "name": "daal",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "source": "usda"
+  },
+  "519858a4-45e1-44a7-8e97-400490640dbb": {
+   "kcal": "316.25",
+   "name": "Sprouts upma",
+   "portions": null,
+   "source": "indb"
+  },
+  "51e045b3-0f4d-4ca0-9d8b-cacba8a61f5e": {
+   "kcal": "117.29",
+   "name": "Lentils and semolina porridge (Dal suji porridge/daliya)",
+   "portions": null,
+   "source": "indb"
+  },
+  "532c9124-4284-4924-9dc5-cc68a17d23fb": {
+   "kcal": "97",
+   "name": "cooked rice",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 174
+    }
+   ],
+   "source": "usda"
+  },
+  "5394f8f7-49fc-4d42-96c0-e84903226d6d": {
+   "kcal": "329.05",
+   "name": "Mayonnaise without eggs",
+   "portions": null,
+   "source": "indb"
+  },
+  "5606c315-e5be-4104-9eec-f784fe2fe4d8": {
+   "kcal": "296.8",
+   "name": "Egg, poultry, yolk, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "564c59a2-0797-4c6d-8dab-d6a65ffa7907": {
+   "kcal": "145",
+   "name": "chana dal",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "source": "usda"
+  },
+  "56e54850-a7d2-45a4-ae29-e6d94a107286": {
+   "kcal": "145.55",
+   "name": "Veg paneer stew",
+   "portions": null,
+   "source": "indb"
+  },
+  "5776a978-fe8f-4009-b939-8a2687e35b4f": {
+   "kcal": "76.13",
+   "name": "Curd mint dip",
+   "portions": null,
+   "source": "indb"
+  },
+  "58339566-740e-4aa8-82b6-8af840b45ce5": {
+   "kcal": "149.11",
+   "name": "Vermicelli upma (Semiya/Seviyan upma)",
+   "portions": null,
+   "source": "indb"
+  },
+  "5929acdc-7a3f-476d-9df7-a24c8d04ed8c": {
+   "kcal": "147.05",
+   "name": "Baked potato soup",
+   "portions": null,
+   "source": "indb"
+  },
+  "5aca1a95-e516-484b-8bf5-c2653b262c94": {
+   "kcal": "297",
+   "name": "wheat roti",
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 68
+    }
+   ],
+   "source": "usda"
+  },
+  "5add0bba-bb05-419b-8fcb-73b046261756": {
+   "kcal": "535",
+   "name": "dairy milk chocolate",
+   "portions": null,
+   "source": "usda"
+  },
+  "5bf7354a-795f-4791-b67d-03b3ec6a2acc": {
+   "kcal": "75.03",
+   "name": "Rice kheer (Chawal ki kheer)",
+   "portions": null,
+   "source": "indb"
+  },
+  "5c6a2da6-2ca2-489a-9bb6-8802dfbbfd25": {
+   "kcal": "263.97",
+   "name": "Makki ki roti",
+   "portions": null,
+   "source": "indb"
+  },
+  "5d0eec50-343a-4309-8510-a859d566c065": {
+   "kcal": "60.9",
+   "name": "Potato, brown skin, small (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "5f20d673-2247-44bf-9517-6f7d58ff4930": {
+   "kcal": "130",
+   "name": "cooked white rice",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 186
+    }
+   ],
+   "source": "usda"
+  },
+  "616c7e9b-ba16-4696-9e60-514b8c01585b": {
+   "kcal": "125.64",
+   "name": "Hot potato souffle",
+   "portions": null,
+   "source": "indb"
+  },
+  "6261ca0a-9fe9-4807-a5ea-8933c5d8ce41": {
+   "kcal": "70",
+   "name": "bhindi ki sabzi",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "64c6dcd3-acca-49cc-9488-40c90e94193a": {
+   "kcal": "130",
+   "name": "rajma",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "64eabdee-9280-4ccb-96a9-fbd2a6f12ce9": {
+   "kcal": "64",
+   "name": "pasteurized cow milk",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "65c014dc-b56e-457b-8f51-30115902bf25": {
+   "kcal": "268.24",
+   "name": "Dal parantha/paratha",
+   "portions": null,
+   "source": "indb"
+  },
+  "696fafec-291e-4bae-8dcd-b25f6684aaa2": {
+   "kcal": "121.9",
+   "name": "Sour cream potato salad",
+   "portions": null,
+   "source": "indb"
+  },
+  "6afbebf2-7c87-49ae-b9cc-32d74bc214ed": {
+   "kcal": "74.04",
+   "name": "Dal makhani",
+   "portions": null,
+   "source": "indb"
+  },
+  "6bd912a2-5c62-4205-95e7-56ee96c039ec": {
+   "kcal": "100.2",
+   "name": "Stuffed baked potatoes",
+   "portions": null,
+   "source": "indb"
+  },
+  "6c7e7c5f-2bb8-44bc-89dc-30990d79e1a5": {
+   "kcal": "107.3",
+   "name": "Milk, whole, Buffalo",
+   "portions": null,
+   "source": "ifct"
+  },
+  "6dae4a74-fae0-4cc5-8caa-c0e50393377e": {
+   "kcal": "203.51",
+   "name": "Stuffed egg omelette/omlet",
+   "portions": null,
+   "source": "indb"
+  },
+  "6e385784-bbc3-4348-a97f-5102d9f3ac70": {
+   "kcal": "198.91",
+   "name": "Gram flour and semolina dhokla (Besan suji dhokla)",
+   "portions": null,
+   "source": "indb"
+  },
+  "6e626ad7-975a-4f54-9bfa-24a759f116cf": {
+   "kcal": "326",
+   "name": "paratha",
+   "portions": null,
+   "source": "usda"
+  },
+  "6e96da82-65e6-4c34-b98e-6281390e3ba2": {
+   "kcal": "87.32",
+   "name": "Roast potatoes",
+   "portions": null,
+   "source": "indb"
+  },
+  "6f236ba8-be48-419f-9925-ba4e937635f4": {
+   "kcal": "202.31",
+   "name": "Chapati/Roti",
+   "portions": null,
+   "source": "indb"
+  },
+  "7044f2b0-1b33-4c8a-bc9d-d25318185511": {
+   "kcal": "73.1",
+   "name": "Potato, red skin (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "717067dc-2937-407c-b990-1d9e1d38f244": {
+   "kcal": "0",
+   "name": "green tea",
+   "portions": null,
+   "source": "usda"
+  },
+  "717f6316-613d-415e-93dc-260add7d8480": {
+   "kcal": "145.61",
+   "name": "Paneer in butter sauce",
+   "portions": null,
+   "source": "indb"
+  },
+  "72e5675f-52c8-4d9e-b3ad-9f7b2c16f798": {
+   "kcal": "84.92",
+   "name": "Beetroot and egg salad (Chukandar aur ande ka salad)",
+   "portions": null,
+   "source": "indb"
+  },
+  "73be406c-e9ea-4af5-bbd9-1dcb89e9f958": {
+   "kcal": "207.11",
+   "name": "Instant dhokla",
+   "portions": null,
+   "source": "indb"
+  },
+  "74076651-a8aa-4f5b-b547-d769684c8106": {
+   "kcal": "15",
+   "name": "almond milk",
+   "portions": null,
+   "source": "usda"
+  },
+  "74bce6a8-5c70-47db-9817-7731ad932adc": {
+   "kcal": "322.4",
+   "name": "Lentil dal (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "750d9dd9-12ff-481a-8b61-f855f4b3db90": {
+   "kcal": "108",
+   "name": "Sweet potato, pink skin (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "75804f1f-e4fd-42f2-a86b-f5d18b8a8a41": {
+   "kcal": "105.48",
+   "name": "Paneer lababdar",
+   "portions": null,
+   "source": "indb"
+  },
+  "767ad010-b60c-4eff-bad8-c4682fff54cc": {
+   "kcal": "87",
+   "name": "medium boiled potato",
+   "portions": null,
+   "source": "usda"
+  },
+  "78110e12-96a0-482b-843b-7c98341f7187": {
+   "kcal": "186.19",
+   "name": "Spinach and paneer souffle",
+   "portions": null,
+   "source": "indb"
+  },
+  "784f93e6-b342-4117-93ae-ac5e243fa916": {
+   "kcal": "16.26",
+   "name": "Potato canjee (Aloo canjee)",
+   "portions": null,
+   "source": "indb"
+  },
+  "78993600-3306-44e6-85ee-0ef5b0f0d411": {
+   "kcal": "98.56",
+   "name": "Deviled egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "78bbd004-ffa4-4aac-af4c-7cfc8f809b54": {
+   "kcal": "93.85",
+   "name": "Paneer shaslik/tikka",
+   "portions": null,
+   "source": "indb"
+  },
+  "7974b32b-25dd-4064-9179-9d37228f36cf": {
+   "kcal": "130",
+   "name": "chawal (cooked rice)",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "7a80d57d-3cc0-45e2-b58d-3aed99c5d07c": {
+   "kcal": "149.26",
+   "name": "Paushtik roti",
+   "portions": null,
+   "source": "indb"
+  },
+  "7b98dd2d-ff05-4527-a9c2-30c14aa309ad": {
+   "kcal": "338.58",
+   "name": "Paneer patties",
+   "portions": null,
+   "source": "indb"
+  },
+  "7d360df0-5ad0-4307-a6cf-9bedfa7545de": {
+   "kcal": "297",
+   "name": "roti",
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 68
+    }
+   ],
+   "source": "usda"
+  },
+  "7d99e3e5-a7a3-4102-840b-0ef361752130": {
+   "kcal": "55.65",
+   "name": "Horsegram dal (Kulthi dal)",
+   "portions": null,
+   "source": "indb"
+  },
+  "7e0fac32-ada1-4dbb-9db4-e7869967551a": {
+   "kcal": "145",
+   "name": "dal",
+   "portions": null,
+   "source": "usda"
+  },
+  "7e8863d3-7e78-446e-b1ed-ceac271be903": {
+   "kcal": "89.91",
+   "name": "Potato salad (Aloo ka salaad)",
+   "portions": null,
+   "source": "indb"
+  },
+  "7ff1aa18-999e-4dd9-b479-0e0a37f09184": {
+   "kcal": "95.43",
+   "name": "Mashed banana with milk",
+   "portions": null,
+   "source": "indb"
+  },
+  "813ee549-335a-4c69-8c54-f082ca79534c": {
+   "kcal": "168.3",
+   "name": "Egg, country hen, whole, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "87479547-768d-4d66-8862-76e51e89f8cf": {
+   "kcal": "285.96",
+   "name": "Egg sandwich (Ande ka sandwich)",
+   "portions": null,
+   "source": "indb"
+  },
+  "87fc6412-cb54-4c30-8b15-73061a66f1c3": {
+   "kcal": "156.5",
+   "name": "Shahi paneer",
+   "portions": null,
+   "source": "indb"
+  },
+  "88eeccde-7947-4c38-8ffa-ecd6e1c29427": {
+   "kcal": "107.99",
+   "name": "Kadhai Paneer",
+   "portions": null,
+   "source": "indb"
+  },
+  "89e283bc-e9fe-4132-bbba-608652756f54": {
+   "kcal": "326",
+   "name": "methi paratha",
+   "portions": null,
+   "source": "usda"
+  },
+  "8b58d5fe-b790-44c4-b1df-c8467f0f3a1c": {
+   "kcal": "146.85",
+   "name": "Egg sauce",
+   "portions": null,
+   "source": "indb"
+  },
+  "8be8fb5b-713f-4903-8759-9993ff810343": {
+   "kcal": "407.74",
+   "name": "Almond biscuit (Badam ke biscuit)",
+   "portions": null,
+   "source": "indb"
+  },
+  "8c185899-8079-44b4-97e1-2664a5854804": {
+   "kcal": "155",
+   "name": "boiled egg",
+   "portions": [
+    {
+     "description": "1 tbsp",
+     "gramWeight": 8.5
+    },
+    {
+     "description": "1 cup, chopped",
+     "gramWeight": 136
+    },
+    {
+     "description": "1 large",
+     "gramWeight": 50
+    }
+   ],
+   "source": "usda"
+  },
+  "8c405c1a-b117-42f3-b7cf-a4e970a32ff8": {
+   "kcal": "183.3",
+   "name": "Egg, country hen, whole, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "8c48a6e3-59b8-4484-baea-5321d2dd8865": {
+   "kcal": "143.4",
+   "name": "Eggs, Cat fish (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "8d182bde-7368-4371-8628-150b3029e28b": {
+   "kcal": "120.57",
+   "name": "Mexican rice",
+   "portions": null,
+   "source": "indb"
+  },
+  "8de2981c-e6e7-45e6-9232-45eb7d5c5776": {
+   "kcal": "441.08",
+   "name": "Wheat flour and moong dal burfi (Atta aur moong dal ki burfi)",
+   "portions": null,
+   "source": "indb"
+  },
+  "8e08108c-7a8e-4615-a15a-2f7553aa10fb": {
+   "kcal": "95.67",
+   "name": "Cauliflower, pea and potato bhujia (Phoolgobhi, matar aur aloo bhujia)",
+   "portions": null,
+   "source": "indb"
+  },
+  "8e43f89e-50ab-4389-a401-d2403cc4f93a": {
+   "kcal": "102.79",
+   "name": "Thickened sweetened milk (Rabri)",
+   "portions": null,
+   "source": "indb"
+  },
+  "917537d6-ed8d-40c9-b70a-46a531e13370": {
+   "kcal": "134.8",
+   "name": "Egg, poultry, whole, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "92f24051-6f22-4096-96c0-114cae7d2d36": {
+   "kcal": "151.57",
+   "name": "Cereal pulse mix with amylase rice flour",
+   "portions": null,
+   "source": "indb"
+  },
+  "952f57fd-ee28-43ce-add2-380057939289": {
+   "kcal": "109",
+   "name": "Sweet potato, brown skin (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "9645c96d-d867-456d-9e89-77012e880ed2": {
+   "kcal": "329.1",
+   "name": "Bengal gram, dal (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "987bf871-536b-47c5-956d-e602820a9fc1": {
+   "kcal": "125.53",
+   "name": "Potato capsicum (Shimla mirch aloo)",
+   "portions": null,
+   "source": "indb"
+  },
+  "98d43a5d-e07d-431a-a766-c1579ab88ad5": {
+   "kcal": "87",
+   "name": "boiled potato",
+   "portions": null,
+   "source": "usda"
+  },
+  "9ca15288-e06a-4ef4-9a93-772bd439d2a6": {
+   "kcal": "265.92",
+   "name": "Coconut chutney (Nariyal ki chutney)",
+   "portions": null,
+   "source": "indb"
+  },
+  "9d3144c5-f618-492a-b476-29d71146f2c2": {
+   "kcal": "225.62",
+   "name": "Lemon curd filling",
+   "portions": null,
+   "source": "indb"
+  },
+  "9f697def-24dc-45a0-9a7e-7f11db305e7e": {
+   "kcal": "373.04",
+   "name": "Tamarind rice (Chintapandu pulihora/Puliyodharai/Puli sadam/Huli anna)",
+   "portions": null,
+   "source": "indb"
+  },
+  "a0af1659-8df6-4ffc-8c90-348d8587d177": {
+   "kcal": "56.21",
+   "name": "Curd vegetable dip",
+   "portions": null,
+   "source": "indb"
+  },
+  "a0b70c5a-9014-4675-a3e6-d782e5ad5d98": {
+   "kcal": "158.85",
+   "name": "Spinach mushroom scrambled egg (Palak mushroom bhurji)",
+   "portions": null,
+   "source": "indb"
+  },
+  "a13e97ef-2485-4965-b5dd-a8b231476a02": {
+   "kcal": "60.28",
+   "name": "Mixed vegetable salad with curd sauce",
+   "portions": null,
+   "source": "indb"
+  },
+  "a1bdb626-ed85-44fd-b47d-3a05f2846e53": {
+   "kcal": "102.83",
+   "name": "Indian style egg bhujia (Anda bhujia (Indian style))",
+   "portions": null,
+   "source": "indb"
+  },
+  "a1d9a64b-3639-4d4f-ab00-77c34acbb37a": {
+   "kcal": "356.35",
+   "name": "Almond cardamom cake (Badam elaichi cake)",
+   "portions": null,
+   "source": "indb"
+  },
+  "a1f3ed09-8be4-4cb9-9431-e70715a9f90b": {
+   "kcal": "609.2",
+   "name": "Almond",
+   "portions": null,
+   "source": "ifct"
+  },
+  "a2feabba-a040-43e2-b83f-2047699ebba6": {
+   "kcal": "36.13",
+   "name": "Cucumber and yogurt salad (Kheere aur dahi ka salad)",
+   "portions": null,
+   "source": "indb"
+  },
+  "a3f46783-d617-472a-af90-b6dd33d7b420": {
+   "kcal": "214.85",
+   "name": "Vanilla ice cream with egg",
+   "portions": null,
+   "source": "indb"
+  },
+  "a6b7df17-c6cc-4ffb-855e-ee17beadf409": {
+   "kcal": "346.36",
+   "name": "Dessicated coconut chutney (Sookhe kase nariyal ki chutney)",
+   "portions": null,
+   "source": "indb"
+  },
+  "aa044a7a-590c-4243-b719-119fb9b6f73f": {
+   "kcal": "44.7",
+   "name": "Egg, poultry, white, raw (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "ab89531d-ddaa-402b-8343-48cf940b5f4d": {
+   "kcal": "240.84",
+   "name": "Home made egg noodles",
+   "portions": null,
+   "source": "indb"
+  },
+  "ac6197ee-c57f-4e9a-8077-a56a68e4a393": {
+   "kcal": "325.8",
+   "name": "Green gram, dal (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "ac8e3a83-cd2f-4a3a-9ecd-26fc14624b1e": {
+   "kcal": "545",
+   "name": "potato chips",
+   "portions": [
+    {
+     "description": "16 chips",
+     "gramWeight": 26
+    },
+    {
+     "description": "1 oz",
+     "gramWeight": 28.35
+    },
+    {
+     "description": "1 oz",
+     "gramWeight": 28
+    },
+    {
+     "description": "1 can (7 oz)",
+     "gramWeight": 198
+    }
+   ],
+   "source": "usda"
+  },
+  "ad73a078-8182-44f4-a6e8-ca384f844abc": {
+   "kcal": "16.14",
+   "name": "Hot tea (Garam Chai)",
+   "portions": null,
+   "source": "indb"
+  },
+  "aef79a47-d6f5-45d8-b18b-29f4e0bdc058": {
+   "kcal": "49",
+   "name": "Flavored milk",
+   "portions": [
+    {
+     "description": "1 fl oz",
+     "gramWeight": 30.5
+    },
+    {
+     "description": "1 cup",
+     "gramWeight": 244
+    }
+   ],
+   "source": "usda"
+  },
+  "af8c5e95-56b0-454e-860c-e72b9c9e0a50": {
+   "kcal": "75.38",
+   "name": "Potato raita (Aloo ka raita)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b0819c76-5fb5-4a22-8948-545fe76fce47": {
+   "kcal": "69.8",
+   "name": "Potato, brown skin, big (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "b0f7f540-704b-4cd6-89c4-b8efa01fced9": {
+   "kcal": "35",
+   "name": "skim milk",
+   "portions": null,
+   "source": "usda"
+  },
+  "b2f62233-2f33-4dbf-805d-8f0cd5d63f60": {
+   "kcal": "68.74",
+   "name": "Dal dhokli",
+   "portions": null,
+   "source": "indb"
+  },
+  "b35e3b27-c3a5-4ad8-8623-f896a2d04a90": {
+   "kcal": "77.68",
+   "name": "Spinach paneer (Palak paneer)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b3672862-e803-47c2-b5e5-3e5c921daa0c": {
+   "kcal": "353.7",
+   "name": "Rice, raw, brown (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "b45eb1ef-7100-424b-a698-ee10adcfb26a": {
+   "kcal": "117.52",
+   "name": "Egg curry (Anda curry)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b6cb39f5-ba08-4d90-8715-bded6aee8854": {
+   "kcal": "151.66",
+   "name": "Potato halwa (Aloo ka halwa)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b750cd0d-71cc-4479-9914-2eed90b70442": {
+   "kcal": "176.3",
+   "name": "Lemon rice (Pulihora, Elumichai sadam, Chitranna)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b788b9d8-2fa6-4551-9736-dd6c6196dcd4": {
+   "kcal": "287.36",
+   "name": "Split bengal gram burfi/fudge (Channa dal burfi)",
+   "portions": null,
+   "source": "indb"
+  },
+  "b84a7f73-62d6-4a46-b24a-3b2ded14dc45": {
+   "kcal": "299",
+   "name": "chapati",
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 43
+    }
+   ],
+   "source": "usda"
+  },
+  "b95d5b62-eb98-4990-bf09-9956d7df5ff2": {
+   "kcal": "134.83",
+   "name": "Pea paneer curry (Matar paneer)",
+   "portions": null,
+   "source": "indb"
+  },
+  "bbac4d3e-de3e-4b84-ab4a-62e20de305ae": {
+   "kcal": "215.41",
+   "name": "Sweet rice (Meethe chawal)",
+   "portions": null,
+   "source": "indb"
+  },
+  "bd18488c-7547-4e05-9295-ebadd29e4913": {
+   "kcal": "158.54",
+   "name": "Spaghetti with paneer balls and tomato sauce",
+   "portions": null,
+   "source": "indb"
+  },
+  "be269eda-5601-4cbf-9d56-06c517b83237": {
+   "kcal": "111.22",
+   "name": "Panchmel dal",
+   "portions": null,
+   "source": "indb"
+  },
+  "be2b9326-da7c-49e2-b600-aab558c52df6": {
+   "kcal": "101",
+   "name": "sweet potato",
+   "portions": null,
+   "source": "usda"
+  },
+  "c0a423a9-b7e7-43b4-8054-468f856ee1cf": {
+   "kcal": "361.9",
+   "name": "Rice puffed (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "c15b557d-0937-40ff-9089-92742aa4c858": {
+   "kcal": "71",
+   "name": "coffee with milk",
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 262
+    }
+   ],
+   "source": "usda"
+  },
+  "c1e5cd50-bebf-4109-8287-2f5f6819c503": {
+   "kcal": "112.93",
+   "name": "Meringue and rice pudding",
+   "portions": null,
+   "source": "indb"
+  },
+  "c1f3917c-72a5-42d9-aa1d-002581476961": {
+   "kcal": "119",
+   "name": "kodo millet upma",
+   "portions": null,
+   "source": "usda"
+  },
+  "c3c7286c-7c44-46e8-ad81-37f506ca10bb": {
+   "kcal": "130",
+   "name": "rice",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "c5615b5f-2621-4a1d-80d9-859b951e3abc": {
+   "kcal": "78.8",
+   "name": "Curd dressing",
+   "portions": null,
+   "source": "indb"
+  },
+  "c5ec7827-102f-4f97-824c-69814fa995ce": {
+   "kcal": "129.51",
+   "name": "Bread upma",
+   "portions": null,
+   "source": "indb"
+  },
+  "c680edce-855c-453d-829e-9eb8265c3b80": {
+   "kcal": "190.21",
+   "name": "Split bengal gram sweet rice (Channa dal sweet rice)",
+   "portions": null,
+   "source": "indb"
+  },
+  "c8f9be41-d39f-431e-ad87-6f46b43c77e2": {
+   "kcal": "35",
+   "name": "skimmed milk",
+   "portions": null,
+   "source": "usda"
+  },
+  "c93f6bdb-9d3b-49b8-8399-dbf022d203f4": {
+   "kcal": "194.98",
+   "name": "Methi malai paneer",
+   "portions": null,
+   "source": "indb"
+  },
+  "ca9a9eaf-0f4c-4966-b772-b05652dec207": {
+   "kcal": "127.41",
+   "name": "Milk cake",
+   "portions": null,
+   "source": "indb"
+  },
+  "caceb539-f8f0-42d6-b622-5afe9b945822": {
+   "kcal": "297",
+   "name": "butter roti",
+   "portions": null,
+   "source": "usda"
+  },
+  "cd4306fd-a064-48d8-8daf-700ead3e5d9f": {
+   "kcal": "532",
+   "name": "Lays potato chips",
+   "portions": null,
+   "source": "usda"
+  },
+  "cd50295b-aae1-48d0-9588-1bfa3e2bdc30": {
+   "kcal": "80.05",
+   "name": "Baked eggs in tomato sauce",
+   "portions": null,
+   "source": "indb"
+  },
+  "ce06b7e9-87e3-4fd8-9739-1c75780aae8b": {
+   "kcal": "297",
+   "name": "bajra roti",
+   "portions": null,
+   "source": "usda"
+  },
+  "cee0b937-1d6a-4706-b056-7915a612a864": {
+   "kcal": "10.34",
+   "name": "Iced tea",
+   "portions": null,
+   "source": "indb"
+  },
+  "d1aeaaaa-5477-42e5-8312-e331136e6bd4": {
+   "kcal": "164.24",
+   "name": "Spanish rice",
+   "portions": null,
+   "source": "indb"
+  },
+  "d1ba0e03-1d59-45e3-aa69-b334b29497b1": {
+   "kcal": "285.94",
+   "name": "Paneer kaathi roll",
+   "portions": null,
+   "source": "indb"
+  },
+  "d3bcdddb-8ec3-4b5e-888e-e3f4c7359803": {
+   "kcal": "44.16",
+   "name": "Semolina milk drink (Thari kanji)",
+   "portions": null,
+   "source": "indb"
+  },
+  "d6b06dfa-4a7c-4b56-84c2-944aae217422": {
+   "kcal": "77.16",
+   "name": "Moong dal kheer",
+   "portions": null,
+   "source": "indb"
+  },
+  "d6ec2ecc-e564-4b7a-a14c-d3dcbfcbd451": {
+   "kcal": "262.97",
+   "name": "Paneer parantha/paratha",
+   "portions": null,
+   "source": "indb"
+  },
+  "d6ec8b98-eef8-494e-89a5-dc5f3ef1467d": {
+   "kcal": "151.27",
+   "name": "Rice upma",
+   "portions": null,
+   "source": "indb"
+  },
+  "d7de7575-82d0-4731-a89a-cb9025e47f5a": {
+   "kcal": "173.32",
+   "name": "Poha with curd (Poha aur dahi)",
+   "portions": null,
+   "source": "indb"
+  },
+  "d7f2410d-0059-431a-8e02-5f575ef581d8": {
+   "kcal": "164.9",
+   "name": "Pea potato sandwich (toasted) (Matar aloo ka sandwich)",
+   "portions": null,
+   "source": "indb"
+  },
+  "da4403a1-76a7-4743-adcb-8b9ef397cba0": {
+   "kcal": "52.54",
+   "name": "Lentils and wheat porridge (Dal wheat porridge/daliya )",
+   "portions": null,
+   "source": "indb"
+  },
+  "dcf8dbb2-02cd-4096-9ef8-6e1b633f1267": {
+   "kcal": "356.4",
+   "name": "Rice, raw, milled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "ddcb21fb-b2c1-4080-ae60-4fa843144142": {
+   "kcal": "128.78",
+   "name": "Egg in a pepper",
+   "portions": null,
+   "source": "indb"
+  },
+  "de152ca1-35e0-4766-904b-c58d2decc4d3": {
+   "kcal": "151",
+   "name": "Steamed white rice",
+   "portions": null,
+   "source": "usda"
+  },
+  "e2a86464-4d99-4d1a-9e93-76250ae371c4": {
+   "kcal": "362.16",
+   "name": "Cracked wheat and green gram dal premix (Dalia moong dal premix)",
+   "portions": null,
+   "source": "indb"
+  },
+  "e630c184-c66f-4acc-a72e-2ae5daaefd76": {
+   "kcal": "154.6",
+   "name": "Egg, quial, whole, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "e737df56-23f4-432d-9d9f-cf36dc4c154a": {
+   "kcal": "308.3",
+   "name": "Egg, poultry, yolk, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "e8e81f3b-6a4f-4dcb-ad42-c4067fedb95b": {
+   "kcal": "205.19",
+   "name": "Paneer stuffed cheela/chilla",
+   "portions": null,
+   "source": "indb"
+  },
+  "ea036a56-0e7b-407b-9670-31c1c4040ea7": {
+   "kcal": "59.9",
+   "name": "Curd with potatoes (Dahi aloo)",
+   "portions": null,
+   "source": "indb"
+  },
+  "ea41af39-9f27-4521-aaf0-957af51797e1": {
+   "kcal": "330.8",
+   "name": "Red gram, dal (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "edd47f41-1684-4af5-8f55-fc42da537f1e": {
+   "kcal": "117.33",
+   "name": "Cornflakes with milk",
+   "portions": null,
+   "source": "indb"
+  },
+  "ee377a2c-cbff-47e6-b1c8-11e5672795fd": {
+   "kcal": "73.18",
+   "name": "Potato with curd",
+   "portions": null,
+   "source": "indb"
+  },
+  "ef8d5e96-860b-4b2c-a8a8-8b6ed731b4ea": {
+   "kcal": "276",
+   "name": "paneer pizza",
+   "portions": [
+    {
+     "description": "1 slice",
+     "gramWeight": 112
+    },
+    {
+     "description": "1 pizza",
+     "gramWeight": 897
+    }
+   ],
+   "source": "usda"
+  },
+  "f05d1626-f0b4-42ab-82a3-834c7f979063": {
+   "kcal": "116.53",
+   "name": "Split bengal gram dal and vegetable pulao (Channa dal and vegetable pulao)",
+   "portions": null,
+   "source": "indb"
+  },
+  "f05f8a67-f202-4510-810b-de0b09093d30": {
+   "kcal": "47.85",
+   "name": "Paneer soup",
+   "portions": null,
+   "source": "indb"
+  },
+  "f1a1d1bb-669b-422c-94cd-978b78efa31a": {
+   "kcal": "61",
+   "name": "milk",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "f213fb0e-e32e-4b16-97b6-ec2140b23ff8": {
+   "kcal": "81.98",
+   "name": "Rice puttu (Ari puttu)",
+   "portions": null,
+   "source": "indb"
+  },
+  "f289d0c6-ea74-4348-a39d-76be73fd4db1": {
+   "kcal": "61",
+   "name": "dahi (yogurt)",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "f3f078d0-3217-4892-b813-48fe36c1c7aa": {
+   "kcal": "86.21",
+   "name": "Fish in coconut milk (Nariyal ke doodh ke saath machli)",
+   "portions": null,
+   "source": "indb"
+  },
+  "f4ffe48f-24aa-42f2-b44a-6f32d0d8e4a5": {
+   "kcal": "147.7",
+   "name": "Egg, poultry, whole, boiled (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "f522b543-1340-4001-ab12-5e33b6a2109f": {
+   "kcal": "296.4",
+   "name": "Sweet potato biscuit (Shakarkand ke biscuit)",
+   "portions": null,
+   "source": "indb"
+  },
+  "f5462882-9908-4c45-97b0-20232347a148": {
+   "kcal": "283.96",
+   "name": "Soya roti",
+   "portions": null,
+   "source": "indb"
+  },
+  "f6a795b0-37b6-406d-b477-f6cdbb38c348": {
+   "kcal": "150",
+   "name": "mutter paneer",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "f748f68a-86a7-479a-8b96-52e6641cb15b": {
+   "kcal": "112.44",
+   "name": "Rice flakes (Chiwda/Aval)",
+   "portions": null,
+   "source": "indb"
+  },
+  "f79a6641-531b-4018-9592-2ec9504310e3": {
+   "kcal": "146.47",
+   "name": "Vegetable upma",
+   "portions": null,
+   "source": "indb"
+  },
+  "f92efccc-6333-4a2c-a2bb-9e9d53dbeb5e": {
+   "kcal": "56.72",
+   "name": "Spinach soup in milk",
+   "portions": null,
+   "source": "indb"
+  },
+  "f9eedc03-d4b3-4ab0-b412-beaf8b7ec61d": {
+   "kcal": "249.56",
+   "name": "Paneer pea sandwich (toasted) (Paneer matar ka sandwich)",
+   "portions": null,
+   "source": "indb"
+  },
+  "fadce167-e8f9-49f2-910b-976572937a84": {
+   "kcal": "103.13",
+   "name": "Moti mahal dal (Urad rajmah mix dal)",
+   "portions": null,
+   "source": "indb"
+  },
+  "faf224f7-68ee-4a76-9d7d-6558a93c280d": {
+   "kcal": "575",
+   "name": "almonds",
+   "portions": null,
+   "source": "ai_estimated"
+  },
+  "fbb6fd46-fb78-4365-82d8-92d6ff812dd8": {
+   "kcal": "79.95",
+   "name": "Curd dip",
+   "portions": null,
+   "source": "indb"
+  },
+  "fd415a52-38ca-4f7f-a22d-488338d6a881": {
+   "kcal": "204.3",
+   "name": "Egg, country hen, omlet (raw)",
+   "portions": null,
+   "source": "ifct"
+  },
+  "fe81a21e-da16-4e4f-a336-0b5bbffdfc77": {
+   "kcal": "149",
+   "name": "scrambled eggs",
+   "portions": null,
+   "source": "usda"
+  },
+  "ffe7123d-0149-466d-a925-4db7c2e63358": {
+   "kcal": "113.32",
+   "name": "Murmura (Puffed rice)",
+   "portions": null,
+   "source": "indb"
+  }
+ },
+ "key_holders": [],
+ "memory": {},
+ "migrations": [
+  "001",
+  "002",
+  "003",
+  "004",
+  "005",
+  "006",
+  "007",
+  "008",
+  "009",
+  "010",
+  "011",
+  "012",
+  "013",
+  "014",
+  "015",
+  "016",
+  "017",
+  "018",
+  "019",
+  "020",
+  "021",
+  "022",
+  "023",
+  "024",
+  "025",
+  "026",
+  "027",
+  "028",
+  "029",
+  "030",
+  "031",
+  "032",
+  "033",
+  "034",
+  "035",
+  "036",
+  "037",
+  "038",
+  "039",
+  "040",
+  "041",
+  "042",
+  "043",
+  "044",
+  "045",
+  "046",
+  "047",
+  "048",
+  "049",
+  "050",
+  "052"
+ ],
+ "phrase_usage": {
+  "aalu ki sabzi": [
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "45.0",
+    "users": 1
+   }
+  ],
+  "almonds": [
+   {
+    "entries": 8,
+    "food_item_id": "none",
+    "median_g": "20.0",
+    "users": 2
+   },
+   {
+    "entries": 6,
+    "food_item_id": "faf224f7-68ee-4a76-9d7d-6558a93c280d",
+    "median_g": "4.8",
+    "users": 4
+   },
+   {
+    "entries": 3,
+    "food_item_id": "private",
+    "median_g": "12.0",
+    "users": 1
+   }
+  ],
+  "aloo paratha": [
+   {
+    "entries": 1,
+    "food_item_id": "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289",
+    "median_g": "300.0",
+    "users": 1
+   }
+  ],
+  "aloo sabji": [
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "87.5",
+    "users": 1
+   }
+  ],
+  "bajra roti": [
+   {
+    "entries": 2,
+    "food_item_id": "ce06b7e9-87e3-4fd8-9739-1c75780aae8b",
+    "median_g": "80.0",
+    "users": 1
+   }
+  ],
+  "bhindi ki sabzi": [
+   {
+    "entries": 3,
+    "food_item_id": "6261ca0a-9fe9-4807-a5ea-8933c5d8ce41",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "butter roti": [
+   {
+    "entries": 1,
+    "food_item_id": "caceb539-f8f0-42d6-b622-5afe9b945822",
+    "median_g": "160.0",
+    "users": 1
+   }
+  ],
+  "chana dal": [
+   {
+    "entries": 1,
+    "food_item_id": "564c59a2-0797-4c6d-8dab-d6a65ffa7907",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "chapati": [
+   {
+    "entries": 15,
+    "food_item_id": "b84a7f73-62d6-4a46-b24a-3b2ded14dc45",
+    "median_g": "120.0",
+    "users": 5
+   }
+  ],
+  "chapati roti": [
+   {
+    "entries": 1,
+    "food_item_id": "6f236ba8-be48-419f-9925-ba4e937635f4",
+    "median_g": "80.0",
+    "users": 1
+   }
+  ],
+  "chawal": [
+   {
+    "entries": 3,
+    "food_item_id": "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "median_g": "120.0",
+    "users": 2
+   }
+  ],
+  "chawal cooked rice": [
+   {
+    "entries": 2,
+    "food_item_id": "7974b32b-25dd-4064-9179-9d37228f36cf",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "chawal rice": [
+   {
+    "entries": 3,
+    "food_item_id": "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "median_g": "160.0",
+    "users": 1
+   }
+  ],
+  "coconut chutney": [
+   {
+    "entries": 4,
+    "food_item_id": "9ca15288-e06a-4ef4-9a93-772bd439d2a6",
+    "median_g": "40.0",
+    "users": 3
+   }
+  ],
+  "cooked rice": [
+   {
+    "entries": 14,
+    "food_item_id": "532c9124-4284-4924-9dc5-cc68a17d23fb",
+    "median_g": "174.0",
+    "users": 6
+   }
+  ],
+  "cooked white rice": [
+   {
+    "entries": 1,
+    "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+    "median_g": "240.0",
+    "users": 1
+   },
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "150.0",
+    "users": 1
+   }
+  ],
+  "cottage cheese paneer cubes": [
+   {
+    "entries": 1,
+    "food_item_id": "0c34952a-1e04-4b07-8af7-0ad879948160",
+    "median_g": "100.0",
+    "users": 1
+   }
+  ],
+  "curd": [
+   {
+    "entries": 2,
+    "food_item_id": "26c4a4fe-c79f-4c63-bf1b-61e713b5a5c0",
+    "median_g": "100.0",
+    "users": 2
+   },
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "45.0",
+    "users": 1
+   },
+   {
+    "entries": 1,
+    "food_item_id": "1796a1e7-1c74-4782-a729-838eddb264f4",
+    "median_g": "200.0",
+    "users": 1
+   },
+   {
+    "entries": 1,
+    "food_item_id": "ea036a56-0e7b-407b-9670-31c1c4040ea7",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "curd yogurt": [
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "50.0",
+    "users": 1
+   }
+  ],
+  "daal": [
+   {
+    "entries": 6,
+    "food_item_id": "4baf43ea-0605-48f6-a853-941578936751",
+    "median_g": "150.0",
+    "users": 2
+   }
+  ],
+  "dahi yogurt": [
+   {
+    "entries": 1,
+    "food_item_id": "f289d0c6-ea74-4348-a39d-76be73fd4db1",
+    "median_g": "120.0",
+    "users": 1
+   }
+  ],
+  "dal": [
+   {
+    "entries": 12,
+    "food_item_id": "7e0fac32-ada1-4dbb-9db4-e7869967551a",
+    "median_g": "200.0",
+    "users": 4
+   }
+  ],
+  "dal lentil curry": [
+   {
+    "entries": 4,
+    "food_item_id": "none",
+    "median_g": "200.0",
+    "users": 2
+   },
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "175.0",
+    "users": 2
+   }
+  ],
+  "egg": [
+   {
+    "entries": 5,
+    "food_item_id": "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7",
+    "median_g": "100.0",
+    "users": 3
+   },
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "118.0",
+    "users": 1
+   }
+  ],
+  "eggs": [
+   {
+    "entries": 4,
+    "food_item_id": "none",
+    "median_g": "150.0",
+    "users": 2
+   }
+  ],
+  "maggi noodles": [
+   {
+    "entries": 2,
+    "food_item_id": "270c9235-0549-4024-8c6e-a064d4947f07",
+    "median_g": "70.0",
+    "users": 2
+   }
+  ],
+  "maggie noodles": [
+   {
+    "entries": 3,
+    "food_item_id": "1e221bcf-ac0c-4f87-8f47-70101a68b4da",
+    "median_g": "70.0",
+    "users": 1
+   }
+  ],
+  "masala chai": [
+   {
+    "entries": 8,
+    "food_item_id": "none",
+    "median_g": "188.5",
+    "users": 1
+   }
+  ],
+  "matar paneer": [
+   {
+    "entries": 1,
+    "food_item_id": "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "methi paratha": [
+   {
+    "entries": 1,
+    "food_item_id": "89e283bc-e9fe-4132-bbba-608652756f54",
+    "median_g": "320.0",
+    "users": 1
+   }
+  ],
+  "milk": [
+   {
+    "entries": 23,
+    "food_item_id": "f1a1d1bb-669b-422c-94cd-978b78efa31a",
+    "median_g": "240.0",
+    "users": 10
+   },
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "279.0",
+    "users": 1
+   }
+  ],
+  "mutter paneer": [
+   {
+    "entries": 1,
+    "food_item_id": "f6a795b0-37b6-406d-b477-f6cdbb38c348",
+    "median_g": "60.0",
+    "users": 1
+   }
+  ],
+  "paneer": [
+   {
+    "entries": 3,
+    "food_item_id": "42528f88-2dff-4cda-951e-d7c55fe6c32e",
+    "median_g": "100.0",
+    "users": 2
+   },
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "150.0",
+    "users": 2
+   }
+  ],
+  "paratha": [
+   {
+    "entries": 3,
+    "food_item_id": "6e626ad7-975a-4f54-9bfa-24a759f116cf",
+    "median_g": "160.0",
+    "users": 2
+   }
+  ],
+  "pasteurized cow milk": [
+   {
+    "entries": 2,
+    "food_item_id": "64eabdee-9280-4ccb-96a9-fbd2a6f12ce9",
+    "median_g": "103.0",
+    "users": 1
+   }
+  ],
+  "potato": [
+   {
+    "entries": 2,
+    "food_item_id": "0126212d-cdb8-41f9-8fb0-ec4094de8755",
+    "median_g": "155.0",
+    "users": 2
+   }
+  ],
+  "rajma": [
+   {
+    "entries": 1,
+    "food_item_id": "64c6dcd3-acca-49cc-9488-40c90e94193a",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "rice": [
+   {
+    "entries": 14,
+    "food_item_id": "c3c7286c-7c44-46e8-ad81-37f506ca10bb",
+    "median_g": "160.0",
+    "users": 6
+   },
+   {
+    "entries": 1,
+    "food_item_id": "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+    "median_g": "160.0",
+    "users": 1
+   },
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "roti": [
+   {
+    "entries": 20,
+    "food_item_id": "7d360df0-5ad0-4307-a6cf-9bedfa7545de",
+    "median_g": "80.0",
+    "users": 6
+   },
+   {
+    "entries": 4,
+    "food_item_id": "none",
+    "median_g": "80.0",
+    "users": 2
+   }
+  ],
+  "roti chapati": [
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "80.0",
+    "users": 1
+   }
+  ],
+  "sabudana khichdi": [
+   {
+    "entries": 2,
+    "food_item_id": "private",
+    "median_g": "300.0",
+    "users": 2
+   }
+  ],
+  "sambar": [
+   {
+    "entries": 2,
+    "food_item_id": "34bf6420-4493-4b14-b958-3ca75c15c0e6",
+    "median_g": "125.0",
+    "users": 1
+   }
+  ],
+  "steamed rice": [
+   {
+    "entries": 10,
+    "food_item_id": "none",
+    "median_g": "150.0",
+    "users": 2
+   }
+  ],
+  "steamed white rice": [
+   {
+    "entries": 1,
+    "food_item_id": "de152ca1-35e0-4766-904b-c58d2decc4d3",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "tea": [
+   {
+    "entries": 3,
+    "food_item_id": "0337eaef-6ae5-4332-aac3-9919d6ae3c3c",
+    "median_g": "240.0",
+    "users": 3
+   },
+   {
+    "entries": 1,
+    "food_item_id": "717067dc-2937-407c-b990-1d9e1d38f244",
+    "median_g": "240.0",
+    "users": 1
+   }
+  ],
+  "upma": [
+   {
+    "entries": 2,
+    "food_item_id": "d6ec8b98-eef8-494e-89a5-dc5f3ef1467d",
+    "median_g": "225.0",
+    "users": 2
+   }
+  ],
+  "vada pav": [
+   {
+    "entries": 1,
+    "food_item_id": "22698752-ccc4-47c5-9332-c8605046070d",
+    "median_g": "260.0",
+    "users": 1
+   }
+  ],
+  "wheat roti": [
+   {
+    "entries": 2,
+    "food_item_id": "5aca1a95-e516-484b-8bf5-c2653b262c94",
+    "median_g": "160.0",
+    "users": 1
+   }
+  ],
+  "white rice": [
+   {
+    "entries": 1,
+    "food_item_id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+    "median_g": "250.0",
+    "users": 1
+   },
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "200.0",
+    "users": 1
+   }
+  ],
+  "whole wheat roti chapati": [
+   {
+    "entries": 1,
+    "food_item_id": "private",
+    "median_g": "40.0",
+    "users": 1
+   }
+  ]
+ },
+ "rows": [
+  {
+   "carbs": "9.99",
+   "created_by_null": true,
+   "external_id": "OSR142",
+   "fat": "4.62",
+   "fdc_id": null,
+   "fiber": "3.72",
+   "id": "022ed69d-c9a7-4d14-bf51-14b00f2c8e67",
+   "kcal": "99.67",
+   "key": "split bengal gram dal channa dal",
+   "name": "Split bengal gram dal (Channa dal)",
+   "normalized_name": "split bengal gram dal channa dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "4.15",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "2.72",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "1.02",
+   "fdc_id": "173417",
+   "fiber": "0",
+   "id": "0c34952a-1e04-4b07-8af7-0ad879948160",
+   "kcal": "72",
+   "key": "cottage cheese paneer cubes",
+   "name": "cottage cheese (paneer) cubes",
+   "normalized_name": "cottage cheese paneer cubes",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "12.4",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "25.72",
+   "created_by_null": true,
+   "external_id": "ASC113",
+   "fat": "0.18",
+   "fdc_id": null,
+   "fiber": "1.25",
+   "id": "0da4ef7d-ded7-4431-89a5-c6afb5333d0e",
+   "kcal": "117.19",
+   "key": "boiled rice uble chawal",
+   "name": "Boiled rice (Uble chawal)",
+   "normalized_name": "boiled rice uble chawal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.6",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "21.1",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "0.19",
+   "fdc_id": "169711",
+   "fiber": "1",
+   "id": "10f3afce-0aa1-4677-b1fc-80787a8b162e",
+   "kcal": "97",
+   "key": "cooked basmati rice",
+   "name": "Cooked basmati rice",
+   "normalized_name": "cooked basmati rice",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.02",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "3.59",
+   "created_by_null": true,
+   "external_id": "OSR076",
+   "fat": "29.11",
+   "fdc_id": null,
+   "fiber": "0.57",
+   "id": "12ffb549-63e5-4591-ae4c-667c898cfa4d",
+   "kcal": "278.29",
+   "key": "gobi 65",
+   "name": "Gobi 65",
+   "normalized_name": "gobi 65",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "0.56",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.84",
+   "created_by_null": true,
+   "external_id": "ASC152",
+   "fat": "2.98",
+   "fdc_id": null,
+   "fiber": "1.53",
+   "id": "130cac2c-2698-4c1c-a5cc-dc8f606f363a",
+   "kcal": "61.32",
+   "key": "washed urad dal dhuli urad ki dal",
+   "name": "Washed urad dal (Dhuli urad ki dal)",
+   "normalized_name": "washed urad dal dhuli urad ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.51",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.17",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "4.31",
+   "fdc_id": "2707427",
+   "fiber": "7.5",
+   "id": "17defa02-de55-41e8-a161-6a32bbb461e9",
+   "kcal": "145",
+   "key": "dal tadka",
+   "name": "Dal Tadka",
+   "normalized_name": "dal tadka",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "protein": "8.6",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.12",
+   "created_by_null": true,
+   "external_id": "ASC354",
+   "fat": "71.86",
+   "fdc_id": null,
+   "fiber": "1.13",
+   "id": "1945a20a-0f7f-495c-bdf6-8fe2b602ae89",
+   "kcal": "673.81",
+   "key": "mixed vegetable pakora pakoda",
+   "name": "Mixed vegetable pakora/pakoda",
+   "normalized_name": null,
+   "parked_normalized_name": "mixed vegetable pakora pakoda",
+   "portions": null,
+   "protein": "1.94",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "24",
+   "created_by_null": true,
+   "external_id": "OSR118",
+   "fat": "54.41",
+   "fdc_id": null,
+   "fiber": "1.5",
+   "id": "1aaa7f9b-c479-46b5-acdb-3b0da026ced2",
+   "kcal": "597.79",
+   "key": "jackfruit fritters ponsa mulik kathal ka pakora",
+   "name": "Jackfruit fritters (Ponsa mulik/Kathal ka pakora)",
+   "normalized_name": "jackfruit fritters ponsa mulik kathal ka pakora",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.34",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "16.38",
+   "created_by_null": true,
+   "external_id": "ASC165",
+   "fat": "5.77",
+   "fdc_id": null,
+   "fiber": "5.83",
+   "id": "20752111-d150-4ecd-8128-821f1324c79f",
+   "kcal": "143.73",
+   "key": "kidney bean curry rajmah curry",
+   "name": "Kidney bean curry (Rajmah curry)",
+   "normalized_name": "kidney bean curry rajmah curry",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.95",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.52",
+   "created_by_null": true,
+   "external_id": "BFP568",
+   "fat": "56.58",
+   "fdc_id": null,
+   "fiber": "4.55",
+   "id": "2144a31e-da72-4f43-80d8-0ea145a4f8b4",
+   "kcal": "613.39",
+   "key": "poshtik namak paras",
+   "name": "Poshtik namak paras",
+   "normalized_name": "poshtik namak paras",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.49",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "33.25",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "9.73",
+   "fdc_id": "2709130",
+   "fiber": "5.8",
+   "id": "22698752-ccc4-47c5-9332-c8605046070d",
+   "kcal": "266",
+   "key": "vada pav",
+   "name": "vada pav",
+   "normalized_name": "vada pav",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "12.75",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "16.12",
+   "created_by_null": true,
+   "external_id": "OSR152",
+   "fat": "40.25",
+   "fdc_id": null,
+   "fiber": "1.45",
+   "id": "23874458-49f3-443d-8315-62f1e0caeecf",
+   "kcal": "435.46",
+   "key": "bread roll",
+   "name": "Bread roll",
+   "normalized_name": "bread roll",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.85",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "16.31",
+   "created_by_null": true,
+   "external_id": "BFP039",
+   "fat": "7.49",
+   "fdc_id": null,
+   "fiber": "3.24",
+   "id": "23c96f47-d375-406e-81d3-4654a4a88c55",
+   "kcal": "147.89",
+   "key": "semolina upma suji rava upma",
+   "name": "Semolina upma (Suji/Rava upma)",
+   "normalized_name": "semolina upma suji rava upma",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.3",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "9.7",
+   "created_by_null": true,
+   "external_id": "BFP436",
+   "fat": "76.32",
+   "fdc_id": null,
+   "fiber": "2.27",
+   "id": "2a06fe4f-4ebd-46c5-bdba-8fec96455cbe",
+   "kcal": "745.5",
+   "key": "plain urad dal vada uzunne vada minapa garelu ulundu vadai medu vada",
+   "name": "Plain urad dal vada (Uzunne vada/Minapa garelu/Ulundu vadai/Medu vada)",
+   "normalized_name": null,
+   "parked_normalized_name": "plain urad dal vada uzunne vada minapa garelu ulundu vadai medu vada",
+   "portions": null,
+   "protein": "4.39",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "5.41",
+   "created_by_null": true,
+   "external_id": "ASC352",
+   "fat": "71.84",
+   "fdc_id": null,
+   "fiber": "1.11",
+   "id": "3030f8d4-c81f-4fa2-970e-4441f696d58c",
+   "kcal": "674.61",
+   "key": "onion pakora pakoda pyaaz ke pakode",
+   "name": "Onion pakora/pakoda (Pyaaz ke pakode)",
+   "normalized_name": null,
+   "parked_normalized_name": "onion pakora pakoda pyaaz ke pakode",
+   "portions": null,
+   "protein": "1.9",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "10.57",
+   "created_by_null": true,
+   "external_id": "ASC167",
+   "fat": "4.38",
+   "fdc_id": null,
+   "fiber": "3.52",
+   "id": "34bf6420-4493-4b14-b958-3ca75c15c0e6",
+   "kcal": "96.92",
+   "key": "sambar",
+   "name": "Sambar",
+   "normalized_name": "sambar",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.35",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "45.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "13.2",
+   "fdc_id": "174076",
+   "fiber": "9.6",
+   "id": "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289",
+   "kcal": "326",
+   "key": "aloo paratha",
+   "name": "Aloo Paratha",
+   "normalized_name": "aloo paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.36",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "0.96",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "9.96",
+   "fdc_id": "748967",
+   "fiber": "0",
+   "id": "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7",
+   "kcal": "148",
+   "key": "egg",
+   "name": "egg",
+   "normalized_name": "egg",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "12.4",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "16.47",
+   "created_by_null": true,
+   "external_id": "OSR114",
+   "fat": "47.91",
+   "fdc_id": null,
+   "fiber": "2.24",
+   "id": "3f194ff7-b64d-427e-9c3d-d34140a16149",
+   "kcal": "509.89",
+   "key": "bhel puri",
+   "name": "Bhel puri",
+   "normalized_name": "bhel puri",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.52",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "12.41",
+   "created_by_null": true,
+   "external_id": "L003",
+   "fat": "14.78",
+   "fdc_id": "2705740",
+   "fiber": "0",
+   "id": "42528f88-2dff-4cda-951e-d7c55fe6c32e",
+   "kcal": "257.9",
+   "key": "paneer",
+   "name": "Paneer",
+   "normalized_name": "paneer",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "18.86",
+   "source": "ifct",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.22",
+   "created_by_null": true,
+   "external_id": "ASC156",
+   "fat": "2.56",
+   "fdc_id": null,
+   "fiber": "2.02",
+   "id": "42b44bc9-96f8-4f7b-a0cc-a03900e5acbc",
+   "kcal": "53.7",
+   "key": "whole moong moong ki dal",
+   "name": "Whole moong (Moong ki dal)",
+   "normalized_name": "whole moong moong ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.25",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.17",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "4.31",
+   "fdc_id": "2707427",
+   "fiber": "7.5",
+   "id": "4baf43ea-0605-48f6-a853-941578936751",
+   "kcal": "145",
+   "key": "daal",
+   "name": "daal",
+   "normalized_name": "daal",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "protein": "8.6",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "6.76",
+   "created_by_null": true,
+   "external_id": "ASC164",
+   "fat": "10.19",
+   "fdc_id": null,
+   "fiber": "7.34",
+   "id": "5143a84d-bc67-4e85-b648-42a5a0c0f111",
+   "kcal": "163.28",
+   "key": "soyabean curry",
+   "name": "Soyabean curry",
+   "normalized_name": "soyabean curry",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "10.43",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "21.1",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "0.19",
+   "fdc_id": "169711",
+   "fiber": "1",
+   "id": "532c9124-4284-4924-9dc5-cc68a17d23fb",
+   "kcal": "97",
+   "key": "cooked rice",
+   "name": "cooked rice",
+   "normalized_name": "cooked rice",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 174
+    }
+   ],
+   "protein": "2.02",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.17",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "4.31",
+   "fdc_id": "2707427",
+   "fiber": "7.5",
+   "id": "564c59a2-0797-4c6d-8dab-d6a65ffa7907",
+   "kcal": "145",
+   "key": "chana dal",
+   "name": "chana dal",
+   "normalized_name": "chana dal",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "protein": "8.6",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.05",
+   "created_by_null": true,
+   "external_id": "ASC159",
+   "fat": "2.62",
+   "fdc_id": null,
+   "fiber": "2.32",
+   "id": "5742990e-7eef-465e-875d-ebbb30796c57",
+   "kcal": "53.8",
+   "key": "whole urad urad ki dal",
+   "name": "Whole urad (Urad ki dal)",
+   "normalized_name": "whole urad urad ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.21",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "6.8",
+   "created_by_null": true,
+   "external_id": "BFP178",
+   "fat": "2.48",
+   "fdc_id": null,
+   "fiber": "3.02",
+   "id": "58b3443d-0f76-4c3c-bd8d-3e882cd0a473",
+   "kcal": "63.43",
+   "key": "green gram whole with baghar sabut moong dal with tadka",
+   "name": "Green gram whole with baghar (Sabut moong dal with tadka)",
+   "normalized_name": "green gram whole with baghar sabut moong dal with tadka",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.23",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.91",
+   "created_by_null": true,
+   "external_id": "ASC151",
+   "fat": "1.68",
+   "fdc_id": null,
+   "fiber": "1.17",
+   "id": "590dc32b-6fc1-45ab-bd78-afa3f1d53f57",
+   "kcal": "50",
+   "key": "washed moong dal dhuli moong ki dal",
+   "name": "Washed moong dal (Dhuli moong ki dal)",
+   "normalized_name": "washed moong dal dhuli moong ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.68",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "46.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "7.45",
+   "fdc_id": "171844",
+   "fiber": "4.9",
+   "id": "5aca1a95-e516-484b-8bf5-c2653b262c94",
+   "kcal": "297",
+   "key": "wheat roti",
+   "name": "wheat roti",
+   "normalized_name": "wheat roti",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 68
+    }
+   ],
+   "protein": "11.2",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "33.29",
+   "created_by_null": true,
+   "external_id": "OSR113",
+   "fat": "48.22",
+   "fdc_id": null,
+   "fiber": "2.18",
+   "id": "5c0b0b52-dd5a-44a4-8df4-c17db6429649",
+   "kcal": "593.99",
+   "key": "rice murukku",
+   "name": "Rice murukku",
+   "normalized_name": "rice murukku",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.41",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "28.6",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "0.21",
+   "fdc_id": "168930",
+   "fiber": "0",
+   "id": "5f20d673-2247-44bf-9517-6f7d58ff4930",
+   "kcal": "130",
+   "key": "cooked white rice",
+   "name": "cooked white rice",
+   "normalized_name": "cooked white rice",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 186
+    }
+   ],
+   "protein": "2.38",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "17.88",
+   "created_by_null": true,
+   "external_id": "ASC163",
+   "fat": "5.62",
+   "fdc_id": null,
+   "fiber": "4.57",
+   "id": "607df67f-a4e4-4aef-8063-22a6849e5b32",
+   "kcal": "148.99",
+   "key": "lobia curry",
+   "name": "Lobia curry",
+   "normalized_name": "lobia curry",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.06",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "17.49",
+   "created_by_null": true,
+   "external_id": "ASC115",
+   "fat": "3.33",
+   "fdc_id": null,
+   "fiber": "2.67",
+   "id": "61e55069-51c1-43c0-862d-824bef43fd63",
+   "kcal": "113.05",
+   "key": "mixed vegetable pulao",
+   "name": "Mixed vegetable pulao",
+   "normalized_name": "mixed vegetable pulao",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.72",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "14.11",
+   "created_by_null": true,
+   "external_id": "ASC161",
+   "fat": "6.61",
+   "fdc_id": null,
+   "fiber": "7.99",
+   "id": "63ca6146-3475-45eb-889f-f04591a2df85",
+   "kcal": "140.68",
+   "key": "black channa curry bengal gram curry kale chane ki curry",
+   "name": "Black channa curry/Bengal gram curry (Kale chane ki curry)",
+   "normalized_name": "black channa curry bengal gram curry kale chane ki curry",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.67",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "10.04",
+   "created_by_null": true,
+   "external_id": "BFP144",
+   "fat": "1.01",
+   "fdc_id": null,
+   "fiber": "0.85",
+   "id": "67d06648-33d0-464e-9194-a3e4b06cdbf2",
+   "kcal": "57.03",
+   "key": "plain khitchdi plain khichri khichdi",
+   "name": "Plain khitchdi (Plain khichri/khichdi)",
+   "normalized_name": "plain khitchdi plain khichri khichdi",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.72",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "14.38",
+   "created_by_null": true,
+   "external_id": "ASC178",
+   "fat": "4.18",
+   "fdc_id": null,
+   "fiber": "1.88",
+   "id": "693df2ca-9a80-4c2c-aa41-991b4bea0d67",
+   "kcal": "103.15",
+   "key": "dry potato sookhe aloo",
+   "name": "Dry potato (Sookhe aloo)",
+   "normalized_name": "dry potato sookhe aloo",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.62",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "30.68",
+   "created_by_null": true,
+   "external_id": "ASC474",
+   "fat": "5.28",
+   "fdc_id": null,
+   "fiber": "4.95",
+   "id": "6c96a806-9a85-4215-b996-3f13f725199e",
+   "kcal": "216.49",
+   "key": "dhokla",
+   "name": "Dhokla",
+   "normalized_name": "dhokla",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "13.45",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "45.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "13.2",
+   "fdc_id": "174076",
+   "fiber": "9.6",
+   "id": "6e626ad7-975a-4f54-9bfa-24a759f116cf",
+   "kcal": "326",
+   "key": "paratha",
+   "name": "paratha",
+   "normalized_name": "paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.36",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "35.65",
+   "created_by_null": true,
+   "external_id": "ASC096",
+   "fat": "3.56",
+   "fdc_id": null,
+   "fiber": "6.31",
+   "id": "6f236ba8-be48-419f-9925-ba4e937635f4",
+   "kcal": "202.31",
+   "key": "chapati roti",
+   "name": "Chapati/Roti",
+   "normalized_name": "chapati roti",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.88",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "45.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "13.2",
+   "fdc_id": "174076",
+   "fiber": "9.6",
+   "id": "730f3d2e-c1a4-4f3a-9e6e-64cd427034d3",
+   "kcal": "326",
+   "key": "aaloo onion paratha",
+   "name": "aaloo onion paratha",
+   "normalized_name": "aaloo onion paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.36",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "46.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "7.45",
+   "fdc_id": "171844",
+   "fiber": "4.9",
+   "id": "7d360df0-5ad0-4307-a6cf-9bedfa7545de",
+   "kcal": "297",
+   "key": "roti",
+   "name": "roti",
+   "normalized_name": "roti",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 68
+    }
+   ],
+   "protein": "11.2",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.17",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "4.31",
+   "fdc_id": "2707427",
+   "fiber": "7.5",
+   "id": "7e0fac32-ada1-4dbb-9db4-e7869967551a",
+   "kcal": "145",
+   "key": "dal",
+   "name": "dal",
+   "normalized_name": "dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "8.6",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "10.73",
+   "created_by_null": true,
+   "external_id": "ASC143",
+   "fat": "82.56",
+   "fdc_id": null,
+   "fiber": "0.38",
+   "id": "87ebed4d-5322-45c2-8266-b65c37db027c",
+   "kcal": "793.2",
+   "key": "bhatura",
+   "name": "Bhatura",
+   "normalized_name": null,
+   "parked_normalized_name": "bhatura",
+   "portions": null,
+   "protein": "1.63",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "45.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "13.2",
+   "fdc_id": "174076",
+   "fiber": "9.6",
+   "id": "89e283bc-e9fe-4132-bbba-608652756f54",
+   "kcal": "326",
+   "key": "methi paratha",
+   "name": "methi paratha",
+   "normalized_name": "methi paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.36",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "7.1",
+   "created_by_null": true,
+   "external_id": "ASC153",
+   "fat": "3.6",
+   "fdc_id": null,
+   "fiber": "2.72",
+   "id": "8f8ed882-378c-4385-8f87-cfc4f84ee075",
+   "kcal": "73.25",
+   "key": "split bengal gram with bottle gourd channa dal with ghiya lauki",
+   "name": "Split bengal gram with bottle gourd (Channa dal with ghiya/lauki)",
+   "normalized_name": "split bengal gram with bottle gourd channa dal with ghiya lauki",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.79",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "22.41",
+   "created_by_null": true,
+   "external_id": "OSR099",
+   "fat": "10.1",
+   "fdc_id": null,
+   "fiber": "1.82",
+   "id": "92ef8305-7232-4636-8a90-190e109ad67d",
+   "kcal": "187.16",
+   "key": "sago khitchdi khichri sabudana khitchdi khichri",
+   "name": "Sago khitchdi/khichri (Sabudana khitchdi/khichri)",
+   "normalized_name": "sago khitchdi khichri sabudana khitchdi khichri",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.72",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "4.92",
+   "created_by_null": true,
+   "external_id": "BFP166",
+   "fat": "1.62",
+   "fdc_id": null,
+   "fiber": "1.08",
+   "id": "973a8605-a04b-424d-a0c7-e5ac07d7deaf",
+   "kcal": "43.69",
+   "key": "dal moong",
+   "name": "Dal moong",
+   "normalized_name": "dal moong",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.2",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "9.74",
+   "created_by_null": true,
+   "external_id": "ASC190",
+   "fat": "5.13",
+   "fdc_id": null,
+   "fiber": "3.61",
+   "id": "a3c98fb7-d54e-4268-95a3-9a06963144e5",
+   "kcal": "100.92",
+   "key": "pea potato curry aloo matar",
+   "name": "Pea potato curry (Aloo matar)",
+   "normalized_name": "pea potato curry aloo matar",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.48",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "10.42",
+   "created_by_null": true,
+   "external_id": "BFP239",
+   "fat": "4.47",
+   "fdc_id": null,
+   "fiber": "2.42",
+   "id": "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09",
+   "kcal": "89.56",
+   "key": "potato curry aloo ki sabzi",
+   "name": "Potato curry (Aloo ki sabzi)",
+   "normalized_name": "potato curry aloo ki sabzi",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.52",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "12.87",
+   "created_by_null": true,
+   "external_id": "OSR147",
+   "fat": "60.08",
+   "fdc_id": null,
+   "fiber": "2.35",
+   "id": "a7ab9d8d-6642-4067-bf26-0b0ae3340aa0",
+   "kcal": "609.14",
+   "key": "sev omapodi karapusa",
+   "name": "Sev (Omapodi/Karapusa)",
+   "normalized_name": null,
+   "parked_normalized_name": "sev omapodi karapusa",
+   "portions": null,
+   "protein": "5.12",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "28.24",
+   "created_by_null": true,
+   "external_id": "BFP386",
+   "fat": "40.15",
+   "fdc_id": null,
+   "fiber": "0.05",
+   "id": "a8d7c5b6-22f7-41f2-b07d-60aecdd164c1",
+   "kcal": "471.15",
+   "key": "gulab jamun with milk powder",
+   "name": "Gulab jamun with milk powder",
+   "normalized_name": "gulab jamun with milk powder",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "0.85",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "8.22",
+   "created_by_null": true,
+   "external_id": "ASC107",
+   "fat": "77.61",
+   "fdc_id": null,
+   "fiber": "1.46",
+   "id": "aaa262bc-09ee-4cda-998d-678dfdde579e",
+   "kcal": "737.63",
+   "key": "poori",
+   "name": "Poori",
+   "normalized_name": null,
+   "parked_normalized_name": "poori",
+   "portions": null,
+   "protein": "1.35",
+   "source": "indb",
+   "status": "quarantined",
+   "status_reason": "auto_050:fat_dominant_dish"
+  },
+  {
+   "carbs": "5.99",
+   "created_by_null": true,
+   "external_id": "ASC171",
+   "fat": "8.13",
+   "fdc_id": null,
+   "fiber": "3.02",
+   "id": "aba7561f-2f79-4b1c-867e-8f1de1e46a9b",
+   "kcal": "106.18",
+   "key": "potato cauliflower aloo gobhi",
+   "name": "Potato cauliflower (Aloo gobhi)",
+   "normalized_name": "potato cauliflower aloo gobhi",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.9",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.37",
+   "created_by_null": true,
+   "external_id": "ASC157",
+   "fat": "2.52",
+   "fdc_id": null,
+   "fiber": "1.98",
+   "id": "b07737fd-c493-40e6-b8e9-9cad0119b914",
+   "kcal": "54.05",
+   "key": "whole masoor masoor ki dal",
+   "name": "Whole masoor (Masoor ki dal)",
+   "normalized_name": "whole masoor masoor ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.28",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "46.1",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "9.2",
+   "fdc_id": "174075",
+   "fiber": "9.7",
+   "id": "b84a7f73-62d6-4a46-b24a-3b2ded14dc45",
+   "kcal": "299",
+   "key": "chapati",
+   "name": "chapati",
+   "normalized_name": "chapati",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 piece",
+     "gramWeight": 43
+    }
+   ],
+   "protein": "7.85",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.17",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "4.31",
+   "fdc_id": "2707427",
+   "fiber": "7.5",
+   "id": "bcfe8cca-3bc2-4128-bebc-59bd1fe279a0",
+   "kcal": "145",
+   "key": "moong dal",
+   "name": "moong dal",
+   "normalized_name": "moong dal",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 240
+    }
+   ],
+   "protein": "8.6",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "4.5",
+   "created_by_null": true,
+   "external_id": "BFP269",
+   "fat": "9.27",
+   "fdc_id": null,
+   "fiber": "3.57",
+   "id": "bd763856-cf67-4ca1-a8e3-661668d969ee",
+   "kcal": "110.81",
+   "key": "okra lady s fingers fry bhindi sabzi sabji subji",
+   "name": "Okra/Lady's fingers fry (Bhindi sabzi/sabji/subji)",
+   "normalized_name": "okra lady s fingers fry bhindi sabzi sabji subji",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.83",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "4.77",
+   "created_by_null": true,
+   "external_id": "BFP172",
+   "fat": "2.76",
+   "fdc_id": null,
+   "fiber": "1.3",
+   "id": "bdee1292-f1de-4d17-bc35-39067adc07d4",
+   "kcal": "52.84",
+   "key": "arhar with spinach arhar dal aur palak",
+   "name": "Arhar with spinach (Arhar dal aur palak)",
+   "normalized_name": "arhar with spinach arhar dal aur palak",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.05",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "22.19",
+   "created_by_null": true,
+   "external_id": "BFP110",
+   "fat": "4.34",
+   "fdc_id": null,
+   "fiber": "5.09",
+   "id": "bfc5ff00-2736-49f5-8fde-741af6789bbd",
+   "kcal": "148.36",
+   "key": "methi parantha paratha",
+   "name": "Methi parantha/paratha",
+   "normalized_name": "methi parantha paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "4.27",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "16.64",
+   "created_by_null": true,
+   "external_id": "OSR108",
+   "fat": "30.65",
+   "fdc_id": null,
+   "fiber": "3.04",
+   "id": "c10d9e0f-84b8-4ba2-8041-fda6ea1f1856",
+   "kcal": "358.66",
+   "key": "khakhra chaat",
+   "name": "Khakhra chaat",
+   "normalized_name": "khakhra chaat",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "4.52",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.79",
+   "created_by_null": true,
+   "external_id": "ASC155",
+   "fat": "3.1",
+   "fdc_id": null,
+   "fiber": "1.62",
+   "id": "c1c042cf-acc4-43e3-aced-180a49c0a769",
+   "kcal": "61.93",
+   "key": "mixed dal",
+   "name": "Mixed dal",
+   "normalized_name": "mixed dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.51",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "30.69",
+   "created_by_null": true,
+   "external_id": "ASC097",
+   "fat": "16.86",
+   "fdc_id": null,
+   "fiber": "5.43",
+   "id": "caa17c6f-4b26-4690-8237-b1ef0da685ca",
+   "kcal": "298.3",
+   "key": "plain parantha paratha",
+   "name": "Plain parantha/paratha",
+   "normalized_name": "plain parantha paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.06",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "46.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "7.45",
+   "fdc_id": "171844",
+   "fiber": "4.9",
+   "id": "caceb539-f8f0-42d6-b622-5afe9b945822",
+   "kcal": "297",
+   "key": "butter roti",
+   "name": "butter roti",
+   "normalized_name": "butter roti",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "11.2",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "46.4",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "7.45",
+   "fdc_id": "171844",
+   "fiber": "4.9",
+   "id": "ce06b7e9-87e3-4fd8-9739-1c75780aae8b",
+   "kcal": "297",
+   "key": "bajra roti",
+   "name": "bajra roti",
+   "normalized_name": "bajra roti",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "11.2",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "26.09",
+   "created_by_null": true,
+   "external_id": "ASC348",
+   "fat": "53.23",
+   "fdc_id": null,
+   "fiber": "0.07",
+   "id": "cfbb9270-0f25-423b-a50e-712d2e731a83",
+   "kcal": "586.06",
+   "key": "gulab jamun with khoya",
+   "name": "Gulab Jamun with khoya",
+   "normalized_name": "gulab jamun with khoya",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.03",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "19.98",
+   "created_by_null": true,
+   "external_id": "ASC162",
+   "fat": "6.84",
+   "fdc_id": null,
+   "fiber": "4.73",
+   "id": "d0cb71a4-b746-4c23-9337-67f07fb58baa",
+   "kcal": "163.43",
+   "key": "chickpeas curry safed channa curry",
+   "name": "Chickpeas curry (Safed channa curry)",
+   "normalized_name": "chickpeas curry safed channa curry",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.1",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "4.4",
+   "created_by_null": true,
+   "external_id": "ASC177",
+   "fat": "4.48",
+   "fdc_id": null,
+   "fiber": "3.27",
+   "id": "d78b3726-3176-451c-b742-b2ee8c06d733",
+   "kcal": "65.12",
+   "key": "brinjal bhartha baingan ka bhartha",
+   "name": "Brinjal bhartha (Baingan ka bhartha)",
+   "normalized_name": "brinjal bhartha baingan ka bhartha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.38",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "33.9",
+   "created_by_null": true,
+   "external_id": null,
+   "fat": "0.27",
+   "fdc_id": "169712",
+   "fiber": "0.9",
+   "id": "de152ca1-35e0-4766-904b-c58d2decc4d3",
+   "kcal": "151",
+   "key": "steamed white rice",
+   "name": "Steamed white rice",
+   "normalized_name": "steamed white rice",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.2",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "5.74",
+   "created_by_null": true,
+   "external_id": "ASC158",
+   "fat": "2.62",
+   "fdc_id": null,
+   "fiber": "1.85",
+   "id": "e9f5b52f-ff9f-4b4a-8c12-f6f9b8fa1474",
+   "kcal": "55",
+   "key": "whole moth moth ki dal",
+   "name": "Whole moth (Moth ki dal)",
+   "normalized_name": "whole moth moth ki dal",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.01",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "20.06",
+   "created_by_null": true,
+   "external_id": "OSR110",
+   "fat": "42.53",
+   "fdc_id": null,
+   "fiber": "0.67",
+   "id": "efb38b91-267d-4adf-b133-43d15214747b",
+   "kcal": "469.81",
+   "key": "banana appam",
+   "name": "Banana appam",
+   "normalized_name": "banana appam",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.17",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "4.85",
+   "created_by_null": true,
+   "external_id": "OSR075",
+   "fat": "22.48",
+   "fdc_id": null,
+   "fiber": "0.37",
+   "id": "f53d472a-a92a-444e-8f67-b2d14fcd19e3",
+   "kcal": "224.26",
+   "key": "cabbage manchurian pattagobhi manchurian",
+   "name": "Cabbage manchurian (Pattagobhi manchurian)",
+   "normalized_name": "cabbage manchurian pattagobhi manchurian",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "0.64",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  },
+  {
+   "carbs": "23.92",
+   "created_by_null": true,
+   "external_id": "ASC098",
+   "fat": "10.22",
+   "fdc_id": null,
+   "fiber": "4.18",
+   "id": "fbce5da1-e766-47ec-9c58-66fa82d5f1ca",
+   "kcal": "205.04",
+   "key": "potato parantha paratha aloo ka parantha paratha",
+   "name": "Potato parantha/paratha (Aloo ka parantha/paratha)",
+   "normalized_name": "potato parantha paratha aloo ka parantha paratha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.7",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass"
+  }
+ ],
+ "saved_meals": {
+  "meals": 3,
+  "users": 2,
+  "users_with_053_rows": 2,
+  "variants": [
+   "roti_plain",
+   "sambar"
+  ],
+  "with_053_rows": 2
+ },
+ "taken_at": "2026-11-13T15:29:08Z",
+ "usage_by_row": {
+  "0c34952a-1e04-4b07-8af7-0ad879948160": {
+   "entries": 1,
+   "users": 1
+  },
+  "0da4ef7d-ded7-4431-89a5-c6afb5333d0e": {
+   "entries": 7,
+   "users": 3
+  },
+  "20752111-d150-4ecd-8128-821f1324c79f": {
+   "entries": 1,
+   "users": 1
+  },
+  "22698752-ccc4-47c5-9332-c8605046070d": {
+   "entries": 1,
+   "users": 1
+  },
+  "34bf6420-4493-4b14-b958-3ca75c15c0e6": {
+   "entries": 2,
+   "users": 1
+  },
+  "3c27389b-6a4c-44e1-a6b3-d5cab5a4c289": {
+   "entries": 1,
+   "users": 1
+  },
+  "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7": {
+   "entries": 5,
+   "users": 3
+  },
+  "3f194ff7-b64d-427e-9c3d-d34140a16149": {
+   "entries": 1,
+   "users": 1
+  },
+  "42528f88-2dff-4cda-951e-d7c55fe6c32e": {
+   "entries": 3,
+   "users": 2
+  },
+  "4baf43ea-0605-48f6-a853-941578936751": {
+   "entries": 6,
+   "users": 2
+  },
+  "532c9124-4284-4924-9dc5-cc68a17d23fb": {
+   "entries": 14,
+   "users": 6
+  },
+  "564c59a2-0797-4c6d-8dab-d6a65ffa7907": {
+   "entries": 1,
+   "users": 1
+  },
+  "5aca1a95-e516-484b-8bf5-c2653b262c94": {
+   "entries": 2,
+   "users": 1
+  },
+  "5f20d673-2247-44bf-9517-6f7d58ff4930": {
+   "entries": 2,
+   "users": 2
+  },
+  "6e626ad7-975a-4f54-9bfa-24a759f116cf": {
+   "entries": 3,
+   "users": 2
+  },
+  "6f236ba8-be48-419f-9925-ba4e937635f4": {
+   "entries": 1,
+   "users": 1
+  },
+  "7d360df0-5ad0-4307-a6cf-9bedfa7545de": {
+   "entries": 20,
+   "users": 6
+  },
+  "7e0fac32-ada1-4dbb-9db4-e7869967551a": {
+   "entries": 12,
+   "users": 4
+  },
+  "89e283bc-e9fe-4132-bbba-608652756f54": {
+   "entries": 1,
+   "users": 1
+  },
+  "a3c98fb7-d54e-4268-95a3-9a06963144e5": {
+   "entries": 1,
+   "users": 1
+  },
+  "a74d35bb-168f-4be9-9ce4-9eebc2cc4b09": {
+   "entries": 1,
+   "users": 1
+  },
+  "b84a7f73-62d6-4a46-b24a-3b2ded14dc45": {
+   "entries": 15,
+   "users": 5
+  },
+  "bd763856-cf67-4ca1-a8e3-661668d969ee": {
+   "entries": 1,
+   "users": 1
+  },
+  "caceb539-f8f0-42d6-b622-5afe9b945822": {
+   "entries": 2,
+   "users": 2
+  },
+  "ce06b7e9-87e3-4fd8-9739-1c75780aae8b": {
+   "entries": 2,
+   "users": 1
+  },
+  "de152ca1-35e0-4766-904b-c58d2decc4d3": {
+   "entries": 1,
+   "users": 1
+  }
+ },
+ "usage_by_variant": {
+  "curry_rajma": {
+   "entries": 1,
+   "users": 1
+  },
+  "dal_chana": {
+   "entries": 1,
+   "users": 1
+  },
+  "dal_mixed": {
+   "entries": 18,
+   "users": 4
+  },
+  "paneer_ifct_l003": {
+   "entries": 1,
+   "users": 1
+  },
+  "paratha_aloo": {
+   "entries": 1,
+   "users": 1
+  },
+  "paratha_methi": {
+   "entries": 1,
+   "users": 1
+  },
+  "paratha_plain": {
+   "entries": 3,
+   "users": 2
+  },
+  "q_bajra_roti": {
+   "entries": 2,
+   "users": 1
+  },
+  "q_butter_roti": {
+   "entries": 2,
+   "users": 2
+  },
+  "q_frying_oil_counted": {
+   "entries": 1,
+   "users": 1
+  },
+  "q_vada_pav": {
+   "entries": 1,
+   "users": 1
+  },
+  "rice_white_usda168930": {
+   "entries": 24,
+   "users": 7
+  },
+  "roti_plain": {
+   "entries": 38,
+   "users": 8
+  },
+  "sabzi_aloo": {
+   "entries": 1,
+   "users": 1
+  },
+  "sabzi_aloo_matar": {
+   "entries": 1,
+   "users": 1
+  },
+  "sabzi_bhindi": {
+   "entries": 1,
+   "users": 1
+  },
+  "sambar": {
+   "entries": 2,
+   "users": 1
+  }
+ },
+ "verified_count": 1635
+}
