@@ -1,5 +1,5 @@
 [
-  { "id": "s01", "type": "log", "category": "verified", "text": "2 roti", "expected": { "calories": [180, 300] }, "note": "should resolve from a verified shared row" },
+  { "id": "s01", "type": "log", "category": "verified", "text": "2 roti", "expected": { "calories": [150, 300] }, "note": "should resolve from a verified shared row; band starts at 150 so NIN's two phulkas (160 kcal) pass (portion research 2026-11-13)" },
   { "id": "s02", "type": "log", "category": "quarantined", "text": "1 khasta kachori", "expected": { "calories": [150, 320] }, "note": "the 713 kcal/100g INDB row is quarantined; must not be served" },
   { "id": "s03", "type": "log", "category": "unknown", "text": "a bowl of bhapa doi with nolen gur", "expected": { "calories": [150, 400] }, "note": "obscure Bengali dessert; AI estimate path, private row" },
   { "id": "s04", "type": "log", "category": "unknown", "text": "one slice of my aunt's ghevar cheesecake", "expected": { "calories": [250, 600] }, "note": "made-up dish; exercises the estimate / rough-estimate path" },
