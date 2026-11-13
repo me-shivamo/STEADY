@@ -3,6 +3,8 @@ import {
   effectiveSearch,
   entryQuantityLabel,
   estimateNote,
+  gateCandidate,
+  keepSearchRow,
   placeFoods,
   planLabelFoods,
   resolveFoods,
@@ -29,6 +31,9 @@ import {
 //     between the verified exact hit and machine-learned memory, and ranked
 //     search_foods rows replace the FTS query. RESULT ORDER is SQL's job, so it
 //     is pinned by 052's self-check and scripts/eval/search-check.sql, not here.
+//   * Phase 4.1: ranked trigram rows that fail gateCandidate (extra words,
+//     missing words, a state the user did not say) never reach the matcher, and
+//     the ranked matcher prompt adds one identity rule; fts is untouched.
 
 // ── Fake supabase: a chainable builder that records every call ──────────────
 interface Call {
@@ -373,12 +378,12 @@ describe('resolveFoods — Phase 4 search and aliases', () => {
   })
 
   it('search rows reach the matcher in SQL order; a pick is a reference_match carrying its score', async () => {
-    const sb = fakeSupabase({ search: [row('uttapam', 'indb', 256, { name: 'Uttapam', score: 0.57 }), row('pulao', 'usda', 140, { name: 'plain pulao' })] })
+    const sb = fakeSupabase({ search: [row('set-dosa', 'indb', 256, { name: 'Set dosa', score: 0.57 }), row('dosa', 'usda', 140, { name: 'Dosa, plain' })] })
     matcherAnswers.push([pick0])
     const r = await resolveFoods(sb.client, [food('set dosa')], RANKED)
-    expect(matcherPrompts[0]).toMatch(/0: Uttapam \[indb\][\s\S]*1: plain pulao \[usda\]/)
+    expect(matcherPrompts[0]).toMatch(/0: Set dosa \[indb\][\s\S]*1: Dosa, plain \[usda\]/)
     expect(matcherPrompts[0]).not.toContain('0.57')        // the raw score never reaches the prompt
-    expect(r.foods[0]).toMatchObject({ food_item_id: 'uttapam', resolution: 'reference_match', match_score: 0.57 })
+    expect(r.foods[0]).toMatchObject({ food_item_id: 'set-dosa', resolution: 'reference_match', match_score: 0.57 })
   })
 
   it('an alias hit is deterministic: no search, no matcher, no memory write; last_used_at touched', async () => {
@@ -475,7 +480,7 @@ describe('resolveFoods — Phase 4 search and aliases', () => {
       row('roti-usda', 'usda', 297, { name: 'roti', portions: [{ description: '1 piece', gramWeight: 68 }] }),
       row('katori-dal', 'indb', 100, { name: 'Dal', portions: [{ description: '1 katori', gramWeight: 150 }] })] })
     matcherAnswers.push([pick0])
-    await resolveFoods(sb.client, [food('rotti')], RANKED)
+    await resolveFoods(sb.client, [food('dal rotti')], RANKED)   // both rows pass the gate
     expect(matcherPrompts[0]).toContain('USDA portions: 1 piece = 68g')
     expect(matcherPrompts[0]).toContain('       Portions: 1 katori = 150g')
   })
@@ -517,6 +522,211 @@ describe('resolveFoods — Phase 4 search and aliases', () => {
     }
     expect(events.slice(0, 2)).toEqual(['usda', 'search'])
     expect(matcherPrompts[0]).toMatch(/0: Dal \[indb\][\s\S]*1: Dal, cooked \[USDA Survey \(FNDDS\)\]/)
+  })
+
+  // Phase 4.1. Phrases and row names are modelled on the labelled search_foods
+  // rows of the gate's calibration: real-user phrases and the dev set
+  // (dataset-v3), never the held-out set.
+  describe('the ranked candidate gate', () => {
+    const RULE = 'IDENTITY AND STATE MUST BOTH MATCH.'
+    const usdaReturns = (foods: any[]) => {
+      const openRouter = (globalThis as any).fetch
+      ;(globalThis as any).fetch = jest.fn(async (url: string, init: any) => {
+        if (!String(url).includes('api.nal.usda.gov')) return openRouter(url, init)
+        return { ok: true, json: async () => ({ foods }), text: async () => '' }
+      })
+    }
+    // search_foods' answer for "chicken": every row scores 1.0 on word similarity.
+    const chickenRows = () => [
+      row('chilli-chicken', 'indb', 160, { name: 'Chilli chicken', score: 1 }),
+      row('chicken-stew', 'indb', 110, { name: 'Chicken stew', score: 1 }),
+      row('chicken-curry', 'indb', 150, { name: 'Chicken curry', score: 1 }),
+      row('cajun-chicken', 'indb', 190, { name: 'Cajun chicken', score: 1 }),
+      row('chicken-taco', 'usda', 220, { name: 'chicken taco', score: 1 }),
+    ]
+    // …and for "oats": none of them is plain oats.
+    const oatsRows = () => [
+      row('oats-burfi', 'indb', 420, { name: 'Oats burfi', score: 1 }),
+      row('oats-smoothie', 'indb', 90, { name: 'Apple oats chia seed smoothie', score: 1 }),
+      row('oat-porridge', 'indb', 110, { name: 'Oatmeal Porridge', score: 0.3 }),
+    ]
+
+    it.each([
+      ['kaju barfi', 'Cashewnut burfi (Kaju burfi/Kaju katli)'],   // barfi = burfi; a bracketed name can match
+      ['khichdi', 'Plain khitchdi (Plain khichri/khichdi)'],         // "/" spellings fill one word slot
+      ['zinger burger', 'burger'],                                   // up to 0.6 of the user's words may be missing
+      ['tea', 'Hot tea (Garam Chai)'],
+      ['beetroot', 'Beet root'],                                     // one query word = two name words joined
+      ['babycorn slices', 'Corn, Baby'],                             // …in either order (IFCT's inverted names)
+      ['daal', 'Dal'],                                               // doubled letters squeezed
+      ['eggs', 'egg'],                                               // the plural goes BEFORE the squeeze
+      ['boiled eggs', 'boiled egg'],
+      ['red chilli powder', 'Chillies, red'],                        // chillies → chilly → chili = chilli
+      ['instant noodles', 'cooked instant noodles'],                 // a usual preparation the user did not contradict
+      ['corn', 'boiled corn'],
+      ['seeded raisins', 'Raisins, dried, seeded'],
+      ['boiled rice', 'Rice, cooked'],                               // boiled = cooked
+      ['bhindi sabzi', "Okra/Lady's fingers fry (Bhindi sabzi/sabji/subji)"],
+    ])('keeps the same food: "%s" → %s', (q, name) => {
+      expect(gateCandidate(q, name)).toMatchObject({ keep: true, states: [], rawMissing: false })
+    })
+
+    it.each([
+      ['eggs', 'egg'], ['chillies', 'chilli'], ['cookies', 'cookie'], ['veggies', 'veggie'], ['curries', 'curry'],
+      ['tomatoes', 'tomato'], ['daal', 'dal'], ['moong', 'mong'],
+    ])('stems "%s" and "%s" to the same word', (a, b) => {
+      expect(gateCandidate(a, b)).toMatchObject({ extra: 0, missing: 0 })
+      expect(gateCandidate(b, a)).toMatchObject({ extra: 0, missing: 0 })
+    })
+
+    it.each([
+      ['oats', 'Oatmeal Porridge', 'extra'],                                 // a longer, different name
+      ['juice', 'Sugarcane, juice', 'extra'],
+      ['fried daal', 'Chinese fried rice', 'extra'],
+      ['salmon with roasted vegetables', 'Lasagne with vegetables', 'missing'],
+      ['oats', 'Oats burfi', 'state'],                                       // a dish form the user did not say
+      ['chicken', 'Chicken curry', 'state'],
+      ['bhindi', "Okra/Lady's fingers fry (Bhindi sabzi/sabji/subji)", 'state'],   // sabzi counts as curry
+      ['butter naan', 'butter roti', 'state'],
+      ['beetroot', 'Beet root (raw)', 'state'],                              // a "(raw)" qualifier is a state too
+      ['raw beetroot', 'Beetroot', 'raw'],                                   // the user said raw, the row does not
+      ['bhindi', 'Stuffed okra (Bharwa bhindi)', 'state'],                   // bharwa = stuffed, in either name
+      ['chicken curry', 'Chicken, cooked', 'state'],                         // the user named another form: cooked conflicts
+      ['fried daal', 'Dal, cooked', 'state'],                                // …or another preparation
+      ['raw beetroot', 'Beetroot, boiled', 'state'],                         // …or raw
+    ])('drops a near-miss: "%s" → %s (%s)', (q, name, why) => {
+      const v = gateCandidate(q, name)
+      expect(v.keep).toBe(false)
+      if (why === 'extra') expect(v.extra).toBeGreaterThan(0.6)
+      if (why === 'missing') expect(v).toMatchObject({ extra: 0.5, states: [], rawMissing: false })   // the missing words alone
+      if (why === 'missing') expect(v.missing).toBeGreaterThan(0.6)
+      if (why === 'state') expect(v.states.length).toBeGreaterThan(0)
+      if (why === 'raw') expect(v.rawMissing).toBe(true)
+    })
+
+    it.each([
+      ['mango lassi', 'lassi'], ['coffee latte', 'coffee'], ['tea', 'Iced tea'], ['sandwich', 'Salami sandwich'],
+    ])('leaves subset/variant rows ("%s" → %s) to the matcher prompt', (q, name) => {
+      expect(gateCandidate(q, name).keep).toBe(true)
+    })
+
+    it('a "/" spelling the user\'s word already matched adds no state; 3+ words still need most of them', () => {
+      // "roti" is the other spelling of the slot "chapati" matched, not a roti-form of chapati
+      expect(gateCandidate('whole wheat chapati', 'Chapati/Roti')).toMatchObject({ states: [], extra: 0 })
+      // …but two of the three words the user said are missing from the row, so it stays out
+      // (the labelled 3+-word "modifier + base food" rows are mostly variants: whole wheat toast → toast)
+      expect(gateCandidate('whole wheat chapati', 'Chapati/Roti').keep).toBe(false)
+    })
+
+    describe('keepSearchRow: which search_foods rows reach the matcher', () => {
+      const r = (name: string, score: number, matched_key: string, match_kind = 'trgm') => ({ name, score, matched_key, match_kind })
+      it.each([
+        ['yogurt curd', r('dahi', 0, 'dahi'), true],                          // tail word curd reached dahi as an alias
+        ['amul curd', r('dahi', 0, 'dahi'), true],
+        ['rajma chawal', r('cooked white rice', 0.069, 'cooked white rice'), true],   // a 2-word subset: the matcher judges it
+        ['chicken curry with brown rice', r('cooked white rice', 0.176, 'cooked white rice'), false],   // one part of a meal
+        ['amul curd', r('dahi', 0.3, 'dahi'), false],                         // >= 0.3: the trigram branch found it by its own name
+        ['stir fried idli', r('Idli', 0.313, 'idli'), false],                 // an exact-key tail row is judged on its own name
+        ['butter naan', r('Naan', 0.417, 'naan'), true],
+        ['curd', r('Yogurt, plain, whole milk', 1, 'curd', 'alias'), true],    // exact and alias rows are never gated
+        ['oats', r('Oats burfi', 1, 'oats burfi', 'exact'), true],
+      ] as const)('"%s" → %j: %s', (q, row, want) => {
+        expect(keepSearchRow(q, row)).toBe(want)
+      })
+
+      it('the resolver offers the alias-reached tail row and still drops the near-misses', async () => {
+        const sb = fakeSupabase({ search: [
+          row('greek', 'usda', 73, { name: 'Greek yogurt, plain', score: 0.5 }),
+          row('curd-sandwich', 'indb', 210, { name: 'Curd sandwich', score: 0.5 }),
+          row('dahi', 'usda', 71, { name: 'dahi', score: 0, matched_key: 'dahi' }),
+        ] })
+        matcherAnswers.push([{ candidate_index: 1, est_per_100g: null, corrected_quantity_g: null }])
+        const res = await resolveFoods(sb.client, [food('yogurt curd')], RANKED)
+        expect(matcherPrompts[0]).toMatch(/    0: Greek yogurt, plain \[usda\][^\n]*\n    1: dahi \[usda\]/)
+        expect(matcherPrompts[0]).not.toContain('Curd sandwich')
+        expect(res.foods[0]).toMatchObject({ food_item_id: 'dahi', resolution: 'reference_match' })
+      })
+    })
+
+    it('is deterministic, and judges each row on its own words', () => {
+      const names = chickenRows().map((r) => r.name)
+      const once = names.map((n) => gateCandidate('chicken', n))
+      expect(names.map((n) => gateCandidate('chicken', n))).toEqual(once)
+      expect([...names].reverse().map((n) => gateCandidate('chicken', n))).toEqual([...once].reverse())
+      expect(once.map((v) => v.keep)).toEqual([true, false, false, true, false])
+    })
+
+    it('drops failing rows before the matcher; survivors keep SQL order and the pick maps onto them', async () => {
+      const sb = fakeSupabase({ search: chickenRows() })
+      matcherAnswers.push([{ candidate_index: 1, est_per_100g: null, corrected_quantity_g: null }])
+      const r = await resolveFoods(sb.client, [food('chicken')], RANKED)
+      expect(matcherPrompts[0]).toMatch(/    0: Chilli chicken \[indb\][^\n]*\n    1: Cajun chicken \[indb\][^\n]*\n\n/)
+      for (const gone of ['Chicken stew', 'Chicken curry', 'chicken taco']) expect(matcherPrompts[0]).not.toContain(gone)
+      expect(r.foods[0]).toMatchObject({ food_item_id: 'cajun-chicken', resolution: 'reference_match', match_score: 1 })
+      // the existing search log marks what the gate dropped, and names no row
+      const log = (console.log as jest.Mock).mock.calls.map((c) => c.join(' ')).find((l) => l.startsWith('[resolver] search:'))
+      expect(log).toBe('[resolver] search: chicken trgm:1.00 trgm:1.00(gated) trgm:1.00(gated) trgm:1.00 trgm:1.00(gated)')
+    })
+
+    it.each(['exact', 'alias'])('never gates a verified %s row', async (kind) => {
+      // e.g. the alias read failed, so search_foods returns the alias row itself
+      expect(gateCandidate('curd', 'Yogurt, plain, whole milk').keep).toBe(false)
+      const sb = fakeSupabase({ errors: { alias: 'timeout' }, search: [
+        row('dahi', 'usda', 61, { name: 'Yogurt, plain, whole milk', match_kind: kind, score: 1 }),
+        row('curd-sandwich', 'indb', 210, { name: 'Curd sandwich', score: 1 }),
+      ] })
+      matcherAnswers.push([pick0])
+      const r = await resolveFoods(sb.client, [food('curd')], RANKED)
+      expect(matcherPrompts[0]).toMatch(/    0: Yogurt, plain, whole milk \[usda\]/)
+      expect(matcherPrompts[0]).not.toContain('Curd sandwich')             // a trigram row still is gated
+      expect(r.foods[0]).toMatchObject({ food_item_id: 'dahi', resolution: 'reference_match' })
+    })
+
+    it('a miss whose rows all fail falls through to USDA', async () => {
+      const sb = fakeSupabase({ search: oatsRows() })
+      usdaReturns([{ fdcId: 9, description: 'Oats, cooked with water', dataType: 'Survey (FNDDS)', foodNutrients: [{ nutrientId: 1008, value: 71 }] }])
+      matcherAnswers.push([pick0])
+      const r = await resolveFoods(sb.client, [food('oats')], { ...RANKED, fdcApiKey: 'fdc-key' })
+      expect(matcherPrompts[0]).toMatch(/    0: Oats, cooked with water \[USDA Survey \(FNDDS\)\]/)
+      expect(matcherPrompts[0]).not.toMatch(/Oats burfi|smoothie|Porridge/)
+      expect(r.foods[0]).toMatchObject({ resolution: 'usda_match', macro_source: 'usda' })
+    })
+
+    it('…and with no USDA row either, to the matcher\'s own estimate', async () => {
+      const sb = fakeSupabase({ search: oatsRows() })
+      matcherAnswers.push([est(70, 2.5, 12, 1.5)])
+      const r = await resolveFoods(sb.client, [food('oats', 150)], RANKED)
+      expect(matcherPrompts[0]).toContain('(no candidates found)')
+      expect(r.foods[0]).toMatchObject({ resolution: 'ai_estimate', calories: 105 })
+    })
+
+    it('fts is untouched: it still offers rows the gate would drop, with no identity rule', async () => {
+      expect(gateCandidate('chicken', 'Chicken curry').keep).toBe(false)
+      const sb = fakeSupabase({ fuzzy: [{ ...per100('chicken-curry', 'indb', 150), name: 'Chicken curry' }] })
+      matcherAnswers.push([pick0])
+      const r = await resolveFoods(sb.client, [food('chicken')], OPTS)
+      expect(matcherPrompts[0]).toContain('    0: Chicken curry [indb]')
+      expect(matcherPrompts[0]).not.toContain(RULE)
+      expect(r.foods[0]).toMatchObject({ food_item_id: 'chicken-curry', resolution: 'reference_match' })
+    })
+
+    it('the ranked prompt is the fts prompt plus exactly one rule paragraph', async () => {
+      const same = { ...per100('chilli-chicken', 'indb', 160), name: 'Chilli chicken' }
+      matcherAnswers.push([pick0], [pick0])
+      await resolveFoods(fakeSupabase({ fuzzy: [same] }).client, [food('chicken')], OPTS)
+      await resolveFoods(fakeSupabase({ search: [{ ...same, match_kind: 'trgm', score: 1, name_sim: 0.5, head_match: false, matched_key: 'chilli chicken' }] }).client, [food('chicken')], RANKED)
+      const [fts, ranked] = matcherPrompts
+      expect(ranked.split(RULE)).toHaveLength(2)
+      expect(ranked.replace(/IDENTITY AND STATE MUST BOTH MATCH\.[^\n]*\n\n/, '')).toBe(fts)
+    })
+
+    it('the same words give the same prompt every time', async () => {
+      matcherAnswers.push([pick0], [pick0])
+      await resolveFoods(fakeSupabase({ search: chickenRows() }).client, [food('chicken')], RANKED)
+      await resolveFoods(fakeSupabase({ search: chickenRows() }).client, [food('chicken')], RANKED)
+      expect(matcherPrompts).toHaveLength(2)
+      expect(matcherPrompts[1]).toBe(matcherPrompts[0])
+    })
   })
 
   it.each([

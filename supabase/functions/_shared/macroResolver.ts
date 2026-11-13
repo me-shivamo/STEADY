@@ -5,7 +5,8 @@
 //                     alias in ranked mode) (user_food_memory → food_items; precedence in step 1)
 //                → 2. DB candidates from the VERIFIED base: ranked search_foods (exact
 //                     aliases + trigram, migration 052) when RESOLVER_SEARCH says so, else
-//                     the old FTS query
+//                     the old FTS query. Ranked trigram rows must pass gateCandidate
+//                     (food identity + preparation state) before the matcher sees them
 //                → 3. USDA search candidates for remaining misses (in parallel with step 2)
 //                → 4. ONE cheap LLM call: pick best candidate per miss, or
 //                     emit a per-100g estimate when nothing matches. Every
@@ -387,6 +388,213 @@ export function computeMacros(quantityG: number, per100g: Per100g) {
 // prompt lines and catches a right row that a near-tie pushed to 4th or 5th.
 const SEARCH_K = 5
 
+// ── Ranked-search candidate gate (v1.2 Phase 4.1) ─────────────────────────────
+// strict_word_similarity gives 1.0 to ANY row that contains the query's word, so
+// search_foods surfaces longer, different dishes and other states of the food:
+// "oats" → "Oats burfi", "chicken" → "Chicken curry", "bhindi" → "Okra fry (Bhindi
+// sabzi)". Those rows carry portions and come first in the matcher's list, and
+// the matcher took the near-miss over the USDA row or its own estimate. The gate
+// drops them BEFORE the matcher sees them. It combines two ideas:
+//   * Intake24's missing/extra-word penalty: a row whose name is mostly words the
+//     user did not say, or that lacks most of the words they did, is another food;
+//   * FAO/INFOODS food matching: food identity AND preparation state must both
+//     match, so a row that names a state or form the user did not (curry,
+//     porridge, juice, raw…) is another food.
+// Calibrated on 611 labelled search_foods rows (139 miss phrases: real-user
+// phrases, eval account excluded, and the dev set dataset-v3), never the held-out
+// set. On that calibration set it keeps 53/61 right rows and drops 348/550
+// near-misses; 7/46 phrases lose every right row (USDA or an estimate then serves
+// them). A second labelled batch of 55 organic phrases (223 rows: 31/31 kept,
+// 107/192 dropped) is NOT held out: it was labelled before the doubled-letter
+// squeeze was added and informed both that and the usual-preparation rule below.
+// There is no independent organic check; the held-out eval run is the real test.
+// The word lists and thresholds are the calibrated ones; change them only with a
+// new labelled run. Pure and deterministic: same words, same verdict.
+// Exact and alias rows are verified keys and are never gated (keepSearchRow).
+const GATE_MAX_EXTRA = 0.6     // share of the row's name words the user did not say
+const GATE_MAX_MISSING = 0.6   // share of the user's words the row's name lacks
+
+// Python-style split on runs of whitespace, no empty strings.
+const gateSplit = (s: string): string[] => s.split(/\s+/).filter((w) => w !== '')
+
+// A plural stripped from the word as written (-ies → -y, -oes → -o, -s), THEN
+// doubled letters squeezed (daal = dal, moong = mong) and y folded to i, and a
+// final -ie to -i: eggs → egg → eg = egg; chillies → chilly → chili = chilli;
+// cookies → cooky → coki = cookie; curries = curry. Squeezing first broke the
+// length check ("eggs" → "egs" kept its s). Applied to the word lists too.
+function gateStem(t: string): string {
+  let s = t
+  if (s.length > 4 && s.endsWith('ies')) s = s.slice(0, -3) + 'y'
+  else if (s.length > 4 && s.endsWith('oes')) s = s.slice(0, -2)
+  else if (s.length > 3 && s.endsWith('s') && !s.endsWith('ss')) s = s.slice(0, -1)
+  s = s.replace(/(.)\1+/g, '$1').replace(/y/g, 'i')
+  return s.length > 2 && s.endsWith('ie') ? s.slice(0, -1) : s
+}
+const gateVocab = (words: string): ReadonlySet<string> => new Set(gateSplit(words).map(gateStem))
+
+// Words that never decide identity: function words (English and Hinglish), and
+// amount, serving, cut or garnish words, which change grams, not per-100 g.
+const GATE_IGNORED = gateVocab(
+  'a an the of with and or in on to for at from by into ki ka ke kay ki saath aur ' +
+  'handful piece pieces slice slices small large medium big bowl cup cups glass katori plate serving portion ' +
+  'diced chopped sliced julienned grated minced shredded cubed cubes florets garnish dollop pat side another used label ' +
+  'fresh plain homemade home made regular',
+)
+// Preparation-state and dish-form words: each one changes the per-100 g numbers.
+const GATE_STATE = gateVocab(
+  'raw cooked boiled fried fry roasted baked grilled steamed stuffed bharwa dry dried scrambled mashed sweetened unsweetened ' +
+  'curry gravy korma stew sabzi sabji subji porridge kheer halwa burfi barfi ladoo chikki smoothie milkshake shake ' +
+  'juice powder oil flour seeds seed leaves soup sauce chutney pickle achaar raita salad sandwich pulao biryani ' +
+  'paratha parantha roti cake pie pudding biscuit cookies icing dip dressing jam murabba marmalade pizza taco burger ' +
+  'tikka kebab mousse tart souffle gateau',
+)
+// Spellings of one form: sabzi/sabji/subji/gravy are all a curry, fry = fried,
+// bharwa = stuffed ("Stuffed okra (Bharwa bhindi)" is stuffed in both names)…
+const GATE_SAME_FORM: ReadonlyMap<string, string> = new Map(
+  Object.entries({ sabzi: 'curry', sabji: 'curry', subji: 'curry', gravy: 'curry', fry: 'fried', barfi: 'burfi', parantha: 'paratha', bharwa: 'stuffed' })
+    .map(([k, v]) => [gateStem(k), gateStem(v)]),
+)
+const gateForm = (t: string): string => GATE_SAME_FORM.get(t) ?? t
+// A food's USUAL preparation: the state it is eaten in when nobody says otherwise
+// ("cooked instant noodles", "boiled corn", "Raisins, dried"). On a row it is a
+// conflict only when the user said raw, or named a state or form the row lacks
+// outside the word's own class: boiled rice = cooked rice, fried rice ≠ cooked
+// rice, chicken curry ≠ "Chicken, cooked". Every other state word is a conflict
+// whenever the user did not say it, and a row saying raw still always is (IFCT's
+// "(raw)" also labels foods eaten as they are: "Beet root (raw)", "Rice puffed
+// (raw)"; USDA's rows still reach the matcher for those).
+const GATE_USUAL_CLASS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ...[...gateVocab('cooked boiled steamed')].map((w) => [w, gateVocab('cooked boiled steamed')] as const),
+  [gateStem('dried'), gateVocab('dried dry')] as const,
+])
+const GATE_RAW = gateStem('raw')
+
+// Lowercase, punctuation → space, drop 1-letter tokens, stem.
+const gateTokens = (s: string): string[] =>
+  gateSplit(s.toLowerCase().replace(/[^0-9a-z\s]/g, ' ')).filter((t) => t.length > 1).map(gateStem)
+
+// t is one of the tokens, or two adjacent tokens written together, in either
+// order ("beetroot" = "beet root"; "babycorn" = IFCT's inverted "Corn, Baby").
+function gateCovered(t: string, tokens: string[]): boolean {
+  if (tokens.includes(t)) return true
+  for (let i = 0; i < tokens.length - 1; i++) {
+    if (tokens[i] + tokens[i + 1] === t || tokens[i + 1] + tokens[i] === t) return true
+  }
+  return false
+}
+
+export interface GateVerdict {
+  keep: boolean
+  extra: number        // share of the best-matching name's words the user did not say
+  missing: number      // share of the user's words the row's full name lacks
+  states: string[]     // conflicting state/form words: the row names them, the user did not (stemmed)
+  rawMissing: boolean  // the user said raw and the row does not
+}
+
+// `query` is the normalized phrase search_foods was asked for; `name` the row's
+// name. A row's names are the text before the first comma (outside brackets)
+// plus each bracketed name ("Okra fry (Bhindi sabzi)" has two); spellings joined
+// by "/" fill one word slot ("Bhindi sabzi/sabji/subji").
+export function gateCandidate(query: string, name: string): GateVerdict {
+  const qt = gateTokens(query).filter((t) => !GATE_IGNORED.has(t))
+  const full = gateTokens(name)
+  const outside = name.replace(/\([^)]*\)/g, ' ')
+  const bracketed = (name.match(/\([^)]*\)/g) ?? []).map((m) => m.slice(1, -1))
+  const commaQualifiers = outside.split(',').slice(1)
+
+  // Each name → its word slots; a slot is the set of spellings for one word.
+  const names: Array<Array<Set<string>>> = []
+  for (const g of [outside.split(',')[0], ...bracketed]) {
+    const slots: Array<Set<string>> = []
+    for (const w of gateSplit(g)) {
+      const opts = new Set(
+        gateSplit(w.toLowerCase().replace(/[^0-9a-z/\s]/g, ' ').replace(/\//g, ' '))
+          .filter((t) => t.length > 1).map(gateStem).filter((o) => o !== '' && !GATE_IGNORED.has(o)),
+      )
+      if (opts.size > 0) slots.push(opts)
+    }
+    if (slots.length > 0) names.push(slots)
+  }
+
+  // Extra words: the name (of the row's names) with the smallest share of slots
+  // the query does not cover. Ties keep the first name.
+  const qset = new Set(qt)
+  const joinedQ = new Set<string>()
+  for (let i = 0; i < qt.length - 1; i++) joinedQ.add(qt[i] + qt[i + 1])
+  let extra = 1
+  let best: Array<Set<string>> = names[0] ?? []
+  let bestHit: boolean[] = []
+  for (const slots of names) {
+    const hit = slots.map((s) => [...s].some((o) => qset.has(o) || joinedQ.has(o) || gateCovered(o, qt) ||
+      // a query word that is this word joined to another word of the row, either
+      // order: "babycorn" covers "Corn" in "Corn, Baby"
+      full.some((f) => f !== o && (qset.has(o + f) || qset.has(f + o)))))
+    // "bhelpuri" / "cornflakes" in the query covers two adjacent name slots.
+    for (let i = 0; i < slots.length - 1; i++) {
+      if ([...slots[i]].some((a) => [...slots[i + 1]].some((b) => qset.has(a + b)))) hit[i] = hit[i + 1] = true
+    }
+    const share = hit.filter((h) => !h).length / slots.length
+    if (share < extra) { extra = share; best = slots; bestHit = hit }
+  }
+  const missing = qt.length > 0 ? qt.filter((t) => !gateCovered(t, full)).length / qt.length : 0
+
+  // State veto: state words in the best-matching name, plus those in qualifiers.
+  // A comma qualifier always counts ("Chicken, curry style" → curry); a bracketed
+  // one only when it is nothing but state words ("Beet root (raw)"), because the
+  // others are alternate names ("Okra fry (Bhindi sabzi)"). A slot the user's word
+  // already matched adds no state: its other spellings are that same word
+  // ("Chapati/Roti" for chapati is not a roti-form of chapati).
+  const qStates = new Set(qt.filter((t) => GATE_STATE.has(t)).map(gateForm))
+  const rowStates = new Set<string>()
+  best.forEach((s, i) => { if (!bestHit[i]) for (const t of s) if (GATE_STATE.has(t)) rowStates.add(gateForm(t)) })
+  for (const g of [...commaQualifiers, ...bracketed]) {
+    const cont = gateTokens(g).filter((t) => !GATE_IGNORED.has(t))
+    if (cont.length > 0 && cont.every((t) => GATE_STATE.has(t))) cont.forEach((t) => rowStates.add(gateForm(t)))
+    else if (commaQualifiers.includes(g)) cont.filter((t) => GATE_STATE.has(t)).forEach((t) => rowStates.add(gateForm(t)))
+  }
+  // A usual preparation (GATE_USUAL_CLASS) the user did not contradict is no conflict.
+  const qOnly = [...qStates].filter((s) => !rowStates.has(s))
+  const usual = (s: string): boolean => {
+    const cls = GATE_USUAL_CLASS.get(s)
+    return !!cls && !qStates.has(GATE_RAW) && qOnly.every((q) => cls.has(q))
+  }
+  const states = [...rowStates].filter((s) => !qStates.has(s) && !usual(s)).sort()
+  const rawMissing = qset.has(GATE_RAW) && !full.includes(GATE_RAW)
+
+  return {
+    keep: extra <= GATE_MAX_EXTRA && missing <= GATE_MAX_MISSING && states.length === 0 && !rawMissing,
+    extra, missing, states, rawMissing,
+  }
+}
+
+// The ranked path's verdict on one search_foods row (`norm` = the phrase it was
+// asked for). Exact and alias rows are verified keys for the whole phrase: kept.
+// A row scoring under 0.3 can only come from 052's TAIL SLOT (the trigram branch
+// admits nothing below 0.3). If its key is not the last word itself, that word
+// reached it as an ALIAS ("amul curd": curd → dahi), so the gate also reads the
+// alias as one of the row's names; otherwise "dahi" shares no word with the
+// phrase and could never pass. Every other row, an exact-key tail row included
+// ("stir fried idli" → Idli), is judged on its own name: the labelled tail rows
+// are mostly one part of a meal ("palak paneer with roti" → roti) or a variant.
+export function keepSearchRow(
+  norm: string,
+  row: { name?: unknown; match_kind?: unknown; score?: unknown; matched_key?: unknown },
+): boolean {
+  if (row.match_kind === 'exact' || row.match_kind === 'alias') return true
+  const name = String(row.name ?? '')
+  const sp = norm.lastIndexOf(' ')
+  const tail = sp > 0 ? norm.slice(sp + 1) : undefined
+  const viaTailAlias = tail !== undefined && Number(row.score) < 0.3 && row.matched_key !== tail
+  return gateCandidate(norm, viaTailAlias ? `${name} (${tail})` : name).keep
+}
+
+// Ranked mode only: added to the matcher prompt (the fts prompt is unchanged).
+// The gate leaves rows that are a SUBSET of the query ("mango lassi" → lassi,
+// "coffee latte" → coffee) or a VARIANT of a generic one ("tea" → Iced tea,
+// "sandwich" → Salami sandwich); only the matcher can judge those, and the old
+// prompt guarded one direction only (a composite dish named after an ingredient).
+const RANKED_IDENTITY_RULE = 'IDENTITY AND STATE MUST BOTH MATCH. Every food word the user said must be true of the candidate (latte, mango, juice, fried, butter, bhurji), and the candidate must not add a food, flavour or variant they did not say (iced, mango, salami, quinoa). Same preparation and form: raw vs cooked, dry vs porridge, plain vs curry, fruit vs juice, ripe vs raw/green. If no candidate passes both checks, prefer a USDA candidate that does, otherwise set candidate_index to null and estimate. A near-miss database row is worse than an estimate. List order is not a signal.'
+
 // One retrieved candidate a miss can be matched against — either an existing
 // cache row (carries its id) or a fresh USDA result (carries its fdcId).
 interface Candidate {
@@ -572,6 +780,12 @@ export async function resolveFoods(
         //    word match > head noun > not raw > similarity > source > id, last
         //    slot kept for the query's last word: "butter naan" -> Naan), so the
         //    same words always offer the matcher the same rows in the same order.
+        //    Trigram rows then pass gateCandidate or are DROPPED (not demoted below
+        //    USDA, where the matcher could still pick them); exact/alias rows are
+        //    verified keys and always kept, and a tail row an alias reached is
+        //    also named by that alias (keepSearchRow). Survivors keep SQL's order,
+        //    DB first.
+        //    A miss whose rows all fail is offered USDA only, then an estimate.
         //    Not fatal: on error or rejection (PGRST202 = function missing, a
         //    timeout, a dropped socket) the matcher sees USDA only, exactly as
         //    when FTS finds nothing, and the failure is logged.
@@ -588,10 +802,12 @@ export async function resolveFoods(
                 }
                 // deno-lint-ignore no-explicit-any
                 const rows: any[] = data ?? []
+                const kept = rows.map((r) => keepSearchRow(norm, r))
                 if (rows.length) {
-                  console.log('[resolver] search:', norm, rows.map((r) => `${r.match_kind}:${Number(r.score).toFixed(2)}`).join(' '))
+                  // "(gated)" marks a row the gate dropped; no row names are logged.
+                  console.log('[resolver] search:', norm, rows.map((r, j) => `${r.match_kind}:${Number(r.score).toFixed(2)}${kept[j] ? '' : '(gated)'}`).join(' '))
                 }
-                return rows.map((row): Candidate => ({
+                return rows.filter((_, j) => kept[j]).map((row): Candidate => ({
                   label: `${row.name} [${row.source}]`,   // same label shape as the FTS path
                   per100g: rowPer100g(row),
                   cacheRowId: row.id,
@@ -678,7 +894,9 @@ export async function resolveFoods(
     )
 
     // 4. single match call for all misses
-    const matches = await matchCall(supabase, opts.userId, missFoods, perMissCandidates, opts.openRouterKey)
+    //    (ranked adds RANKED_IDENTITY_RULE to the prompt; the retry below offers no
+    //    candidates, so it keeps the shared prompt)
+    const matches = await matchCall(supabase, opts.userId, missFoods, perMissCandidates, opts.openRouterKey, undefined, ranked)
 
     // Decide EVERY food before writing ANYTHING. The old code wrote rows as it
     // went, so a bad answer for the third food left the first two committed.
@@ -1294,6 +1512,7 @@ interface MatchResult {
 // supplies est_per_100g in the same response — never a separate call.
 // `hints` is only passed on the single retry: hints[i] lists, in plain words,
 // which rules food i's previous estimate broke (validate.ts issueHints).
+// `ranked` adds RANKED_IDENTITY_RULE; without it the prompt is the fts one, byte for byte.
 // deno-lint-ignore no-explicit-any
 async function matchCall(
   supabase: any,
@@ -1302,6 +1521,7 @@ async function matchCall(
   perFoodCandidates: Candidate[][],
   openRouterKey: string,
   hints?: string[][],
+  ranked = false,
 ): Promise<MatchResult[]> {
   const lines = foods.map((food, i) => {
     const cands = perFoodCandidates[i]
@@ -1328,7 +1548,7 @@ async function matchCall(
 
 For each food below, pick the candidate that is genuinely the SAME food (preparation matters: raw vs cooked/soaked vs fried are different). Be strict — a candidate whose name merely CONTAINS the food's name is not automatically a match, in EITHER direction: a plain raw/base ingredient (e.g. "apple", "banana", "chicken", "salmon") is NOT the same food as a composite dish that features it as one component (e.g. "apple mousse", "banana bread", "chicken curry", "salmon sushi") — a composite dish has additional components (rice, batter, sauce, other ingredients) that meaningfully change the per-100g numbers, so matching to just one of its ingredients silently drops those components entirely. If no candidate is truly the same food, set candidate_index to null and provide your best per-100g estimate instead — a null match with a good estimate is better than a wrong match.
 
-TWO TRAPS THAT PRODUCE LARGE, SILENT ERRORS — check both before accepting a candidate:
+${ranked ? `${RANKED_IDENTITY_RULE}\n\n` : ''}TWO TRAPS THAT PRODUCE LARGE, SILENT ERRORS — check both before accepting a candidate:
 
 1. RAW/DRY vs COOKED. Database entries labelled "raw", "dry", "uncooked", "mature seeds" or "dehydrated" are measured BEFORE cooking, when the food holds no water. The user ate the cooked form. Because grams are applied to the per-100g figure afterwards, accepting a raw entry for a cooked dish overstates energy roughly by the food's water uptake. Reject those candidates and estimate the COOKED per-100g instead, using these yield factors (cooked weight per unit raw weight):
    - dry legumes/beans/dals (rajma, chana, lentils): absorb ~2.5x → cooked ≈ raw/2.5, so ~110-160 kcal/100g cooked (NOT the ~330-350 of the dry seed)
