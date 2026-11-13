@@ -2526,3 +2526,8 @@ Migration 053 is built and reviewed but not yet applied. A small Python tool reb
 *2026-11-13 · Bug*
 
 With the founder's go-ahead we pushed migration 053 to production, and Postgres refused its second statement: "LOCK TABLE can only be used in transaction blocks". The Supabase CLI sends a migration as one all-or-nothing batch, but that batch isn't a formal transaction block, and a bare LOCK TABLE insists on one. Our local tests had run the file inside an explicit transaction, so they never saw it. Because the batch is all-or-nothing, nothing changed: we checked the history fingerprints and they were identical. The fix wraps the locks in a small DO block, where Postgres allows them and still holds them until the migration ends. This time we're testing by pushing with the real CLI to a local copy of production, so the test path matches the live one.
+
+### We fixed eight logging bugs, and the reviewers found a ninth we'd just created
+*2026-11-13 · Bug*
+
+Phase 9 fixed the logging bugs from our code audit. Logging while viewing a past day now saves to that day instead of today. Confirming an unchanged edit no longer re-runs the AI. Adjust Macros writes only what you changed and marks it as your correction. Photo questions from the AI show up in chat. Water totals follow your local day. An unreadable AI reply shows a real error instead of turning into a chat message. The reviewers caught a bug our own fix had introduced: an app left open overnight would have logged Tuesday's breakfast to Monday. Now "today" rolls forward when the app returns to the foreground. 655 tests pass. The app fixes ship with the next build, and the server fixes need one function deploy.
