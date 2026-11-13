@@ -129,6 +129,23 @@ async function fetchAll<T>(table: string, columns: string): Promise<T[]> {
   }
 }
 
+// food_items rows a reviewed migration derived (053+): the ids in public.food_derivation_items. Empty before 053
+// created the table (the read fails with "relation does not exist", which is not an audit failure).
+// (Not fetchAll: that orders by id, and this table's key is food_item_id.)
+async function derivedItemIds(): Promise<Set<string>> {
+  const out = new Set<string>()
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from('food_derivation_items').select('food_item_id')
+      .order('food_item_id').range(from, from + 999)
+    if (error) {
+      console.log(`(food_derivation_items not readable, so no row is exempt as migration-derived: ${error.message})`)
+      return new Set()
+    }
+    for (const r of (data ?? []) as { food_item_id: string }[]) out.add(r.food_item_id)
+    if (!data || data.length < 1000) return out
+  }
+}
+
 async function has050(): Promise<boolean> {
   const { error } = await supabase.from('food_items').select('status').limit(1)
   return !error
@@ -334,7 +351,22 @@ async function runCheck(items: ItemRow[], memory: MemoryRow[]): Promise<boolean>
 
   if (SINCE) {
     const t0 = Date.parse(SINCE)
-    const fresh = items.filter((r) => r.created_at && Date.parse(r.created_at) > t0)
+    // Rows a reviewed migration created on purpose are not "new rows" in this sense: migration 053 inserts
+    // verified, ownerless, keyed reference rows (recalculated Indian dishes, status_reason
+    // 'reviewed:053:recalc_v1:<variant>'; after its down script they stay, quarantined, as
+    // 'reviewed:rollback_053'), which is exactly what the checks below forbid the resolver to create.
+    // The exemption is keyed on public.food_derivation_items, not on status_reason: 050's guard keeps the API
+    // roles off the status columns on UPDATE, but an API-role INSERT of an unverified or quarantined row keeps
+    // the status_reason it supplies, so a prefix alone could be forged. food_derivation_items is written by
+    // migrations only (053 revokes every API-role privilege on it), and the rows must also be ownerless. Before
+    // 053 the table does not exist and nothing is exempt. Every invariant above still covers these rows.
+    const derived = await derivedItemIds()
+    const reviewed = (r: ItemRow) => derived.has(r.id) && r.created_by === null &&
+      /^reviewed:(053:|rollback_053$)/.test(r.status_reason ?? '')
+    const created = items.filter((r) => r.created_at && Date.parse(r.created_at) > t0)
+    const fresh = created.filter((r) => !reviewed(r))
+    const exempt = created.length - fresh.length
+    if (exempt) console.log(`Since ${SINCE}: ${exempt} row(s) created by migration 053 (in food_derivation_items), exempt from the new-row checks.`)
     const ownerless = fresh.filter((r) => r.created_by === null)
     if (ownerless.length) fail(`${ownerless.length} row(s) created since ${SINCE} have no owner`, ownerless.map((r) => `${id8(r.id)} ${r.name}`))
     const keyed = fresh.filter((r) => r.normalized_name !== null)

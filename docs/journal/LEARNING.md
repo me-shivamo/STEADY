@@ -1822,3 +1822,8 @@ The Postgres `pg_trgm` extension splits text into three-letter chunks ("cha", "h
 *2026-11-13 · Pattern*
 
 Nutrition institutes rarely publish what one roti or katori weighs, but they do publish calories per household unit ("1 phulka = 80 kcal", "1 cup rice = 170 kcal"). Divide by a lab-measured calorie density and you get a cooked weight. For chai and rice this reproduced measured values within about 1%. For STEADY it means portion defaults can be anchored to official sources even where nobody weighed the food, and a volume like "1 cup" only stays honest when its density and its energy come from the same source.
+
+### Compare-and-swap migrations
+*2026-11-13 · Pattern*
+
+A compare-and-swap migration carries a snapshot of the exact rows it expects to change (ids, keys, status, calories) and checks them before it writes anything. If anything has drifted, it refuses and rolls back. It's the database version of `if (value == expected) value = new`. For STEADY, migration 053 was generated hours before it can be applied while users keep logging, so it must never quietly overwrite rows that changed in the meantime.
