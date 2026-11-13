@@ -1,0 +1,4 @@
+qa/
+qa-work/spot_*.txt
+qa-work/*_p*.txt
+__pycache__/

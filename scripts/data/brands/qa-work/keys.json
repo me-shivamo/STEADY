@@ -1,0 +1,1018 @@
+{
+ "bare_name_collisions": 70,
+ "bare_collision_by_brand": {
+  "blue_tokai": 4,
+  "burger_king_india": 8,
+  "cafe_coffee_day": 3,
+  "dominos": 2,
+  "faasos": 1,
+  "haldirams": 2,
+  "kfc_india": 1,
+  "lapinoz_pizza": 1,
+  "mcdonalds_india_north_east": 7,
+  "mcdonalds_india_west_south": 8,
+  "naturals_ice_cream": 2,
+  "pizza_hut": 8,
+  "starbucks_india": 6,
+  "subway_india": 10,
+  "taco_bell_india": 2,
+  "theobroma": 5
+ },
+ "examples": [
+  {
+   "brand_slug": "blue_tokai",
+   "item": "Peri Peri Fries",
+   "normalized": "peri peri fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "blue_tokai",
+   "item": "Hot Chocolate",
+   "normalized": "hot chocolate",
+   "steady_live_key_kind": "key",
+   "indb_name": "Hot chocolate"
+  },
+  {
+   "brand_slug": "blue_tokai",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "blue_tokai",
+   "item": "Americano",
+   "normalized": "americano",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Fries",
+   "normalized": "fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Peri Peri Fries",
+   "normalized": "peri peri fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Cheese Slice",
+   "normalized": "cheese slice",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Tomato Ketchup",
+   "normalized": "tomato ketchup",
+   "steady_live_key_kind": "",
+   "indb_name": "Tomato ketchup"
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Americano",
+   "normalized": "americano",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Hot Chocolate",
+   "normalized": "hot chocolate",
+   "steady_live_key_kind": "key",
+   "indb_name": "Hot chocolate"
+  },
+  {
+   "brand_slug": "burger_king_india",
+   "item": "Masala Chai",
+   "normalized": "masala chai",
+   "steady_live_key_kind": "alias",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "cafe_coffee_day",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "cafe_coffee_day",
+   "item": "Filter Coffee",
+   "normalized": "filter coffee",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "cafe_coffee_day",
+   "item": "Green Tea",
+   "normalized": "green tea",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "dominos",
+   "item": "Margherita Pizza",
+   "normalized": "margherita pizza",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "dominos",
+   "item": "Brownie",
+   "normalized": "brownie",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "faasos",
+   "item": "Mango Cheesecake",
+   "normalized": "mango cheesecake",
+   "steady_live_key_kind": "key",
+   "indb_name": "Mango cheesecake"
+  },
+  {
+   "brand_slug": "haldirams",
+   "item": "Rasgulla",
+   "normalized": "rasgulla",
+   "steady_live_key_kind": "key",
+   "indb_name": "Rasgulla"
+  },
+  {
+   "brand_slug": "haldirams",
+   "item": "Besan Ladoo",
+   "normalized": "besan ladoo",
+   "steady_live_key_kind": "",
+   "indb_name": "Gram flour ladoo (Besan ladoo)"
+  },
+  {
+   "brand_slug": "kfc_india",
+   "item": "Fries",
+   "normalized": "fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "lapinoz_pizza",
+   "item": "Margherita Pizza",
+   "normalized": "margherita pizza",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "McChicken Burger",
+   "normalized": "mcchicken burger",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Fries",
+   "normalized": "fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Cold Coffee",
+   "normalized": "cold coffee",
+   "steady_live_key_kind": "",
+   "indb_name": "Cold coffee (with cream)"
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Masala Chai",
+   "normalized": "masala chai",
+   "steady_live_key_kind": "alias",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Tomato Ketchup",
+   "normalized": "tomato ketchup",
+   "steady_live_key_kind": "",
+   "indb_name": "Tomato ketchup"
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_north_east",
+   "item": "Americano",
+   "normalized": "americano",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "McChicken Burger",
+   "normalized": "mcchicken burger",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Fries",
+   "normalized": "fries",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Americano",
+   "normalized": "americano",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Hot Chocolate",
+   "normalized": "hot chocolate",
+   "steady_live_key_kind": "key",
+   "indb_name": "Hot chocolate"
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Maple Syrup",
+   "normalized": "maple syrup",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Cheese Slice",
+   "normalized": "cheese slice",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "mcdonalds_india_west_south",
+   "item": "Sweet Corn",
+   "normalized": "sweet corn",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "naturals_ice_cream",
+   "item": "Strawberry Ice Cream",
+   "normalized": "strawberry ice cream",
+   "steady_live_key_kind": "key",
+   "indb_name": "Strawberry ice cream"
+  },
+  {
+   "brand_slug": "naturals_ice_cream",
+   "item": "Caramel Ice Cream",
+   "normalized": "caramel ice cream",
+   "steady_live_key_kind": "key",
+   "indb_name": "Caramel ice cream"
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Margherita Pizza",
+   "normalized": "margherita pizza",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Kadhai Paneer",
+   "normalized": "kadhai paneer",
+   "steady_live_key_kind": "key",
+   "indb_name": "Kadhai Paneer"
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Tandoori Chicken",
+   "normalized": "tandoori chicken",
+   "steady_live_key_kind": "key",
+   "indb_name": "Tandoori chicken"
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Tomato Ketchup",
+   "normalized": "tomato ketchup",
+   "steady_live_key_kind": "",
+   "indb_name": "Tomato ketchup"
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Hot Chocolate",
+   "normalized": "hot chocolate",
+   "steady_live_key_kind": "key",
+   "indb_name": "Hot chocolate"
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Masala Chai",
+   "normalized": "masala chai",
+   "steady_live_key_kind": "alias",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "pizza_hut",
+   "item": "Cold Coffee",
+   "normalized": "cold coffee",
+   "steady_live_key_kind": "",
+   "indb_name": "Cold coffee (with cream)"
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Americano",
+   "normalized": "americano",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Cappuccino",
+   "normalized": "cappuccino",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Cold Coffee",
+   "normalized": "cold coffee",
+   "steady_live_key_kind": "",
+   "indb_name": "Cold coffee (with cream)"
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Skimmed milk",
+   "normalized": "skimmed milk",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Almond milk",
+   "normalized": "almond milk",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "starbucks_india",
+   "item": "Filter Coffee",
+   "normalized": "filter coffee",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Mexican Rice",
+   "normalized": "mexican rice",
+   "steady_live_key_kind": "key",
+   "indb_name": "Mexican rice"
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Barbeque Sauce",
+   "normalized": "barbeque sauce",
+   "steady_live_key_kind": "key",
+   "indb_name": "Barbeque sauce"
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Paneer Tikka",
+   "normalized": "paneer tikka",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Chicken Teriyaki",
+   "normalized": "chicken teriyaki",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Egg",
+   "normalized": "egg",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Lettuce",
+   "normalized": "lettuce",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  },
+  {
+   "brand_slug": "subway_india",
+   "item": "Tomato",
+   "normalized": "tomato",
+   "steady_live_key_kind": "key",
+   "indb_name": ""
+  }
+ ],
+ "brand_scoped_keys_checked": 3439,
+ "brand_scoped_key_dups": 42,
+ "brand_scoped_dup_examples": [
+  [
+   "la pinoz veg hawaiian pizza all sizes per 100 g",
+   [
+    [
+     "lapinoz_pizza",
+     "2"
+    ],
+    [
+     "lapinoz_pizza",
+     "32"
+    ]
+   ]
+  ],
+  [
+   "la pinoz korma chicken pizza personal giant slice 22 5 cm all sizes per 100 g",
+   [
+    [
+     "lapinoz_pizza",
+     "129"
+    ],
+    [
+     "lapinoz_pizza",
+     "160"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds veg mcmuffin",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "2"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "43"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds hash brown",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "3"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "50"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds egg mcmuffin",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "4"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "48"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcveggie burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "6"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "2"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds veg surprise burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "7"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "41"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcspicy paneer burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "12"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "4"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds pizza puff",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "16"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "9"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcegg burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "17"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "39"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcchicken burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "19"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "10"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds filet o fish burger",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "22"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "11"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds veg maharaja mac",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "25"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "7"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds fries regular",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "35"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "27"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds fries medium",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "36"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "28"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds fries large",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "37"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "29"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds soft serve cone",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "39"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "118"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcswirl chocodip",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "52"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "119"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds mcflurry oreo regular",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "63"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "143"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds coca cola small",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "65"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "158"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds coca cola medium",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "66"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "159"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds coca cola large",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "67"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "160"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds sprite small",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "72"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "164"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds sprite medium",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "73"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "165"
+    ]
+   ]
+  ],
+  [
+   "mcdonalds sprite large",
+   [
+    [
+     "mcdonalds_india_north_east",
+     "74"
+    ],
+    [
+     "mcdonalds_india_west_south",
+     "166"
+    ]
+   ]
+  ]
+ ],
+ "same_item_name_across_brands": 79,
+ "cross_examples": [
+  [
+   "badam kesar thandai",
+   [
+    "behrouz_biryani",
+    "faasos"
+   ]
+  ],
+  [
+   "coca cola bottle 475 ml",
+   [
+    "behrouz_biryani",
+    "faasos"
+   ]
+  ],
+  [
+   "coke zero 330 ml can",
+   [
+    "behrouz_biryani",
+    "faasos"
+   ]
+  ],
+  [
+   "masala lemonade 200 ml",
+   [
+    "behrouz_biryani",
+    "faasos"
+   ]
+  ],
+  [
+   "thums up can 330 ml",
+   [
+    "behrouz_biryani",
+    "faasos"
+   ]
+  ],
+  [
+   "latte",
+   [
+    "blue_tokai",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south",
+    "starbucks_india"
+   ]
+  ],
+  [
+   "espresso",
+   [
+    "blue_tokai",
+    "cafe_coffee_day",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south"
+   ]
+  ],
+  [
+   "iced latte",
+   [
+    "blue_tokai",
+    "burger_king_india",
+    "cafe_coffee_day",
+    "mcdonalds_india_north_east"
+   ]
+  ],
+  [
+   "iced mocha",
+   [
+    "blue_tokai",
+    "cafe_coffee_day"
+   ]
+  ],
+  [
+   "iced cappuccino",
+   [
+    "blue_tokai",
+    "cafe_coffee_day"
+   ]
+  ],
+  [
+   "cortado",
+   [
+    "blue_tokai",
+    "starbucks_india"
+   ]
+  ],
+  [
+   "pain au chocolat",
+   [
+    "blue_tokai",
+    "theobroma"
+   ]
+  ],
+  [
+   "peri peri fries",
+   [
+    "blue_tokai",
+    "burger_king_india"
+   ]
+  ],
+  [
+   "almond croissant",
+   [
+    "blue_tokai",
+    "starbucks_india"
+   ]
+  ],
+  [
+   "mocha",
+   [
+    "blue_tokai",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south",
+    "starbucks_india"
+   ]
+  ],
+  [
+   "hot chocolate",
+   [
+    "blue_tokai",
+    "burger_king_india",
+    "mcdonalds_india_west_south",
+    "pizza_hut"
+   ]
+  ],
+  [
+   "flat white",
+   [
+    "blue_tokai",
+    "cafe_coffee_day",
+    "mcdonalds_india_west_south",
+    "starbucks_india"
+   ]
+  ],
+  [
+   "cappuccino",
+   [
+    "blue_tokai",
+    "burger_king_india",
+    "cafe_coffee_day",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south",
+    "pizza_hut",
+    "starbucks_india",
+    "subway_india",
+    "theobroma"
+   ]
+  ],
+  [
+   "americano",
+   [
+    "blue_tokai",
+    "burger_king_india",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south",
+    "starbucks_india",
+    "subway_india"
+   ]
+  ],
+  [
+   "iced americano",
+   [
+    "blue_tokai",
+    "burger_king_india",
+    "cafe_coffee_day",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south"
+   ]
+  ],
+  [
+   "mango smoothie",
+   [
+    "blue_tokai",
+    "mcdonalds_india_west_south",
+    "subway_india"
+   ]
+  ],
+  [
+   "fries",
+   [
+    "burger_king_india",
+    "kfc_india",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south"
+   ]
+  ],
+  [
+   "cheese slice",
+   [
+    "burger_king_india",
+    "mcdonalds_india_west_south"
+   ]
+  ],
+  [
+   "tomato ketchup",
+   [
+    "burger_king_india",
+    "mcdonalds_india_north_east",
+    "pizza_hut"
+   ]
+  ],
+  [
+   "hash brown",
+   [
+    "burger_king_india",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south"
+   ]
+  ],
+  [
+   "chicken nuggets",
+   [
+    "burger_king_india",
+    "taco_bell_india"
+   ]
+  ],
+  [
+   "choco lava cake",
+   [
+    "burger_king_india",
+    "faasos",
+    "kfc_india"
+   ]
+  ],
+  [
+   "coca cola zero",
+   [
+    "burger_king_india",
+    "mcdonalds_india_north_east"
+   ]
+  ],
+  [
+   "fanta",
+   [
+    "burger_king_india",
+    "mcdonalds_india_north_east"
+   ]
+  ],
+  [
+   "sprite",
+   [
+    "burger_king_india",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south"
+   ]
+  ]
+ ]
+}

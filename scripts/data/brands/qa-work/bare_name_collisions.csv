@@ -1,0 +1,71 @@
+brand_slug,item,normalized,steady_live_key_kind,indb_name
+blue_tokai,Peri Peri Fries,peri peri fries,key,
+blue_tokai,Hot Chocolate,hot chocolate,key,Hot chocolate
+blue_tokai,Cappuccino,cappuccino,key,
+blue_tokai,Americano,americano,key,
+burger_king_india,Fries,fries,key,
+burger_king_india,Peri Peri Fries,peri peri fries,key,
+burger_king_india,Cheese Slice,cheese slice,key,
+burger_king_india,Tomato Ketchup,tomato ketchup,,Tomato ketchup
+burger_king_india,Americano,americano,key,
+burger_king_india,Cappuccino,cappuccino,key,
+burger_king_india,Hot Chocolate,hot chocolate,key,Hot chocolate
+burger_king_india,Masala Chai,masala chai,alias,
+cafe_coffee_day,Cappuccino,cappuccino,key,
+cafe_coffee_day,Filter Coffee,filter coffee,key,
+cafe_coffee_day,Green Tea,green tea,key,
+dominos,Margherita Pizza,margherita pizza,key,
+dominos,Brownie,brownie,key,
+faasos,Mango Cheesecake,mango cheesecake,key,Mango cheesecake
+haldirams,Rasgulla,rasgulla,key,Rasgulla
+haldirams,Besan Ladoo,besan ladoo,,Gram flour ladoo (Besan ladoo)
+kfc_india,Fries,fries,key,
+lapinoz_pizza,Margherita Pizza,margherita pizza,key,
+mcdonalds_india_north_east,McChicken Burger,mcchicken burger,key,
+mcdonalds_india_north_east,Fries,fries,key,
+mcdonalds_india_north_east,Cold Coffee,cold coffee,,Cold coffee (with cream)
+mcdonalds_india_north_east,Masala Chai,masala chai,alias,
+mcdonalds_india_north_east,Tomato Ketchup,tomato ketchup,,Tomato ketchup
+mcdonalds_india_north_east,Cappuccino,cappuccino,key,
+mcdonalds_india_north_east,Americano,americano,key,
+mcdonalds_india_west_south,McChicken Burger,mcchicken burger,key,
+mcdonalds_india_west_south,Fries,fries,key,
+mcdonalds_india_west_south,Americano,americano,key,
+mcdonalds_india_west_south,Cappuccino,cappuccino,key,
+mcdonalds_india_west_south,Hot Chocolate,hot chocolate,key,Hot chocolate
+mcdonalds_india_west_south,Maple Syrup,maple syrup,key,
+mcdonalds_india_west_south,Cheese Slice,cheese slice,key,
+mcdonalds_india_west_south,Sweet Corn,sweet corn,key,
+naturals_ice_cream,Strawberry Ice Cream,strawberry ice cream,key,Strawberry ice cream
+naturals_ice_cream,Caramel Ice Cream,caramel ice cream,key,Caramel ice cream
+pizza_hut,Margherita Pizza,margherita pizza,key,
+pizza_hut,Kadhai Paneer,kadhai paneer,key,Kadhai Paneer
+pizza_hut,Tandoori Chicken,tandoori chicken,key,Tandoori chicken
+pizza_hut,Tomato Ketchup,tomato ketchup,,Tomato ketchup
+pizza_hut,Cappuccino,cappuccino,key,
+pizza_hut,Hot Chocolate,hot chocolate,key,Hot chocolate
+pizza_hut,Masala Chai,masala chai,alias,
+pizza_hut,Cold Coffee,cold coffee,,Cold coffee (with cream)
+starbucks_india,Americano,americano,key,
+starbucks_india,Cappuccino,cappuccino,key,
+starbucks_india,Cold Coffee,cold coffee,,Cold coffee (with cream)
+starbucks_india,Skimmed milk,skimmed milk,key,
+starbucks_india,Almond milk,almond milk,key,
+starbucks_india,Filter Coffee,filter coffee,key,
+subway_india,Mexican Rice,mexican rice,key,Mexican rice
+subway_india,Barbeque Sauce,barbeque sauce,key,Barbeque sauce
+subway_india,Paneer Tikka,paneer tikka,key,
+subway_india,Chicken Teriyaki,chicken teriyaki,key,
+subway_india,Egg,egg,key,
+subway_india,Lettuce,lettuce,key,
+subway_india,Tomato,tomato,key,
+subway_india,Cucumber,cucumber,key,
+subway_india,Americano,americano,key,
+subway_india,Cappuccino,cappuccino,key,
+taco_bell_india,Seasoned Fries,seasoned fries,key,
+taco_bell_india,Chocolate Sauce,chocolate sauce,key,Chocolate sauce
+theobroma,Lemon Tart,lemon tart,key,Lemon tart
+theobroma,Banana Cake,banana cake,,Banana cake (Kele ka cake)
+theobroma,Hazelnut Cookies,hazelnut cookies,key,Hazelnut cookies
+theobroma,Chocolate Chip Cookies,chocolate chip cookies,key,Chocolate chip cookies
+theobroma,Cappuccino,cappuccino,key,
