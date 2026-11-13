@@ -1817,3 +1817,8 @@ The Postgres `pg_trgm` extension splits text into three-letter chunks ("cha", "h
 *2026-11-12 · Tool*
 
 `set_config('lock_timeout', '5s', true)` (or `SET LOCAL`) only lasts until the current transaction ends. When `psql -f` runs a script without `BEGIN`, every statement is its own transaction, so the timeout covers one line and the next `DROP` can wait forever while holding up every food log behind it. For STEADY that's why every hand-run rollback script wraps itself in `BEGIN … COMMIT`: it either finishes completely or changes nothing.
+
+### Calories per household unit beat grams per piece
+*2026-11-13 · Pattern*
+
+Nutrition institutes rarely publish what one roti or katori weighs, but they do publish calories per household unit ("1 phulka = 80 kcal", "1 cup rice = 170 kcal"). Divide by a lab-measured calorie density and you get a cooked weight. For chai and rice this reproduced measured values within about 1%. For STEADY it means portion defaults can be anchored to official sources even where nobody weighed the food, and a volume like "1 cup" only stays honest when its density and its energy come from the same source.
