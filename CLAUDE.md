@@ -30,8 +30,10 @@ Follow the post guide at /home/shivam/Silver-Intelligence/work-log/x-linkedin-po
 - Do not draft a post for every task. At the end of a task, check the work against the bar in
   section 2 of the guide. Only if it passes, draft a post and save it to this workspace's
   social-posts file, `docs/social/social-posts.md` (gitignored, newest first). Say so in one line.
-- If it is borderline, do not draft: mention it in one line as a possible post and let the user
-  decide.
+- If it is borderline, draft it anyway (the founder's standing request, 2026-11-13) and say in
+  the draft's bar check which section-2 check it is weak on. Don't ask first.
+- Hooks: alongside the guide-style hook, write a rage-bait-style option (a provocative, true hot
+  take that invites argument). Keep every word defensible; avoid bait that invites mutes or reports.
 - Never name the company, the product or specific features in a post.
 - When the user shares how a posted draft performed, record it as section 12 describes.
 - When a trigger in section 13 fires, tell the user the guide is due for a re-check, and update
