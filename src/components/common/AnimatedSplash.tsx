@@ -12,15 +12,27 @@ import BowlIllustration, { DESIGN_WIDTH, DESIGN_CANVAS_HEIGHT } from './BowlIllu
  * WHY THIS EXISTS RATHER THAN JUST A BIGGER SPLASH IMAGE
  * ------------------------------------------------------
  * The native splash cannot show this. Android 12+ renders it through
- * `windowSplashScreenAnimatedIcon` (see android/app/src/main/res/values/styles.xml),
- * and the system masks that image to a circle exposing only the inner ~2/3 of
- * the canvas. Six labels spread across a 390x480 illustration get cropped away —
- * it is an OS behaviour, not a setting. So the native splash shows the bowl
- * alone (the one element that survives a circular mask), and this component
- * takes over the instant JS boots to show the artwork in full.
+ * `windowSplashScreenAnimatedIcon`, and the system masks that image to a circle
+ * exposing only the inner ~2/3 of the canvas. Six labels spread across a 390x480
+ * illustration get cropped away — it is an OS behaviour, not a setting.
  *
- * The handover is designed to be invisible: same #FAFAFA background, same bowl,
- * same position. What the user perceives is one splash where the labels fade in.
+ * ONE SPLASH, NOT TWO
+ * -------------------
+ * The native splash used to show the bowl on its own, then this screen took
+ * over and drew the bowl again in a different place with text around it. On a
+ * real phone that read as two splash screens back to back (TASKS.md item 2).
+ *
+ * So the native splash is now deliberately EMPTY: app.json's expo-splash-screen
+ * `image` is assets/splash-blank.png (fully transparent) on #FAFAFA, which
+ * prebuild turns into a plain #FAFAFA square for the Android 12+ icon slot and a
+ * blank iOS launch storyboard. This component's first frame is the same thing —
+ * #FAFAFA with the content at opacity 0 — and the content then fades in. The
+ * native-to-React handover is between two identical blank frames, so the user
+ * sees exactly one splash: the branded one below.
+ *
+ * Keep `container`'s background equal to the app.json splash backgroundColor
+ * and keep `contentOpacity` starting at 0. __tests__/unit/splashConfig.test.ts
+ * and __tests__/component/AnimatedSplash.test.tsx fail if either drifts.
  *
  * Uses core Animated with useNativeDriver rather than Reanimated — project
  * convention, since native module versions must match the Expo SDK 54 set.
@@ -41,8 +53,9 @@ const FADE_MS = 420;
 export default function AnimatedSplash({ isAppReady, onFinish }: Props) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const opacity = useRef(new Animated.Value(1)).current;
-  // Content fades UP slightly as it appears — the same easing the app uses
-  // elsewhere, so the splash feels part of the product rather than bolted on.
+  // Starts at 0 on purpose: the first frame must be the bare background, which
+  // is exactly what the (blank) native splash shows, so the handover is
+  // invisible. The wordmark and bowl then fade in as the one splash moment.
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const [minimumElapsed, setMinimumElapsed] = useState(false);
 
@@ -78,8 +91,11 @@ export default function AnimatedSplash({ isAppReady, onFinish }: Props) {
   const scale = Math.min(widthScale, heightScale);
 
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.container, { opacity }]}>
-      <Animated.View style={[styles.inner, { opacity: contentOpacity }]}>
+    <Animated.View
+      testID="animated-splash"
+      style={[StyleSheet.absoluteFill, styles.container, { opacity }]}
+    >
+      <Animated.View testID="animated-splash-content" style={[styles.inner, { opacity: contentOpacity }]}>
         <View style={styles.wordmarkArea}>
           <Text style={styles.wordmark}>STEADY</Text>
           <Text style={styles.tagline}>know every bite</Text>

@@ -2531,3 +2531,13 @@ With the founder's go-ahead we pushed migration 053 to production, and Postgres 
 *2026-11-13 · Bug*
 
 Phase 9 fixed the logging bugs from our code audit. Logging while viewing a past day now saves to that day instead of today. Confirming an unchanged edit no longer re-runs the AI. Adjust Macros writes only what you changed and marks it as your correction. Photo questions from the AI show up in chat. Water totals follow your local day. An unreadable AI reply shows a real error instead of turning into a chat message. The reviewers caught a bug our own fix had introduced: an app left open overnight would have logged Tuesday's breakfast to Monday. Now "today" rolls forward when the app returns to the foreground. 655 tests pass. The app fixes ship with the next build, and the server fixes need one function deploy.
+
+### The Indian recalculation is live: one roti now counts about 98 kcal, not 202
+*2026-11-13 · Milestone*
+
+After the lock fix had been proven through the real Supabase CLI against a local copy of production, migration 053 went live at 16:51 UTC. That covers 61 new verified foods and 71 old ones quarantined (never deleted), plus 14 nicknames repointed and 4 added. Past meals, daily totals and saved meals had identical fingerprints before and after. The database recorded exactly the 33 statements we had tested, down to the same md5. The ranking gate passes 13/13 aliases, 21/21 first results and 6/6 top-five on two identical runs. Search takes about 10 ms warm, the food-data audit is clean, and the "2 roti" smoke test lands in range. From the next log, a roti counts about 98 kcal instead of 202, a katori of dal about 110 instead of 290, and a cup of chai about 78.
+
+### One splash screen instead of two
+*2026-11-13 · Bug*
+
+The founder's phone testing found the splash image showing twice: Android's own splash drew the bowl, then our branded splash drew it again with the wordmark. Android's splash is now a blank screen in the same off-white, so the only splash anyone sees is the branded one. A reviewer then caught that our splash waited for the safe-area provider's first layout. On a phone in Dark theme, that wait could show a brief dim, so the splash now renders outside the provider, in the very first frame. It can only be seen on a real app build, so it ships with the next one, along with a 30-second check for the founder.

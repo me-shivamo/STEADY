@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react';
 import { PostHogProvider } from 'posthog-react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { View } from 'react-native';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import {
   useFonts,
   TikTokSans_400Regular,
@@ -47,12 +48,15 @@ Notifications.setNotificationHandler({
 });
 
 export default function App() {
-  // Our own splash stays up after the native one hides. The native splash can
-  // only show a circle-masked icon (Android 12+ masks windowSplashScreenAnimatedIcon),
-  // so the bowl-with-callouts artwork has to be rendered by React — see
-  // AnimatedSplash for the full explanation.
+  // Our own splash stays up after the native one hides. The native splash is
+  // deliberately blank #FAFAFA (app.json → assets/splash-blank.png) and
+  // AnimatedSplash's first frame is the same blank #FAFAFA, so the user sees
+  // ONE splash: the branded one. Order matters: preventAutoHideAsync() above
+  // holds the native splash, AnimatedSplash is rendered in the same pass that
+  // fonts become ready, and hideAsync() runs only after that commit (the effect
+  // below) — so there is never an uncovered frame. See AnimatedSplash.
   const [splashVisible, setSplashVisible] = useState(true);
-  const [fontsLoaded] = useFonts({
+  const [fontsLoadedOk, fontError] = useFonts({
     TikTokSans_400Regular,
     TikTokSans_500Medium,
     TikTokSans_600SemiBold,
@@ -61,6 +65,10 @@ export default function App() {
     Caveat_600SemiBold,
     Caveat_700Bold,
   });
+  // A font that fails to load must not hold the app on a blank splash forever:
+  // carry on with system fonts instead (the native splash is now blank, so a
+  // stuck state would look like a frozen off-white screen).
+  const fontsLoaded = fontsLoadedOk || !!fontError;
   const session = useAuthStore((s) => s.session);
 
   useEffect(() => {
@@ -101,26 +109,36 @@ export default function App() {
   }
 
   return (
-    // SafeAreaProvider has to sit above RootNavigator so ToastHost — which is
-    // outside the navigator — can read the bottom inset and clear the Android
-    // navigation bar. React Navigation mounts its own SafeAreaProviderCompat
-    // internally, which detects this one and defers to it rather than nesting.
-    <SafeAreaProvider>
-      <PostHogProvider client={posthog} autocapture={{ captureScreens: false }}>
-        <RootNavigator />
-        {/* Last child = painted on top of every screen. */}
-        <ToastHost />
-        {/* Rendered ABOVE the navigator rather than instead of it, so the real
-            first screen mounts and settles behind the splash. By the time this
-            fades out there is a finished screen underneath, not a flash of
-            empty layout. */}
-        {splashVisible && (
-          <AnimatedSplash
-            isAppReady={fontsLoaded}
-            onFinish={() => setSplashVisible(false)}
-          />
-        )}
-      </PostHogProvider>
-    </SafeAreaProvider>
+    // AnimatedSplash sits OUTSIDE SafeAreaProvider, as a sibling painted last.
+    // Without initialMetrics the provider renders nothing until the native side
+    // reports insets (after the view is attached), so a splash inside it would
+    // miss the first frame while hideAsync() is already fading the native
+    // splash out: on a phone in system Dark theme that gap shows as a dim
+    // toward the dark window background. Outside the provider, the splash is on
+    // screen in the very first commit; it needs no insets. initialMetrics also
+    // lets the navigator render in that first pass.
+    <View style={{ flex: 1 }}>
+      {/* SafeAreaProvider has to sit above RootNavigator so ToastHost — which is
+          outside the navigator — can read the bottom inset and clear the Android
+          navigation bar. React Navigation mounts its own SafeAreaProviderCompat
+          internally, which detects this one and defers to it rather than nesting. */}
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <PostHogProvider client={posthog} autocapture={{ captureScreens: false }}>
+          <RootNavigator />
+          {/* Last child = painted on top of every screen. */}
+          <ToastHost />
+        </PostHogProvider>
+      </SafeAreaProvider>
+      {/* Rendered ABOVE the navigator rather than instead of it, so the real
+          first screen mounts and settles behind the splash. By the time this
+          fades out there is a finished screen underneath, not a flash of
+          empty layout. */}
+      {splashVisible && (
+        <AnimatedSplash
+          isAppReady={fontsLoaded}
+          onFinish={() => setSplashVisible(false)}
+        />
+      )}
+    </View>
   );
 }
