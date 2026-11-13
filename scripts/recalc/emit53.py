@@ -107,10 +107,18 @@ LOCKS = """-- Lock order = account deletion's. DELETE FROM auth.users fires its 
 -- wrote them; LOCK TABLE a, b, c takes them in that order, the same as the food_entries -> daily_summaries
 -- trigger. food_aliases is on no other path, so it goes last."""
 
-LOCK_SQL = """LOCK TABLE public.food_items       IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE public.food_entries, public.daily_summaries, public.saved_entries IN SHARE MODE;
-LOCK TABLE public.user_food_memory IN SHARE ROW EXCLUSIVE MODE;
-LOCK TABLE public.food_aliases     IN SHARE ROW EXCLUSIVE MODE;"""
+# Why a DO block: `supabase db push` sends the file as one extended-protocol batch. That batch is a single
+# implicit transaction (all or nothing, held until the final Sync), but it is not a transaction *block*, and a
+# top-level LOCK TABLE refuses to run outside one ("LOCK TABLE can only be used in transaction blocks",
+# SQLSTATE 25P01: the first live push of 053 on 2026-11-13 stopped right here and changed nothing). Inside a
+# function body Postgres skips that check, and the locks are still held until the implicit transaction ends,
+# i.e. for the whole migration. psql -1 (the local harness) accepts both forms, which is why it did not catch it.
+LOCK_SQL = """DO $locks$ BEGIN
+  LOCK TABLE public.food_items       IN SHARE ROW EXCLUSIVE MODE;
+  LOCK TABLE public.food_entries, public.daily_summaries, public.saved_entries IN SHARE MODE;
+  LOCK TABLE public.user_food_memory IN SHARE ROW EXCLUSIVE MODE;
+  LOCK TABLE public.food_aliases     IN SHARE ROW EXCLUSIVE MODE;
+END $locks$;"""
 
 FP = """CREATE TEMP TABLE {name} ON COMMIT DROP AS SELECT
   (SELECT count(*) || ':' || md5(coalesce(string_agg(concat_ws(':', id, food_item_id, quantity_g, calories, protein_g, carbs_g, fat_g, fiber_g), ',' ORDER BY id), ''))

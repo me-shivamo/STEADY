@@ -1827,3 +1827,8 @@ Nutrition institutes rarely publish what one roti or katori weighs, but they do 
 *2026-11-13 · Pattern*
 
 A compare-and-swap migration carries a snapshot of the exact rows it expects to change (ids, keys, status, calories) and checks them before it writes anything. If anything has drifted, it refuses and rolls back. It's the database version of `if (value == expected) value = new`. For STEADY, migration 053 was generated hours before it can be applied while users keep logging, so it must never quietly overwrite rows that changed in the meantime.
+
+### An implicit transaction is not a transaction block
+*2026-11-13 · Tool*
+
+`supabase db push` sends a migration file as one extended-protocol batch: every statement commits or rolls back together, but Postgres doesn't treat it as a `BEGIN … COMMIT` block. Commands that require a block, like a top-level `LOCK TABLE`, fail with SQLSTATE 25P01. The same commands run fine inside a `DO` block, because Postgres skips that check inside function bodies. For STEADY the lesson is to test a migration the way it will really be applied: push it with the CLI to a throwaway database rather than piping it through `psql -1`.
