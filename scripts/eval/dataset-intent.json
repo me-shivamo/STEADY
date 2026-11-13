@@ -1,0 +1,427 @@
+[
+ {
+  "id": "L01",
+  "type": "log",
+  "text": "poha"
+ },
+ {
+  "id": "L02",
+  "type": "log",
+  "text": "one plate poha"
+ },
+ {
+  "id": "L03",
+  "type": "log",
+  "text": "1 plate poha"
+ },
+ {
+  "id": "L04",
+  "type": "log",
+  "text": "poha 1 plate"
+ },
+ {
+  "id": "L05",
+  "type": "log",
+  "text": "a bowl of curd"
+ },
+ {
+  "id": "L06",
+  "type": "log",
+  "text": "one bowl curd"
+ },
+ {
+  "id": "L07",
+  "type": "log",
+  "text": "curd"
+ },
+ {
+  "id": "L08",
+  "type": "log",
+  "text": "2 roti"
+ },
+ {
+  "id": "L09",
+  "type": "log",
+  "text": "2 roti dal"
+ },
+ {
+  "id": "L10",
+  "type": "log",
+  "text": "dal chawal"
+ },
+ {
+  "id": "L11",
+  "type": "log",
+  "text": "rajma chawal 1 plate"
+ },
+ {
+  "id": "L12",
+  "type": "log",
+  "text": "chai"
+ },
+ {
+  "id": "L13",
+  "type": "log",
+  "text": "1 cup chai"
+ },
+ {
+  "id": "L14",
+  "type": "log",
+  "text": "chai with 2 biscuits"
+ },
+ {
+  "id": "L15",
+  "type": "log",
+  "text": "coffee"
+ },
+ {
+  "id": "L16",
+  "type": "log",
+  "text": "black coffee"
+ },
+ {
+  "id": "L17",
+  "type": "log",
+  "text": "1 glass milk"
+ },
+ {
+  "id": "L18",
+  "type": "log",
+  "text": "milk 300ml"
+ },
+ {
+  "id": "L19",
+  "type": "log",
+  "text": "banana"
+ },
+ {
+  "id": "L20",
+  "type": "log",
+  "text": "2 eggs"
+ },
+ {
+  "id": "L21",
+  "type": "log",
+  "text": "2 boiled eggs"
+ },
+ {
+  "id": "L22",
+  "type": "log",
+  "text": "omelette 2 eggs"
+ },
+ {
+  "id": "L23",
+  "type": "log",
+  "text": "1 scoop whey"
+ },
+ {
+  "id": "L24",
+  "type": "log",
+  "text": "whey protein shake"
+ },
+ {
+  "id": "L25",
+  "type": "log",
+  "text": "paneer 100g"
+ },
+ {
+  "id": "L26",
+  "type": "log",
+  "text": "100g chicken breast"
+ },
+ {
+  "id": "L27",
+  "type": "log",
+  "text": "chicken curry and rice"
+ },
+ {
+  "id": "L28",
+  "type": "log",
+  "text": "biryani"
+ },
+ {
+  "id": "L29",
+  "type": "log",
+  "text": "1 plate biryani"
+ },
+ {
+  "id": "L30",
+  "type": "log",
+  "text": "maggi"
+ },
+ {
+  "id": "L31",
+  "type": "log",
+  "text": "samosa"
+ },
+ {
+  "id": "L32",
+  "type": "log",
+  "text": "2 samosa"
+ },
+ {
+  "id": "L33",
+  "type": "log",
+  "text": "idli sambar"
+ },
+ {
+  "id": "L34",
+  "type": "log",
+  "text": "3 idli"
+ },
+ {
+  "id": "L35",
+  "type": "log",
+  "text": "masala dosa"
+ },
+ {
+  "id": "L36",
+  "type": "log",
+  "text": "upma"
+ },
+ {
+  "id": "L37",
+  "type": "log",
+  "text": "aloo paratha with curd"
+ },
+ {
+  "id": "L38",
+  "type": "log",
+  "text": "nashte mein poha"
+ },
+ {
+  "id": "L39",
+  "type": "log",
+  "text": "aaj lunch mein dal chawal"
+ },
+ {
+  "id": "L40",
+  "type": "log",
+  "text": "breakfast: oats with milk"
+ },
+ {
+  "id": "L41",
+  "type": "log",
+  "text": "lunch - 2 roti, sabzi, dal"
+ },
+ {
+  "id": "L42",
+  "type": "log",
+  "text": "dinner was khichdi"
+ },
+ {
+  "id": "L43",
+  "type": "log",
+  "text": "had a sandwich"
+ },
+ {
+  "id": "L44",
+  "type": "log",
+  "text": "just had coffee"
+ },
+ {
+  "id": "L45",
+  "type": "log",
+  "text": "ate 2 apples"
+ },
+ {
+  "id": "L46",
+  "type": "log",
+  "text": "pizza 2 slices"
+ },
+ {
+  "id": "L47",
+  "type": "log",
+  "text": "a handful of almonds"
+ },
+ {
+  "id": "L48",
+  "type": "log",
+  "text": "peanut butter toast"
+ },
+ {
+  "id": "L49",
+  "type": "log",
+  "text": "salad"
+ },
+ {
+  "id": "L50",
+  "type": "log",
+  "text": "1 katori rajma"
+ },
+ {
+  "id": "L51",
+  "type": "log",
+  "text": "kheer"
+ },
+ {
+  "id": "L52",
+  "type": "log",
+  "text": "gulab jamun 2"
+ },
+ {
+  "id": "L53",
+  "type": "log",
+  "text": "lassi"
+ },
+ {
+  "id": "L54",
+  "type": "log",
+  "text": "chaas"
+ },
+ {
+  "id": "L55",
+  "type": "log",
+  "text": "nimbu pani"
+ },
+ {
+  "id": "L56",
+  "type": "log",
+  "text": "coconut water"
+ },
+ {
+  "id": "L57",
+  "type": "log",
+  "text": "1 pint beer"
+ },
+ {
+  "id": "L58",
+  "type": "log",
+  "text": "protein bar"
+ },
+ {
+  "id": "L59",
+  "type": "log",
+  "text": "subah 2 anda"
+ },
+ {
+  "id": "L60",
+  "type": "log",
+  "text": "raat ko 3 roti aur sabzi"
+ },
+ {
+  "id": "C01",
+  "type": "coach",
+  "text": "how much protein should I eat?"
+ },
+ {
+  "id": "C02",
+  "type": "coach",
+  "text": "is poha healthy?"
+ },
+ {
+  "id": "C03",
+  "type": "coach",
+  "text": "how many calories in poha?"
+ },
+ {
+  "id": "C04",
+  "type": "coach",
+  "text": "what should I eat for dinner?"
+ },
+ {
+  "id": "C05",
+  "type": "coach",
+  "text": "how am I doing this week?"
+ },
+ {
+  "id": "C06",
+  "type": "coach",
+  "text": "am I on track today?"
+ },
+ {
+  "id": "C07",
+  "type": "coach",
+  "text": "how much water did I drink today?"
+ },
+ {
+  "id": "C08",
+  "type": "coach",
+  "text": "can I eat rice at night?"
+ },
+ {
+  "id": "C09",
+  "type": "coach",
+  "text": "is curd good for weight gain?"
+ },
+ {
+  "id": "C10",
+  "type": "coach",
+  "text": "suggest a high protein breakfast"
+ },
+ {
+  "id": "C11",
+  "type": "coach",
+  "text": "why is my weight not increasing?"
+ },
+ {
+  "id": "C12",
+  "type": "coach",
+  "text": "what's my calorie target?"
+ },
+ {
+  "id": "C13",
+  "type": "coach",
+  "text": "how many calories do I have left today?"
+ },
+ {
+  "id": "C14",
+  "type": "coach",
+  "text": "give me a meal plan"
+ },
+ {
+  "id": "C15",
+  "type": "coach",
+  "text": "should I eat a banana before gym?"
+ },
+ {
+  "id": "C16",
+  "type": "coach",
+  "text": "kya poha healthy hai?"
+ },
+ {
+  "id": "C17",
+  "type": "coach",
+  "text": "kitna protein chahiye mujhe?"
+ },
+ {
+  "id": "C18",
+  "type": "coach",
+  "text": "which is better, roti or rice?"
+ },
+ {
+  "id": "C19",
+  "type": "coach",
+  "text": "hi"
+ },
+ {
+  "id": "C20",
+  "type": "coach",
+  "text": "thanks"
+ },
+ {
+  "id": "C21",
+  "type": "coach",
+  "text": "calories in 2 roti?"
+ },
+ {
+  "id": "C22",
+  "type": "coach",
+  "text": "poha calories?"
+ },
+ {
+  "id": "C23",
+  "type": "coach",
+  "text": "what did I eat yesterday?"
+ },
+ {
+  "id": "C24",
+  "type": "coach",
+  "text": "is chai bad for me?"
+ },
+ {
+  "id": "C25",
+  "type": "coach",
+  "text": "help me gain weight"
+ }
+]
