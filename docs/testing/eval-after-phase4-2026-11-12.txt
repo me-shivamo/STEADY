@@ -1,0 +1,87 @@
+Phase 4 go-live eval record — 2026-11-12 (UTC)
+Migration 052 applied 19:31:56Z; functions deployed 19:32:48Z with RESOLVER_SEARCH unset (fts).
+History fingerprint H0 identical before/after (food_entries<T0, saved_entries, verified_items 1635 / 3231e02e…).
+Ranking gate on live, run twice, byte-identical: alias 12/12, top1 19/19, top5 6/6, known 'masala chai' = f (expected until 053).
+search_foods('paneer butter masala',5): 10.6 ms cold. anon/authenticated: no access; service_role: execute.
+
+Verdict: ranked search NOT enabled for users. It failed 'beat today on every target' (strict, in-band, protein worse).
+RESOLVER_SEARCH=eval_only (eval account only). Follow-up: Phase 4.1 candidate gate.
+
+=== B control — dataset-v4, fts, repeat 3, cold
+FUNCTION:                    log-food-from-text   (repeat 3, memory cold)
+STRICT (all declared bands): 69/95 logs passed (72.6%)
+CALORIES IN BAND:            72/93 (77.4%)
+CALORIES WITHIN ±25% OF MID: 50/93 (53.8%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        24.2%
+CALORIE LEAN (signed):       median -6.4%   40 above mid / 52 below
+PROTEIN (19 cases):          median error 16.7%, lean +4.7%
+CONSISTENCY (same number ×3): 66/93 (71.0%)
+LATENCY:                     p50 5.09s   p95 8.79s   (300 requests)
+AI COST:                     $0.1857 total, ~$0.00067 per log (469 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 248 · ai_estimate 125 · usda_match 33 · reference_match 29 · rough_estimate 3 · memory 1
+NEGATIVES (no phantom log):  5/5
+ERRORS: 2
+
+=== B — dataset-v4, ranked (eval_only), repeat 3, cold
+FUNCTION:                    log-food-from-text   (repeat 3, memory cold)
+STRICT (all declared bands): 65/95 logs passed (68.4%)
+CALORIES IN BAND:            70/93 (75.3%)
+CALORIES WITHIN ±25% OF MID: 53/93 (57.0%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        21.8%
+CALORIE LEAN (signed):       median -8.5%   36 above mid / 57 below
+PROTEIN (19 cases):          median error 24.0%, lean +4.7%
+CONSISTENCY (same number ×3): 72/93 (77.4%)
+LATENCY:                     p50 4.92s   p95 8.58s   (300 requests)
+AI COST:                     $0.1835 total, ~$0.00066 per log (453 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 241 · reference_match 79 · ai_estimate 61 · usda_match 33 · verified_alias 26
+NEGATIVES (no phantom log):  5/5
+ERRORS: 2
+
+=== C — smoke, ranked
+FUNCTION:                    log-food-from-text   (repeat 1, memory cold)
+STRICT (all declared bands): 5/5 logs passed (100.0%)
+CALORIES IN BAND:            5/5 (100.0%)
+CALORIES WITHIN ±25% OF MID: 5/5 (100.0%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        9.4%
+CALORIE LEAN (signed):       median -1.0%   2 above mid / 3 below
+LATENCY:                     p50 5.07s   p95 8.26s   (6 requests)
+AI COST:                     $0.0039 total, ~$0.00079 per log (10 AI calls)
+UNSURE (asked, or left a food out): 0/5 (0.0%)
+RESOLUTION:                  verified_exact 3 · ai_estimate 2 · usda_match 2
+NEGATIVES (no phantom log):  1/1
+ERRORS: 0
+
+=== D — dataset-v4, ranked, repeat 3, warm memory
+FUNCTION:                    log-food-from-text   (repeat 3, memory warm)
+STRICT (all declared bands): 67/95 logs passed (70.5%)
+CALORIES IN BAND:            72/93 (77.4%)
+CALORIES WITHIN ±25% OF MID: 50/93 (53.8%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        21.8%
+CALORIE LEAN (signed):       median -8.4%   39 above mid / 53 below
+PROTEIN (19 cases):          median error 22.9%, lean +12.4%
+CONSISTENCY (same number ×3): 79/93 (84.9%)
+LATENCY:                     p50 3.02s   p95 7.37s   (300 requests)
+AI COST:                     $0.1554 total, ~$0.00056 per log (363 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 246 · memory 108 · verified_alias 26 · ai_estimate 24 · reference_match 24 · usda_match 10
+NEGATIVES (no phantom log):  5/5
+ERRORS: 2
+
+=== E — dataset-v3 (dev), ranked, report only
+FUNCTION:                    log-food-from-text   (repeat 1, memory cold)
+STRICT (all declared bands): 74/95 logs passed (77.9%)
+CALORIES IN BAND:            77/95 (81.1%)
+CALORIES WITHIN ±25% OF MID: 63/95 (66.3%)  [literature-comparable]
+MEDIAN CALORIE ERROR:        15.3%
+CALORIE LEAN (signed):       median -6.6%   32 above mid / 62 below
+PROTEIN (19 cases):          median error 15.3%, lean -9.6%
+LATENCY:                     p50 3.18s   p95 7.13s   (100 requests)
+AI COST:                     $0.0567 total, ~$0.00060 per log (137 AI calls)
+UNSURE (asked, or left a food out): 0/95 (0.0%)
+RESOLUTION:                  verified_exact 92 · reference_match 21 · verified_alias 15 · ai_estimate 13 · usda_match 2
+NEGATIVES (no phantom log):  5/5
+ERRORS: 0
+
+Run A (in-process fts vs ranked) was disrupted by the machine sleeping overnight (fts: 73/93 complete); reference only.
