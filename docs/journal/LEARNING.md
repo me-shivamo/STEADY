@@ -1832,3 +1832,8 @@ A compare-and-swap migration carries a snapshot of the exact rows it expects to 
 *2026-11-13 · Tool*
 
 `supabase db push` sends a migration file as one extended-protocol batch: every statement commits or rolls back together, but Postgres doesn't treat it as a `BEGIN … COMMIT` block. Commands that require a block, like a top-level `LOCK TABLE`, fail with SQLSTATE 25P01. The same commands run fine inside a `DO` block, because Postgres skips that check inside function bodies. For STEADY the lesson is to test a migration the way it will really be applied: push it with the CLI to a throwaway database rather than piping it through `psql -1`.
+
+### A spending cap is also an availability limit
+*2026-11-13 · Tool*
+
+API providers like OpenRouter let you cap a key's monthly spend. That protects your wallet, but when the cap is hit every request fails, which is an outage. For STEADY, tests that run through the live functions spend from the same key as real users, so they must use a separate key with its own cap. The production key's cap should sit comfortably above expected use, with an alert well before it's reached.

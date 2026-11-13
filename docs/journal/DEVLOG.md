@@ -2541,3 +2541,8 @@ After the lock fix had been proven through the real Supabase CLI against a local
 *2026-11-13 · Bug*
 
 The founder's phone testing found the splash image showing twice: Android's own splash drew the bowl, then our branded splash drew it again with the wordmark. Android's splash is now a blank screen in the same off-white, so the only splash anyone sees is the branded one. A reviewer then caught that our splash waited for the safe-area provider's first layout. On a phone in Dark theme, that wait could show a brief dim, so the splash now renders outside the provider, in the very first frame. It can only be seen on a real app build, so it ships with the next one, along with a 30-second check for the founder.
+
+### Our own tests took food logging down for real users
+*2026-11-13 · Bug*
+
+At 17:01 UTC every food log started failing with an HTTP 500. The cause was mundane: the OpenRouter key the live app uses carries a $1.00 monthly spending cap, and our evaluation runs had been going through the live functions with that same key. Two days of back-to-back held-out tests (about $0.18 each) spent the month's budget. Nothing was corrupted, but nobody could log a meal until the cap was raised, so the founder raised it in OpenRouter. The lessons: tests must never share a budget with production, and a spending cap that low is an outage waiting to happen. Next we're giving the eval account its own key with its own limit, and adding a cheap alert before any key gets near its cap.
