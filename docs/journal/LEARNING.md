@@ -1852,3 +1852,8 @@ Protein and carbohydrate give about 4 kcal per gram and fat about 9, factors wor
 *2026-11-13 · Architecture*
 
 Whether to log "poha" as one dish or as its ingredients only helps if the pieces exist in our database, and the language model can't see the database. So the better design is for the model to return both the dish and an optional ingredient list, and for the resolver, the code that queries the database, to pick: the verified dish row when one exists, otherwise the ingredients plus oil. It's the same principle as keeping business rules in the service layer instead of the UI. For STEADY it turns a fuzzy prompt instruction ("split compound foods") into a deterministic rule we can test.
+
+### One experiment per meter
+*2026-11-14 · Tool*
+
+When two tests share a resource, here the same API key and the same rate limits, the resource's total can't tell you which test spent what, and each test's timing is slowed by the other. Our model comparison overlapped a prompt test on the same key, so the key's spend made the newer model look 8x as expensive when its own recorded calls said 3.8x, and its timings were inflated. For STEADY the rule is: one experiment on a key at a time, cost taken from the per-call records, and the key total only as a cross-check.
