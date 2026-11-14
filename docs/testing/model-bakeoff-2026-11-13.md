@@ -2,7 +2,9 @@
 
 Founder-scoped: ChatGPT models only. dataset-v3 (dev set, 100 cases / 95 food logs), x3 repeats, fts search, in-process harness, local eval key (never the live key). gpt-4o-mini (current) vs gpt-6-luna vs gpt-6-luna-pro vs split (luna parse + luna-pro match). Raw run files stayed in the session scratchpad.
 
-**Decision:** stay on gpt-4o-mini. No Luna setup beat it on accuracy beyond noise, every Luna setup was about half as consistent (temperature is not supported on Luna, and Luna obeys the old split-compound-foods rule), 4-7x slower per log, and 1.5-8x the cost. Revisit after the system-prompt redesign and the dish-row fixes.
+**Decision:** stay on gpt-4o-mini. No Luna setup beat it on accuracy beyond noise (across all 3 runs gpt-4o-mini was highest), every Luna setup was about half as consistent (temperature is not supported on Luna, and Luna obeys the old split-compound-foods rule), Luna was about 4x slower per log, and on recorded per-call cost Luna is 1.16x, the split 2.5x and Luna Pro 3.8x. Revisit after the system-prompt redesign and the dish-row fixes.
+
+**Correction (14 Nov 2026):** this report's key-spend cost figures (1.5x / 3.6x / 8x) and its Luna Pro and split latency were contaminated: the split-vs-whole A/B ran on the same eval key at the same time. Use the recorded per-call costs and the corrected tables in `docs/testing/MODEL-TESTING.md`.
 
 ---
 

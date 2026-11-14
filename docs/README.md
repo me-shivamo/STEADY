@@ -12,6 +12,7 @@ Every project document lives here. Only `README.md` (the GitHub front page) and 
 | [`journal/LEARNING.md`](journal/LEARNING.md) | Concepts explained as we met them | After explaining something new (Rule 2) |
 | [`testing/TESTING.md`](testing/TESTING.md) | Manual checklist, reset per build | Each test round |
 | [`testing/TEST_SCENARIOS.md`](testing/TEST_SCENARIOS.md) | The durable test spec that automated tests trace to | Writing or reviewing tests |
+| [`testing/MODEL-TESTING.md`](testing/MODEL-TESTING.md) | How we test AI models and prompts, plus a dated results log | Before any model or prompt change; add an entry after every test |
 | [`research/reports/`](research/reports/) | Finished research reports | Product and redesign decisions |
 | [`research/notes/`](research/notes/) | Raw notes behind each report, one folder per report | Checking a report's sources |
 | [`archive/`](archive/) | Superseded trackers, kept for their root-cause writeups | Rarely |
