@@ -1,0 +1,174 @@
+{
+  "label": "mini-whole",
+  "dataset": "dataset-v3.json",
+  "ids": null,
+  "search": "fts",
+  "repeat": 3,
+  "started_at": "2026-11-13T19:11:34.935Z",
+  "git_head": "d6b074d",
+  "models": {
+    "parse": {
+      "id": "openai/gpt-4o-mini",
+      "extra": {},
+      "listed": true,
+      "pricing": {
+        "prompt": 1.5e-7,
+        "completion": 6e-7
+      },
+      "supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "max_completion_tokens",
+        "max_tokens",
+        "prediction",
+        "presence_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_logprobs",
+        "top_p",
+        "web_search_options"
+      ],
+      "context_length": 128000
+    },
+    "match": {
+      "id": "openai/gpt-4o-mini",
+      "extra": {},
+      "listed": true,
+      "pricing": {
+        "prompt": 1.5e-7,
+        "completion": 6e-7
+      },
+      "supported_parameters": [
+        "frequency_penalty",
+        "logit_bias",
+        "logprobs",
+        "max_completion_tokens",
+        "max_tokens",
+        "prediction",
+        "presence_penalty",
+        "response_format",
+        "seed",
+        "stop",
+        "structured_outputs",
+        "temperature",
+        "tool_choice",
+        "tools",
+        "top_logprobs",
+        "top_p",
+        "web_search_options"
+      ],
+      "context_length": 128000
+    }
+  },
+  "warnings": [],
+  "decomp": "whole",
+  "finished_at": "2026-11-13T19:35:37.052Z",
+  "aborted": null,
+  "accuracy": {
+    "cases": 100,
+    "passed": 80,
+    "failed": 20,
+    "errored": 0,
+    "pass_rate": 0.8,
+    "unsure_cases": 0,
+    "rough_cases": 0,
+    "calories_error": {
+      "n": 95,
+      "medianAbs": 0.136,
+      "medianSigned": -0.0733,
+      "above": 30,
+      "below": 64
+    },
+    "protein_error": {
+      "n": 19,
+      "medianAbs": 0.1273,
+      "medianSigned": -0.0308,
+      "above": 8,
+      "below": 11
+    },
+    "consistency": {
+      "identical": 77,
+      "of": 95,
+      "runs": 3
+    }
+  },
+  "calls": {
+    "parse": {
+      "calls": 290,
+      "retry_calls": 0,
+      "http_or_api_errors": 0,
+      "empty": 0,
+      "json_strict_fail": 1,
+      "json_lenient_fail": 1,
+      "schema_fail": 0,
+      "finish_length": 0,
+      "served_models": [
+        "openai/gpt-4o-mini"
+      ],
+      "providers": {
+        "OpenAI": 290
+      },
+      "prompt_tokens": 626896,
+      "completion_tokens": 30299,
+      "reasoning_tokens": 0,
+      "cached_prompt_tokens": 589824,
+      "cost_usd": 0.067977,
+      "cost_sources": {
+        "openrouter_usage": 290,
+        "list_price": 0,
+        "unknown": 0
+      },
+      "latency_ms": {
+        "p50": 2334,
+        "p95": 3257,
+        "max": 6109
+      }
+    },
+    "match": {
+      "calls": 135,
+      "retry_calls": 0,
+      "http_or_api_errors": 0,
+      "empty": 0,
+      "json_strict_fail": 0,
+      "json_lenient_fail": 0,
+      "schema_fail": 0,
+      "finish_length": 0,
+      "served_models": [
+        "openai/gpt-4o-mini"
+      ],
+      "providers": {
+        "OpenAI": 135
+      },
+      "prompt_tokens": 205030,
+      "completion_tokens": 11547,
+      "reasoning_tokens": 0,
+      "cached_prompt_tokens": 166912,
+      "cost_usd": 0.025164,
+      "cost_sources": {
+        "openrouter_usage": 135,
+        "list_price": 0,
+        "unknown": 0
+      },
+      "latency_ms": {
+        "p50": 2361,
+        "p95": 4027,
+        "max": 4851
+      }
+    }
+  },
+  "per_log": {
+    "logs": 290,
+    "cost_usd_mean": 0.0003211768965517244,
+    "cost_usd_p50": 0.0002499,
+    "cost_usd_p95": 0.00046604999999999997,
+    "wall_ms_p50": 3429,
+    "wall_ms_p95": 8937
+  },
+  "total_cost_usd": 0.09314130000000008
+}

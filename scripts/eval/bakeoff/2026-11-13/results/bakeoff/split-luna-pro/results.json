@@ -1,0 +1,4987 @@
+[
+  {
+    "id": "i01",
+    "text": "2 rotis with dal makhani",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 457.5,
+      "protein_g": 16.6,
+      "carbs_g": 61.9,
+      "fat_g": 16.4
+    },
+    "expected": {
+      "calories": [
+        350,
+        650
+      ],
+      "protein_g": [
+        12,
+        26
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Whole wheat roti [usda] 80g (usda_match)",
+      "Cooked lentils and beans in dal makhani [ai_estimated] 110g (ai_estimate)",
+      "Cream and butter in dal makhani [ai_estimated] 15g (ai_estimate)",
+      "Tomato and spice gravy in dal makhani [ai_estimated] 25g (ai_estimate)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "ai_estimate",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Whole wheat roti",
+        "quantity_description": "2 rotis",
+        "quantity_g": 80,
+        "confidence": 0.95
+      },
+      {
+        "name": "Cooked lentils and beans in dal makhani",
+        "quantity_description": "about 1 small bowl",
+        "quantity_g": 110,
+        "confidence": 0.7
+      },
+      {
+        "name": "Cream and butter in dal makhani",
+        "quantity_description": "portion in about 1 small bowl",
+        "quantity_g": 15,
+        "confidence": 0.55
+      },
+      {
+        "name": "Tomato and spice gravy in dal makhani",
+        "quantity_description": "portion in about 1 small bowl",
+        "quantity_g": 25,
+        "confidence": 0.6
+      }
+    ],
+    "runCalories": [
+      457.5,
+      460.8,
+      306.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i02",
+    "text": "a plate of rajma chawal",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 499.8,
+      "protein_g": 17.1,
+      "carbs_g": 96.4,
+      "fat_g": 4.4
+    },
+    "expected": {
+      "calories": [
+        350,
+        650
+      ],
+      "protein_g": [
+        10,
+        24
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked white rice [usda] 220g (verified_exact)",
+      "Cooked kidney beans [usda] 125g (usda_match)",
+      "Rajma curry gravy with onion, tomato, and spices [ai_estimated] 55g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked white rice",
+        "quantity_description": "about 1¼ cups",
+        "quantity_g": 220,
+        "confidence": 0.85
+      },
+      {
+        "name": "Cooked kidney beans",
+        "quantity_description": "in rajma curry",
+        "quantity_g": 125,
+        "confidence": 0.75
+      },
+      {
+        "name": "Rajma curry gravy with onion, tomato, and spices",
+        "quantity_description": "gravy portion",
+        "quantity_g": 55,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      499.8,
+      516.1,
+      507.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i03",
+    "text": "3 idlis with sambar and chutney",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 405.3,
+      "protein_g": 11.1,
+      "carbs_g": 69.2,
+      "fat_g": 7.6
+    },
+    "expected": {
+      "calories": [
+        250,
+        480
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Idli [indb] 120g (verified_exact)",
+      "Sambar [indb] 240g (verified_exact)",
+      "Chutney [usda] 30g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Idli",
+        "quantity_description": "3 idlis",
+        "quantity_g": 120,
+        "confidence": 0.95
+      },
+      {
+        "name": "Sambar",
+        "quantity_description": "1 small bowl",
+        "quantity_g": 150,
+        "confidence": 0.8
+      },
+      {
+        "name": "Chutney",
+        "quantity_description": "1 small serving",
+        "quantity_g": 30,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      405.3,
+      411.3,
+      405.3
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i04",
+    "text": "one masala dosa",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 364,
+      "protein_g": 8.9,
+      "carbs_g": 61.5,
+      "fat_g": 8.5
+    },
+    "expected": {
+      "calories": [
+        250,
+        480
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Dosa [usda] 130g (verified_exact)",
+      "Potato masala filling [ai_estimated] 70g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Dosa",
+        "quantity_description": "1 masala dosa, dosa portion",
+        "quantity_g": 130,
+        "confidence": 0.78
+      },
+      {
+        "name": "Potato masala filling",
+        "quantity_description": "filling from 1 masala dosa",
+        "quantity_g": 70,
+        "confidence": 0.78
+      }
+    ],
+    "runCalories": [
+      364,
+      386.2,
+      356
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i05",
+    "text": "2 aloo parathas with curd",
+    "category": "indian",
+    "status": "fail",
+    "predicted": {
+      "calories": 942,
+      "protein_g": 25.9,
+      "carbs_g": 117.5,
+      "fat_g": 41.6
+    },
+    "expected": {
+      "calories": [
+        450,
+        800
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Whole wheat flour dough [ai_estimated] 180g (ai_estimate)",
+      "Potato filling [ai_estimated] 120g (ai_estimate)",
+      "Oil or ghee [usda] 30g (reference_match)",
+      "Curd [ai_estimated] 150g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "reference_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Whole wheat flour dough",
+        "quantity_description": "for 2 aloo parathas",
+        "quantity_g": 180,
+        "confidence": 0.72
+      },
+      {
+        "name": "Potato filling",
+        "quantity_description": "in 2 aloo parathas",
+        "quantity_g": 120,
+        "confidence": 0.72
+      },
+      {
+        "name": "Oil or ghee",
+        "quantity_description": "used to cook 2 aloo parathas",
+        "quantity_g": 30,
+        "confidence": 0.55
+      },
+      {
+        "name": "Curd",
+        "quantity_description": "about 1 small bowl",
+        "quantity_g": 150,
+        "confidence": 0.58
+      }
+    ],
+    "runCalories": [
+      942,
+      632.5,
+      991.2
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i06",
+    "text": "a bowl of upma",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 267.5,
+      "protein_g": 7.1,
+      "carbs_g": 39.6,
+      "fat_g": 8.8
+    },
+    "expected": {
+      "calories": [
+        170,
+        350
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked semolina [ai_estimated] 125g (ai_estimate)",
+      "Mixed vegetables [usda] 15g (verified_exact)",
+      "Cooking oil [ai_estimated] 8g (ai_estimate)",
+      "Upma spices and seasonings [ai_estimated] 2g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked semolina",
+        "quantity_description": "about 125 g in a bowl of upma",
+        "quantity_g": 125,
+        "confidence": 0.78
+      },
+      {
+        "name": "Mixed vegetables",
+        "quantity_description": "about 15 g",
+        "quantity_g": 15,
+        "confidence": 0.65
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "about 2 teaspoons",
+        "quantity_g": 8,
+        "confidence": 0.65
+      },
+      {
+        "name": "Upma spices and seasonings",
+        "quantity_description": "about 2 g",
+        "quantity_g": 2,
+        "confidence": 0.5
+      }
+    ],
+    "runCalories": [
+      267.5,
+      227.5,
+      284.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i07",
+    "text": "paneer bhurji with 2 rotis",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 555,
+      "protein_g": 27.9,
+      "carbs_g": 57.7,
+      "fat_g": 22.8
+    },
+    "expected": {
+      "calories": [
+        420,
+        700
+      ],
+      "protein_g": [
+        18,
+        36
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Paneer [ifct] 110g (verified_exact)",
+      "Onion [usda] 30g (verified_exact)",
+      "Tomato [usda] 30g (verified_exact)",
+      "Cooking oil [usda] 5g (usda_match)",
+      "Spices [ai_estimated] 5g (ai_estimate)",
+      "Roti [indb] 80g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact",
+      "usda_match",
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Paneer",
+        "quantity_description": "in one serving of paneer bhurji",
+        "quantity_g": 110,
+        "confidence": 0.75
+      },
+      {
+        "name": "Onion",
+        "quantity_description": "in paneer bhurji",
+        "quantity_g": 30,
+        "confidence": 0.65
+      },
+      {
+        "name": "Tomato",
+        "quantity_description": "in paneer bhurji",
+        "quantity_g": 30,
+        "confidence": 0.65
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "used to cook paneer bhurji",
+        "quantity_g": 5,
+        "confidence": 0.5
+      },
+      {
+        "name": "Spices",
+        "quantity_description": "in paneer bhurji",
+        "quantity_g": 5,
+        "confidence": 0.4
+      },
+      {
+        "name": "Roti",
+        "quantity_description": "2 rotis",
+        "quantity_g": 80,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      555,
+      564,
+      625
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i08",
+    "text": "chicken curry with rice",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 577,
+      "protein_g": 36.1,
+      "carbs_g": 63.5,
+      "fat_g": 18.4
+    },
+    "expected": {
+      "calories": [
+        450,
+        750
+      ],
+      "protein_g": [
+        25,
+        48
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked white rice [usda] 200g (verified_exact)",
+      "Cooked chicken [ai_estimated] 110g (ai_estimate)",
+      "Chicken curry sauce [ai_estimated] 90g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked white rice",
+        "quantity_description": "about 1¼ cups",
+        "quantity_g": 200,
+        "confidence": 0.75
+      },
+      {
+        "name": "Cooked chicken",
+        "quantity_description": "chicken pieces from curry",
+        "quantity_g": 110,
+        "confidence": 0.65
+      },
+      {
+        "name": "Chicken curry sauce",
+        "quantity_description": "gravy",
+        "quantity_g": 90,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      577,
+      581.5,
+      549.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i09",
+    "text": "a plate of pav bhaji",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 580.9,
+      "protein_g": 15,
+      "carbs_g": 82,
+      "fat_g": 22.1
+    },
+    "expected": {
+      "calories": [
+        350,
+        650
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Pav bhaji vegetable curry [ai_estimated] 200g (ai_estimate)",
+      "Pav bread rolls [ai_estimated] 100g (ai_estimate)",
+      "Butter [usda] 5g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pav bhaji vegetable curry",
+        "quantity_description": "1 serving",
+        "quantity_g": 200,
+        "confidence": 0.78
+      },
+      {
+        "name": "Pav bread rolls",
+        "quantity_description": "2 rolls",
+        "quantity_g": 100,
+        "confidence": 0.75
+      },
+      {
+        "name": "Butter",
+        "quantity_description": "small amount, mixed into the bhaji or served on top",
+        "quantity_g": 5,
+        "confidence": 0.48
+      }
+    ],
+    "runCalories": [
+      580.9,
+      659.7,
+      579.2
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i10",
+    "text": "2 vada pavs",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 621.4,
+      "protein_g": 13.8,
+      "carbs_g": 95.5,
+      "fat_g": 20.6
+    },
+    "expected": {
+      "calories": [
+        480,
+        820
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Pav bread [ai_estimated] 100g (ai_estimate)",
+      "Spiced potato filling [ai_estimated] 100g (ai_estimate)",
+      "Besan coating [ai_estimated] 30g (ai_estimate)",
+      "Chutney [usda] 20g (verified_exact)",
+      "Oil absorbed during frying [usda] 10g (usda_match)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "ai_estimate",
+      "verified_exact",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pav bread",
+        "quantity_description": "2 buns",
+        "quantity_g": 100,
+        "confidence": 0.82
+      },
+      {
+        "name": "Spiced potato filling",
+        "quantity_description": "filling from 2 vadas",
+        "quantity_g": 100,
+        "confidence": 0.75
+      },
+      {
+        "name": "Besan coating",
+        "quantity_description": "coating from 2 vadas",
+        "quantity_g": 30,
+        "confidence": 0.68
+      },
+      {
+        "name": "Chutney",
+        "quantity_description": "about 2 small servings",
+        "quantity_g": 20,
+        "confidence": 0.6
+      },
+      {
+        "name": "Oil absorbed during frying",
+        "quantity_description": "estimated for 2 vadas",
+        "quantity_g": 10,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      621.4,
+      707.8,
+      567.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i11",
+    "text": "a bowl of rajma",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 222.9,
+      "protein_g": 12.6,
+      "carbs_g": 35.7,
+      "fat_g": 2.5
+    },
+    "expected": {
+      "calories": [
+        180,
+        330
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Kidney beans, cooked [usda] 133g (usda_match)",
+      "Rajma curry gravy [ai_estimated] 45g (ai_estimate)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Kidney beans, cooked",
+        "quantity_description": "about ¾ cup",
+        "quantity_g": 105,
+        "confidence": 0.8
+      },
+      {
+        "name": "Rajma curry gravy",
+        "quantity_description": "about 3 tablespoons",
+        "quantity_g": 45,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      222.9,
+      182,
+      167
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i12",
+    "text": "half plate chole chawal",
+    "category": "indian",
+    "status": "fail",
+    "predicted": {
+      "calories": 207.4,
+      "protein_g": 4.8,
+      "carbs_g": 38.8,
+      "fat_g": 2.7
+    },
+    "expected": {
+      "calories": [
+        250,
+        460
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Cooked rice [usda] 110g (verified_exact)",
+      "Chole [indb] 90g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked rice",
+        "quantity_description": "about half of a half plate",
+        "quantity_g": 110,
+        "confidence": 0.75
+      },
+      {
+        "name": "Chole",
+        "quantity_description": "about half of a half plate",
+        "quantity_g": 90,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      207.4,
+      271.2,
+      207.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i13",
+    "text": "a plate of poha",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 310.3,
+      "protein_g": 7,
+      "carbs_g": 46.7,
+      "fat_g": 11
+    },
+    "expected": {
+      "calories": [
+        180,
+        500
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked flattened rice (poha) [ai_estimated] 130g (ai_estimate)",
+      "Onion [usda] 20g (verified_exact)",
+      "Potato [ai_estimated] 20g (ai_estimate)",
+      "Peanuts [ai_estimated] 10g (ai_estimate)",
+      "Cooking oil [usda] 5g (usda_match)",
+      "Spices and herbs [ai_estimated] 5g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate",
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked flattened rice (poha)",
+        "quantity_description": "about 1 serving",
+        "quantity_g": 130,
+        "confidence": 0.78
+      },
+      {
+        "name": "Onion",
+        "quantity_description": "in the poha",
+        "quantity_g": 20,
+        "confidence": 0.7
+      },
+      {
+        "name": "Potato",
+        "quantity_description": "in the poha",
+        "quantity_g": 20,
+        "confidence": 0.55
+      },
+      {
+        "name": "Peanuts",
+        "quantity_description": "small amount mixed in",
+        "quantity_g": 10,
+        "confidence": 0.55
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "used in preparation",
+        "quantity_g": 5,
+        "confidence": 0.5
+      },
+      {
+        "name": "Spices and herbs",
+        "quantity_description": "seasoning and garnish",
+        "quantity_g": 5,
+        "confidence": 0.45
+      }
+    ],
+    "runCalories": [
+      310.3,
+      311.3,
+      322.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i14",
+    "text": "2 samosas",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 310,
+      "protein_g": 5.1,
+      "carbs_g": 33.2,
+      "fat_g": 17.5
+    },
+    "expected": {
+      "calories": [
+        300,
+        560
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Samosa [usda] 100g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Samosa",
+        "quantity_description": "2 pieces",
+        "quantity_g": 100,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      310,
+      310,
+      310
+    ],
+    "consistent": true
+  },
+  {
+    "id": "i15",
+    "text": "a plate of chicken biryani",
+    "category": "indian",
+    "status": "fail",
+    "predicted": {
+      "calories": 644,
+      "protein_g": 44.5,
+      "carbs_g": 59.5,
+      "fat_g": 22.8
+    },
+    "expected": {
+      "calories": [
+        450,
+        800
+      ],
+      "protein_g": [
+        20,
+        42
+      ]
+    },
+    "offFields": [
+      "protein_g"
+    ],
+    "macroSources": [
+      "Cooked basmati rice [usda] 180g (verified_exact)",
+      "Chicken, cooked [ai_estimated] 140g (ai_estimate)",
+      "Biryani masala, sauce, and oil [ai_estimated] 80g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked basmati rice",
+        "quantity_description": "about 1 plate portion",
+        "quantity_g": 180,
+        "confidence": 0.8
+      },
+      {
+        "name": "Chicken, cooked",
+        "quantity_description": "biryani portion",
+        "quantity_g": 140,
+        "confidence": 0.75
+      },
+      {
+        "name": "Biryani masala, sauce, and oil",
+        "quantity_description": "mixed into the biryani",
+        "quantity_g": 80,
+        "confidence": 0.6
+      }
+    ],
+    "runCalories": [
+      644,
+      620,
+      612
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i16",
+    "text": "2 rotis with bhindi sabzi",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 328.8,
+      "protein_g": 8.6,
+      "carbs_g": 47.5,
+      "fat_g": 11.2
+    },
+    "expected": {
+      "calories": [
+        280,
+        500
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Roti [indb] 80g (verified_exact)",
+      "Okra [ai_estimated] 110g (ai_estimate)",
+      "Onion and tomato [ai_estimated] 25g (ai_estimate)",
+      "Cooking oil [usda] 10g (usda_match)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Roti",
+        "quantity_description": "2 rotis",
+        "quantity_g": 80,
+        "confidence": 0.9
+      },
+      {
+        "name": "Okra",
+        "quantity_description": "in bhindi sabzi",
+        "quantity_g": 110,
+        "confidence": 0.75
+      },
+      {
+        "name": "Onion and tomato",
+        "quantity_description": "in bhindi sabzi",
+        "quantity_g": 25,
+        "confidence": 0.6
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "used in bhindi sabzi",
+        "quantity_g": 10,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      328.8,
+      320.4,
+      345.3
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i17",
+    "text": "dal tadka with jeera rice",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 538.9,
+      "protein_g": 12.2,
+      "carbs_g": 75.7,
+      "fat_g": 20.4
+    },
+    "expected": {
+      "calories": [
+        350,
+        620
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Jeera rice [ai_estimated] 220g (ai_estimate)",
+      "Dal tadka [indb] 170g (verified_exact)",
+      "Oil or ghee used for tempering [ai_estimated] 5g (ai_estimate)",
+      "Cumin and spices [ai_estimated] 5g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Jeera rice",
+        "quantity_description": "about 1 plate portion",
+        "quantity_g": 220,
+        "confidence": 0.78
+      },
+      {
+        "name": "Dal tadka",
+        "quantity_description": "about 1 bowl",
+        "quantity_g": 170,
+        "confidence": 0.78
+      },
+      {
+        "name": "Oil or ghee used for tempering",
+        "quantity_description": "small amount",
+        "quantity_g": 5,
+        "confidence": 0.55
+      },
+      {
+        "name": "Cumin and spices",
+        "quantity_description": "seasoning",
+        "quantity_g": 5,
+        "confidence": 0.5
+      }
+    ],
+    "runCalories": [
+      538.9,
+      657.6,
+      663.8
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i18",
+    "text": "a bowl of curd",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 91.5,
+      "protein_g": 5.3,
+      "carbs_g": 7.1,
+      "fat_g": 5
+    },
+    "expected": {
+      "calories": [
+        85,
+        210
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Plain curd [ai_estimated] 150g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Plain curd",
+        "quantity_description": "1 small bowl",
+        "quantity_g": 150,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      91.5,
+      91.5,
+      91.5
+    ],
+    "consistent": true
+  },
+  {
+    "id": "i19",
+    "text": "2 moong dal chillas",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 363.8,
+      "protein_g": 16.2,
+      "carbs_g": 43.2,
+      "fat_g": 13.5
+    },
+    "expected": {
+      "calories": [
+        200,
+        380
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Moong dal chilla [ai_estimated] 180g (ai_estimate)",
+      "Cooking oil [usda] 4.5g (usda_match)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Moong dal chilla",
+        "quantity_description": "2 medium chillas",
+        "quantity_g": 180,
+        "confidence": 0.78
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "about 1 teaspoon used for cooking",
+        "quantity_g": 5,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      363.8,
+      306,
+      323
+    ],
+    "consistent": false
+  },
+  {
+    "id": "i20",
+    "text": "a masala omelette with 2 eggs",
+    "category": "indian",
+    "status": "pass",
+    "predicted": {
+      "calories": 201.8,
+      "protein_g": 12.8,
+      "carbs_g": 3.2,
+      "fat_g": 15
+    },
+    "expected": {
+      "calories": [
+        180,
+        340
+      ],
+      "protein_g": [
+        12,
+        21
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Egg [usda] 100g (verified_exact)",
+      "Onion [usda] 15g (verified_exact)",
+      "Tomato [usda] 15g (verified_exact)",
+      "Green chili [usda] 3g (usda_match)",
+      "Cooking oil [usda] 5g (usda_match)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact",
+      "usda_match",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Egg",
+        "quantity_description": "2 large eggs",
+        "quantity_g": 100,
+        "confidence": 0.98
+      },
+      {
+        "name": "Onion",
+        "quantity_description": "a little, chopped",
+        "quantity_g": 15,
+        "confidence": 0.65
+      },
+      {
+        "name": "Tomato",
+        "quantity_description": "a little, chopped",
+        "quantity_g": 15,
+        "confidence": 0.65
+      },
+      {
+        "name": "Green chili",
+        "quantity_description": "a little, chopped",
+        "quantity_g": 3,
+        "confidence": 0.55
+      },
+      {
+        "name": "Cooking oil",
+        "quantity_description": "about 1 teaspoon",
+        "quantity_g": 5,
+        "confidence": 0.45
+      }
+    ],
+    "runCalories": [
+      201.8,
+      201.8,
+      201.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "b01",
+    "text": "a big mac",
+    "category": "branded",
+    "status": "fail",
+    "predicted": {
+      "calories": 584.1,
+      "protein_g": 32.7,
+      "carbs_g": 41.2,
+      "fat_g": 31.2
+    },
+    "expected": {
+      "calories": [
+        480,
+        650
+      ],
+      "protein_g": [
+        22,
+        31
+      ]
+    },
+    "offFields": [
+      "protein_g"
+    ],
+    "macroSources": [
+      "Big Mac sesame seed bun [ai_estimated] 75g (ai_estimate)",
+      "Beef patties [usda] 90g (reference_match)",
+      "American cheese [usda] 14g (usda_match)",
+      "Big Mac sauce [ai_estimated] 20g (ai_estimate)",
+      "Shredded lettuce [usda] 8g (reference_match)",
+      "Pickle slices [usda] 5g (usda_match)",
+      "Onion [usda] 7g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "reference_match",
+      "usda_match",
+      "ai_estimate",
+      "reference_match",
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Big Mac sesame seed bun",
+        "quantity_description": "1 bun",
+        "quantity_g": 75,
+        "confidence": 0.8
+      },
+      {
+        "name": "Beef patties",
+        "quantity_description": "2 patties",
+        "quantity_g": 90,
+        "confidence": 0.8
+      },
+      {
+        "name": "American cheese",
+        "quantity_description": "1 slice",
+        "quantity_g": 14,
+        "confidence": 0.85
+      },
+      {
+        "name": "Big Mac sauce",
+        "quantity_description": "about 1 serving",
+        "quantity_g": 20,
+        "confidence": 0.7
+      },
+      {
+        "name": "Shredded lettuce",
+        "quantity_description": "about 1 portion",
+        "quantity_g": 8,
+        "confidence": 0.7
+      },
+      {
+        "name": "Pickle slices",
+        "quantity_description": "about 2 slices",
+        "quantity_g": 5,
+        "confidence": 0.7
+      },
+      {
+        "name": "Onion",
+        "quantity_description": "about 1 portion",
+        "quantity_g": 7,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      584.1,
+      586.7,
+      589.6
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b02",
+    "text": "a mcchicken burger",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 431.4,
+      "protein_g": 16,
+      "carbs_g": 40.5,
+      "fat_g": 23.2
+    },
+    "expected": {
+      "calories": [
+        340,
+        480
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Burger bun [ai_estimated] 60g (ai_estimate)",
+      "Breaded chicken patty [usda] 70g (usda_match)",
+      "Mayonnaise [indb] 8g (verified_exact)",
+      "Lettuce [ifct] 5g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match",
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Burger bun",
+        "quantity_description": "1 bun",
+        "quantity_g": 60,
+        "confidence": 0.85
+      },
+      {
+        "name": "Breaded chicken patty",
+        "quantity_description": "1 patty",
+        "quantity_g": 70,
+        "confidence": 0.85
+      },
+      {
+        "name": "Mayonnaise",
+        "quantity_description": "1 small serving",
+        "quantity_g": 8,
+        "confidence": 0.75
+      },
+      {
+        "name": "Lettuce",
+        "quantity_description": "a few leaves",
+        "quantity_g": 5,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      431.4,
+      501.7,
+      586.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b03",
+    "text": "large fries from mcdonalds",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 497.4,
+      "protein_g": 5.3,
+      "carbs_g": 65.6,
+      "fat_g": 23.9
+    },
+    "expected": {
+      "calories": [
+        420,
+        580
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "McDonald's French fries [usda] 154g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "McDonald's French fries",
+        "quantity_description": "1 large serving",
+        "quantity_g": 154,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      497.4,
+      497.4,
+      497.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "b04",
+    "text": "6 chicken mcnuggets",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 289.9,
+      "protein_g": 15.2,
+      "carbs_g": 14.5,
+      "fat_g": 19
+    },
+    "expected": {
+      "calories": [
+        220,
+        330
+      ],
+      "protein_g": [
+        12,
+        21
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Chicken McNuggets [usda] 96g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Chicken McNuggets",
+        "quantity_description": "6 pieces",
+        "quantity_g": 96,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      289.9,
+      259.2,
+      289.9
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b05",
+    "text": "a whopper from burger king",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 648.4,
+      "protein_g": 33.7,
+      "carbs_g": 43,
+      "fat_g": 37.3
+    },
+    "expected": {
+      "calories": [
+        560,
+        760
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Whopper bun [ai_estimated] 75g (ai_estimate)",
+      "Beef patty [usda] 100g (verified_exact)",
+      "Mayonnaise [indb] 18g (verified_exact)",
+      "Tomato [usda] 20g (verified_exact)",
+      "Lettuce [ifct] 10g (verified_exact)",
+      "Onion [usda] 14g (verified_exact)",
+      "Pickles [usda] 8g (usda_match)",
+      "Ketchup [usda] 10g (reference_match)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact",
+      "verified_exact",
+      "verified_exact",
+      "verified_exact",
+      "verified_exact",
+      "usda_match",
+      "reference_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Whopper bun",
+        "quantity_description": "1 bun",
+        "quantity_g": 75,
+        "confidence": 0.82
+      },
+      {
+        "name": "Beef patty",
+        "quantity_description": "1 patty",
+        "quantity_g": 100,
+        "confidence": 0.8
+      },
+      {
+        "name": "Mayonnaise",
+        "quantity_description": "about 1 tbsp",
+        "quantity_g": 18,
+        "confidence": 0.72
+      },
+      {
+        "name": "Tomato",
+        "quantity_description": "2 slices",
+        "quantity_g": 20,
+        "confidence": 0.75
+      },
+      {
+        "name": "Lettuce",
+        "quantity_description": "a few leaves",
+        "quantity_g": 10,
+        "confidence": 0.7
+      },
+      {
+        "name": "Onion",
+        "quantity_description": "a few slices",
+        "quantity_g": 8,
+        "confidence": 0.7
+      },
+      {
+        "name": "Pickles",
+        "quantity_description": "a few slices",
+        "quantity_g": 8,
+        "confidence": 0.7
+      },
+      {
+        "name": "Ketchup",
+        "quantity_description": "about 2 tsp",
+        "quantity_g": 10,
+        "confidence": 0.68
+      }
+    ],
+    "runCalories": [
+      648.4,
+      669.6,
+      689.9
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b06",
+    "text": "footlong turkey sub from subway",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 525.4,
+      "protein_g": 27.7,
+      "carbs_g": 81.8,
+      "fat_g": 9
+    },
+    "expected": {
+      "calories": [
+        450,
+        680
+      ],
+      "protein_g": [
+        24,
+        42
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Submarine sandwich bread [ai_estimated] 156g (ai_estimate)",
+      "Sliced turkey breast [usda] 90g (usda_match)",
+      "Mixed sandwich vegetables [ai_estimated] 35g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Submarine sandwich bread",
+        "quantity_description": "1 footlong roll",
+        "quantity_g": 156,
+        "confidence": 0.87
+      },
+      {
+        "name": "Sliced turkey breast",
+        "quantity_description": "turkey filling for 1 footlong sub",
+        "quantity_g": 90,
+        "confidence": 0.75
+      },
+      {
+        "name": "Mixed sandwich vegetables",
+        "quantity_description": "vegetables in 1 footlong sub",
+        "quantity_g": 35,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      525.4,
+      511.1,
+      593.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b07",
+    "text": "2 slices of dominos medium margherita",
+    "category": "branded",
+    "status": "fail",
+    "predicted": {
+      "calories": 555.7,
+      "protein_g": 29.4,
+      "carbs_g": 42.1,
+      "fat_g": 30.1
+    },
+    "expected": {
+      "calories": [
+        330,
+        530
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Pizza crust [usda] 120g (verified_exact)",
+      "Mozzarella cheese [usda] 65g (usda_match)",
+      "Tomato pizza sauce [usda] 32g (usda_match)",
+      "Italian herbs and seasoning [ai_estimated] 3g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "usda_match",
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pizza crust",
+        "quantity_description": "crust from 2 medium Margherita slices",
+        "quantity_g": 120,
+        "confidence": 0.75
+      },
+      {
+        "name": "Mozzarella cheese",
+        "quantity_description": "topping on 2 medium Margherita slices",
+        "quantity_g": 65,
+        "confidence": 0.75
+      },
+      {
+        "name": "Tomato pizza sauce",
+        "quantity_description": "sauce on 2 medium Margherita slices",
+        "quantity_g": 32,
+        "confidence": 0.75
+      },
+      {
+        "name": "Italian herbs and seasoning",
+        "quantity_description": "seasoning on 2 medium Margherita slices",
+        "quantity_g": 3,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      555.7,
+      547.4,
+      795.6
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b08",
+    "text": "starbucks tall cappuccino",
+    "category": "branded",
+    "status": "fail",
+    "predicted": {
+      "calories": 146.7,
+      "protein_g": 7.7,
+      "carbs_g": 12,
+      "fat_g": 8
+    },
+    "expected": {
+      "calories": [
+        50,
+        145
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Steamed milk and milk foam [ai_estimated] 240g (ai_estimate)",
+      "Espresso [usda] 30g (usda_match)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Steamed milk and milk foam",
+        "quantity_description": "milk in 1 tall cappuccino",
+        "quantity_g": 240,
+        "confidence": 0.75
+      },
+      {
+        "name": "Espresso",
+        "quantity_description": "1 shot",
+        "quantity_g": 30,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      146.7,
+      122.7,
+      149.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b09",
+    "text": "a can of red bull",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 107.5,
+      "protein_g": 1.2,
+      "carbs_g": 25.5,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        95,
+        175
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Red Bull energy drink [usda] 250g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Red Bull energy drink",
+        "quantity_description": "1 can (250 ml)",
+        "quantity_g": 250,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      107.5,
+      107.5,
+      152.7
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b10",
+    "text": "a snickers bar",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 255.3,
+      "protein_g": 3.9,
+      "carbs_g": 32,
+      "fat_g": 12.4
+    },
+    "expected": {
+      "calories": [
+        200,
+        290
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Snickers bar [usda] 52g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Snickers bar",
+        "quantity_description": "1 standard bar",
+        "quantity_g": 52,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      255.3,
+      243.5,
+      249
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b11",
+    "text": "a packet of maggi noodles",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 301,
+      "protein_g": 6.4,
+      "carbs_g": 41.6,
+      "fat_g": 11.8
+    },
+    "expected": {
+      "calories": [
+        260,
+        430
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Instant noodles, dry [ai_estimated] 63g (ai_estimate)",
+      "Instant noodle seasoning [ai_estimated] 7g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Instant noodles, dry",
+        "quantity_description": "1 packet (noodle cake)",
+        "quantity_g": 63,
+        "confidence": 0.8
+      },
+      {
+        "name": "Instant noodle seasoning",
+        "quantity_description": "1 packet seasoning sachet",
+        "quantity_g": 7,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      301,
+      305,
+      307.2
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b12",
+    "text": "a small bag of lays chips",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 149,
+      "protein_g": 1.8,
+      "carbs_g": 15.1,
+      "fat_g": 9.5
+    },
+    "expected": {
+      "calories": [
+        120,
+        230
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Lay’s potato chips [usda] 28g (reference_match)"
+    ],
+    "resolutions": [
+      "reference_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Lay’s potato chips",
+        "quantity_description": "1 small bag",
+        "quantity_g": 28,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      149,
+      149,
+      149
+    ],
+    "consistent": true
+  },
+  {
+    "id": "b13",
+    "text": "kfc zinger burger",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 585.1,
+      "protein_g": 24.5,
+      "carbs_g": 53.1,
+      "fat_g": 30.4
+    },
+    "expected": {
+      "calories": [
+        380,
+        590
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Burger bun [ai_estimated] 70g (ai_estimate)",
+      "Breaded fried chicken fillet [ai_estimated] 100g (ai_estimate)",
+      "Mayonnaise sauce [usda] 20g (usda_match)",
+      "Lettuce [ifct] 10g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Burger bun",
+        "quantity_description": "1 bun",
+        "quantity_g": 70,
+        "confidence": 0.85
+      },
+      {
+        "name": "Breaded fried chicken fillet",
+        "quantity_description": "1 fillet",
+        "quantity_g": 100,
+        "confidence": 0.85
+      },
+      {
+        "name": "Mayonnaise sauce",
+        "quantity_description": "1 portion",
+        "quantity_g": 20,
+        "confidence": 0.75
+      },
+      {
+        "name": "Lettuce",
+        "quantity_description": "a few leaves",
+        "quantity_g": 10,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      585.1,
+      670.2,
+      663.2
+    ],
+    "consistent": false
+  },
+  {
+    "id": "b14",
+    "text": "4 oreo cookies",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 209.4,
+      "protein_g": 2.1,
+      "carbs_g": 30.9,
+      "fat_g": 9.5
+    },
+    "expected": {
+      "calories": [
+        165,
+        265
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Oreo cookies [usda] 44g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Oreo cookies",
+        "quantity_description": "4 cookies",
+        "quantity_g": 44,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      209.4,
+      209.4,
+      209.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "b15",
+    "text": "a slice of pepperoni pizza from pizza hut",
+    "category": "branded",
+    "status": "pass",
+    "predicted": {
+      "calories": 324.7,
+      "protein_g": 16.2,
+      "carbs_g": 18.2,
+      "fat_g": 20.5
+    },
+    "expected": {
+      "calories": [
+        230,
+        390
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Pizza crust [usda] 55g (verified_exact)",
+      "Tomato pizza sauce [usda] 10g (usda_match)",
+      "Mozzarella cheese [usda] 30g (usda_match)",
+      "Pepperoni [usda] 15g (usda_match)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "usda_match",
+      "usda_match",
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pizza crust",
+        "quantity_description": "part of 1 slice",
+        "quantity_g": 55,
+        "confidence": 0.8
+      },
+      {
+        "name": "Tomato pizza sauce",
+        "quantity_description": "part of 1 slice",
+        "quantity_g": 10,
+        "confidence": 0.75
+      },
+      {
+        "name": "Mozzarella cheese",
+        "quantity_description": "part of 1 slice",
+        "quantity_g": 30,
+        "confidence": 0.8
+      },
+      {
+        "name": "Pepperoni",
+        "quantity_description": "part of 1 slice",
+        "quantity_g": 15,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      324.7,
+      450.7,
+      312.6
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w01",
+    "text": "2 scrambled eggs with a slice of toast and butter",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 301.5,
+      "protein_g": 13.9,
+      "carbs_g": 21.1,
+      "fat_g": 17.5
+    },
+    "expected": {
+      "calories": [
+        250,
+        430
+      ],
+      "protein_g": [
+        13,
+        23
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Scrambled eggs [usda] 100g (verified_exact)",
+      "Toast [usda] 37g (verified_exact)",
+      "Butter [usda] 5g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Scrambled eggs",
+        "quantity_description": "2 large eggs",
+        "quantity_g": 100,
+        "confidence": 0.95
+      },
+      {
+        "name": "Toast",
+        "quantity_description": "1 slice",
+        "quantity_g": 25,
+        "confidence": 0.95
+      },
+      {
+        "name": "Butter",
+        "quantity_description": "thin spread on 1 slice of toast",
+        "quantity_g": 5,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      301.5,
+      301.5,
+      301.5
+    ],
+    "consistent": true
+  },
+  {
+    "id": "w02",
+    "text": "a bowl of oatmeal with honey",
+    "category": "western-home",
+    "status": "fail",
+    "predicted": {
+      "calories": 163.3,
+      "protein_g": 5,
+      "carbs_g": 29.8,
+      "fat_g": 2.8
+    },
+    "expected": {
+      "calories": [
+        180,
+        360
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Cooked oatmeal [ai_estimated] 200g (ai_estimate)",
+      "Honey [usda] 7g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked oatmeal",
+        "quantity_description": "1 bowl",
+        "quantity_g": 200,
+        "confidence": 0.75
+      },
+      {
+        "name": "Honey",
+        "quantity_description": "a drizzle",
+        "quantity_g": 7,
+        "confidence": 0.6
+      }
+    ],
+    "runCalories": [
+      163.3,
+      181.3,
+      191.7
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w03",
+    "text": "greek yogurt with berries",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 161.6,
+      "protein_g": 17.7,
+      "carbs_g": 15.7,
+      "fat_g": 3.5
+    },
+    "expected": {
+      "calories": [
+        110,
+        270
+      ],
+      "protein_g": [
+        10,
+        25
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Greek yogurt, plain [usda] 170g (usda_match)",
+      "Mixed berries [ai_estimated] 75g (ai_estimate)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Greek yogurt, plain",
+        "quantity_description": "1 small bowl",
+        "quantity_g": 170,
+        "confidence": 0.75
+      },
+      {
+        "name": "Mixed berries",
+        "quantity_description": "½ cup",
+        "quantity_g": 75,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      161.6,
+      159.1,
+      134.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w04",
+    "text": "avocado toast, half an avocado on 2 slices",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 353.1,
+      "protein_g": 9.3,
+      "carbs_g": 45.3,
+      "fat_g": 15.9
+    },
+    "expected": {
+      "calories": [
+        290,
+        480
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Toast [usda] 74g (verified_exact)",
+      "Avocado [usda] 75g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Toast",
+        "quantity_description": "2 slices",
+        "quantity_g": 50,
+        "confidence": 0.95
+      },
+      {
+        "name": "Avocado",
+        "quantity_description": "1/2 avocado",
+        "quantity_g": 75,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      353.1,
+      353.1,
+      353.1
+    ],
+    "consistent": true
+  },
+  {
+    "id": "w05",
+    "text": "a peanut butter sandwich",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 339,
+      "protein_g": 13.2,
+      "carbs_g": 34.9,
+      "fat_g": 17.6
+    },
+    "expected": {
+      "calories": [
+        290,
+        480
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Bread [usda] 58g (verified_exact)",
+      "Peanut butter [usda] 32g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Bread",
+        "quantity_description": "2 slices",
+        "quantity_g": 50,
+        "confidence": 0.85
+      },
+      {
+        "name": "Peanut butter",
+        "quantity_description": "2 tablespoons",
+        "quantity_g": 32,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      339,
+      339,
+      339
+    ],
+    "consistent": true
+  },
+  {
+    "id": "w06",
+    "text": "3 pancakes with maple syrup",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 474,
+      "protein_g": 10.2,
+      "carbs_g": 63.9,
+      "fat_g": 19.5
+    },
+    "expected": {
+      "calories": [
+        400,
+        720
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Pancakes [indb] 180g (reference_match)",
+      "Maple syrup [usda] 40g (verified_exact)"
+    ],
+    "resolutions": [
+      "reference_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pancakes",
+        "quantity_description": "3 medium pancakes",
+        "quantity_g": 180,
+        "confidence": 0.75
+      },
+      {
+        "name": "Maple syrup",
+        "quantity_description": "about 2 tablespoons",
+        "quantity_g": 40,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      474,
+      565.6,
+      352
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w07",
+    "text": "a bowl of cornflakes with milk",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 201.7,
+      "protein_g": 7.2,
+      "carbs_g": 32.6,
+      "fat_g": 5.1
+    },
+    "expected": {
+      "calories": [
+        150,
+        310
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cornflakes [ai_estimated] 30g (ai_estimate)",
+      "Milk [ai_estimated] 155g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cornflakes",
+        "quantity_description": "1 bowl, about 30 g",
+        "quantity_g": 30,
+        "confidence": 0.75
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "about 150 ml",
+        "quantity_g": 155,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      201.7,
+      225.7,
+      232.8
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w08",
+    "text": "2 slices of french toast",
+    "category": "western-home",
+    "status": "fail",
+    "predicted": {
+      "calories": 242.5,
+      "protein_g": 12.6,
+      "carbs_g": 29.8,
+      "fat_g": 7.6
+    },
+    "expected": {
+      "calories": [
+        290,
+        510
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Bread [usda] 58g (verified_exact)",
+      "Egg [usda] 50g (verified_exact)",
+      "Milk [ai_estimated] 30g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Bread",
+        "quantity_description": "2 slices",
+        "quantity_g": 50,
+        "confidence": 0.9
+      },
+      {
+        "name": "Egg",
+        "quantity_description": "1 large egg",
+        "quantity_g": 50,
+        "confidence": 0.75
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "about 2 tbsp",
+        "quantity_g": 30,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      242.5,
+      303.9,
+      296.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w09",
+    "text": "a banana smoothie with milk",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 255.7,
+      "protein_g": 9.2,
+      "carbs_g": 38.8,
+      "fat_g": 8.6
+    },
+    "expected": {
+      "calories": [
+        175,
+        360
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Banana [usda] 118g (verified_exact)",
+      "Milk [ai_estimated] 247g (ai_estimate)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Banana",
+        "quantity_description": "1 medium banana",
+        "quantity_g": 118,
+        "confidence": 0.9
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "1 cup",
+        "quantity_g": 247,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      255.7,
+      255.7,
+      255.7
+    ],
+    "consistent": true
+  },
+  {
+    "id": "w10",
+    "text": "2 boiled eggs",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 155,
+      "protein_g": 12.6,
+      "carbs_g": 1.1,
+      "fat_g": 10.6
+    },
+    "expected": {
+      "calories": [
+        125,
+        180
+      ],
+      "protein_g": [
+        11,
+        15
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Boiled egg [usda] 100g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Boiled egg",
+        "quantity_description": "2 large eggs",
+        "quantity_g": 100,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      155,
+      155,
+      155
+    ],
+    "consistent": true
+  },
+  {
+    "id": "w11",
+    "text": "a protein shake with milk",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 270.7,
+      "protein_g": 30.3,
+      "carbs_g": 14.9,
+      "fat_g": 9.8
+    },
+    "expected": {
+      "calories": [
+        215,
+        370
+      ],
+      "protein_g": [
+        24,
+        42
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Protein powder [ai_estimated] 30g (ai_estimate)",
+      "Milk [ai_estimated] 247g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Protein powder",
+        "quantity_description": "1 scoop",
+        "quantity_g": 30,
+        "confidence": 0.7
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "1 cup",
+        "quantity_g": 247,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      270.7,
+      264.7,
+      270.7
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w12",
+    "text": "a cheese omelette with 2 eggs",
+    "category": "western-home",
+    "status": "fail",
+    "predicted": {
+      "calories": 240.8,
+      "protein_g": 18.2,
+      "carbs_g": 1.7,
+      "fat_g": 17.4
+    },
+    "expected": {
+      "calories": [
+        250,
+        430
+      ],
+      "protein_g": [
+        14,
+        25
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Egg [usda] 100g (verified_exact)",
+      "Cheese [usda] 25g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Egg",
+        "quantity_description": "2 large eggs",
+        "quantity_g": 100,
+        "confidence": 0.95
+      },
+      {
+        "name": "Cheese",
+        "quantity_description": "about 1 small handful",
+        "quantity_g": 25,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      240.8,
+      222.2,
+      222.2
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w13",
+    "text": "a bagel with cream cheese",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 369,
+      "protein_g": 12.4,
+      "carbs_g": 54.1,
+      "fat_g": 11.6
+    },
+    "expected": {
+      "calories": [
+        300,
+        490
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Plain bagel [usda] 100g (usda_match)",
+      "Cream cheese [usda] 30g (verified_exact)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Plain bagel",
+        "quantity_description": "1 medium bagel",
+        "quantity_g": 100,
+        "confidence": 0.85
+      },
+      {
+        "name": "Cream cheese",
+        "quantity_description": "about 2 tablespoons",
+        "quantity_g": 30,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      369,
+      355,
+      369
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w14",
+    "text": "a slice of toast with jam",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 158.3,
+      "protein_g": 4,
+      "carbs_g": 29.8,
+      "fat_g": 2.4
+    },
+    "expected": {
+      "calories": [
+        105,
+        225
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Toast [usda] 37g (verified_exact)",
+      "Jam [usda] 15g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Toast",
+        "quantity_description": "1 slice",
+        "quantity_g": 25,
+        "confidence": 0.95
+      },
+      {
+        "name": "Jam",
+        "quantity_description": "1 spread",
+        "quantity_g": 15,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      158.3,
+      172.2,
+      158.3
+    ],
+    "consistent": false
+  },
+  {
+    "id": "w15",
+    "text": "granola with yogurt",
+    "category": "western-home",
+    "status": "pass",
+    "predicted": {
+      "calories": 290.1,
+      "protein_g": 13.4,
+      "carbs_g": 32.2,
+      "fat_g": 12
+    },
+    "expected": {
+      "calories": [
+        240,
+        460
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Granola [usda] 40g (verified_exact)",
+      "Yogurt [usda] 150g (reference_match)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "reference_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Granola",
+        "quantity_description": "about 1/3 cup",
+        "quantity_g": 40,
+        "confidence": 0.65
+      },
+      {
+        "name": "Yogurt",
+        "quantity_description": "about 3/4 cup",
+        "quantity_g": 150,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      290.1,
+      290.1,
+      290.1
+    ],
+    "consistent": true
+  },
+  {
+    "id": "d01",
+    "text": "coffee with milk, no sugar",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 21,
+      "protein_g": 1.3,
+      "carbs_g": 1.5,
+      "fat_g": 1
+    },
+    "expected": {
+      "calories": [
+        15,
+        70
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Brewed coffee [usda] 210g (usda_match)",
+      "Milk [ai_estimated] 31g (ai_estimate)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Brewed coffee",
+        "quantity_description": "about 210 ml",
+        "quantity_g": 210,
+        "confidence": 0.85
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "a splash, about 30 ml",
+        "quantity_g": 31,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      21,
+      18.3,
+      21
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d02",
+    "text": "coffee with milk and one sugar",
+    "category": "drinks-additives",
+    "status": "fail",
+    "predicted": {
+      "calories": 33.7,
+      "protein_g": 0.9,
+      "carbs_g": 5.4,
+      "fat_g": 1
+    },
+    "expected": {
+      "calories": [
+        35,
+        110
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Milk [ai_estimated] 30g (ai_estimate)",
+      "Sugar [usda] 4g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Milk",
+        "quantity_description": "splash, about 2 tbsp",
+        "quantity_g": 30,
+        "confidence": 0.85
+      },
+      {
+        "name": "Sugar",
+        "quantity_description": "1 teaspoon",
+        "quantity_g": 5,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      33.7,
+      35.8,
+      33.7
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d03",
+    "text": "masala chai with 2 spoons of sugar",
+    "category": "drinks-additives",
+    "status": "fail",
+    "predicted": {
+      "calories": 51.1,
+      "protein_g": 0.9,
+      "carbs_g": 9.8,
+      "fat_g": 1
+    },
+    "expected": {
+      "calories": [
+        80,
+        175
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Masala chai tea infusion [ai_estimated] 200g (ai_estimate)",
+      "Milk [ai_estimated] 30g (ai_estimate)",
+      "Sugar [usda] 8g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Masala chai tea infusion",
+        "quantity_description": "about 1 cup, excluding milk and sugar",
+        "quantity_g": 200,
+        "confidence": 0.72
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "splash, about 2 tablespoons",
+        "quantity_g": 30,
+        "confidence": 0.75
+      },
+      {
+        "name": "Sugar",
+        "quantity_description": "2 teaspoons",
+        "quantity_g": 10,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      51.1,
+      49.1,
+      49.1
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d04",
+    "text": "black tea with a splash of milk",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 18.3,
+      "protein_g": 1,
+      "carbs_g": 1.4,
+      "fat_g": 1
+    },
+    "expected": {
+      "calories": [
+        8,
+        55
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Milk [ai_estimated] 30g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Milk",
+        "quantity_description": "a splash",
+        "quantity_g": 30,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      18.3,
+      20.4,
+      21
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d05",
+    "text": "a cup of green tea",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 2.4,
+      "protein_g": 0.5,
+      "carbs_g": 0,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        0,
+        6
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Brewed green tea [usda] 240g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Brewed green tea",
+        "quantity_description": "1 cup",
+        "quantity_g": 240,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      2.4,
+      2.4,
+      2.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "d06",
+    "text": "a glass of buttermilk",
+    "category": "drinks-additives",
+    "status": "fail",
+    "predicted": {
+      "calories": 155,
+      "protein_g": 8,
+      "carbs_g": 12.2,
+      "fat_g": 8.3
+    },
+    "expected": {
+      "calories": [
+        45,
+        125
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Buttermilk [usda] 250g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Buttermilk",
+        "quantity_description": "1 glass",
+        "quantity_g": 250,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      155,
+      155,
+      155
+    ],
+    "consistent": true
+  },
+  {
+    "id": "d07",
+    "text": "fresh lime soda with sugar",
+    "category": "drinks-additives",
+    "status": "fail",
+    "predicted": {
+      "calories": 42.3,
+      "protein_g": 0.1,
+      "carbs_g": 11.3,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        45,
+        135
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Soda water [usda] 230g (verified_exact)",
+      "Lime juice [usda] 15g (verified_exact)",
+      "Sugar [usda] 10g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Soda water",
+        "quantity_description": "1 glass",
+        "quantity_g": 230,
+        "confidence": 0.75
+      },
+      {
+        "name": "Lime juice",
+        "quantity_description": "juice of 1 lime",
+        "quantity_g": 15,
+        "confidence": 0.7
+      },
+      {
+        "name": "Sugar",
+        "quantity_description": "about 2 teaspoons",
+        "quantity_g": 10,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      42.3,
+      41.7,
+      21.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d08",
+    "text": "a mango lassi",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 196.4,
+      "protein_g": 9.6,
+      "carbs_g": 32.8,
+      "fat_g": 3.7
+    },
+    "expected": {
+      "calories": [
+        190,
+        430
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Yogurt [usda] 150g (reference_match)",
+      "Mango [usda] 70g (usda_match)",
+      "Milk [ai_estimated] 35g (ai_estimate)",
+      "Sugar [usda] 10g (verified_exact)"
+    ],
+    "resolutions": [
+      "reference_match",
+      "usda_match",
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Yogurt",
+        "quantity_description": "about 150 g",
+        "quantity_g": 150,
+        "confidence": 0.75
+      },
+      {
+        "name": "Mango",
+        "quantity_description": "about 70 g",
+        "quantity_g": 70,
+        "confidence": 0.8
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "about 35 g",
+        "quantity_g": 35,
+        "confidence": 0.65
+      },
+      {
+        "name": "Sugar",
+        "quantity_description": "about 10 g",
+        "quantity_g": 10,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      196.4,
+      181.3,
+      200.6
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d09",
+    "text": "a glass of orange juice",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 112.5,
+      "protein_g": 1.5,
+      "carbs_g": 25.5,
+      "fat_g": 0.8
+    },
+    "expected": {
+      "calories": [
+        85,
+        165
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Orange juice [usda] 250g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Orange juice",
+        "quantity_description": "1 glass (240 ml)",
+        "quantity_g": 250,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      112.5,
+      117,
+      117
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d10",
+    "text": "a cappuccino",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 94.2,
+      "protein_g": 4.8,
+      "carbs_g": 7.7,
+      "fat_g": 5.1
+    },
+    "expected": {
+      "calories": [
+        50,
+        145
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Espresso [usda] 30g (usda_match)",
+      "Steamed milk and milk foam [ai_estimated] 150g (ai_estimate)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Espresso",
+        "quantity_description": "1 shot",
+        "quantity_g": 30,
+        "confidence": 0.85
+      },
+      {
+        "name": "Steamed milk and milk foam",
+        "quantity_description": "about 150 ml",
+        "quantity_g": 150,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      94.2,
+      97.3,
+      97.3
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d11",
+    "text": "a hot chocolate",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 184.1,
+      "protein_g": 7.9,
+      "carbs_g": 23.5,
+      "fat_g": 7.9
+    },
+    "expected": {
+      "calories": [
+        140,
+        370
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Milk [ai_estimated] 220g (ai_estimate)",
+      "Cocoa powder [usda] 5g (usda_match)",
+      "Sugar [usda] 10g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Milk",
+        "quantity_description": "about 1 cup",
+        "quantity_g": 220,
+        "confidence": 0.7
+      },
+      {
+        "name": "Cocoa powder",
+        "quantity_description": "about 1 teaspoon",
+        "quantity_g": 5,
+        "confidence": 0.65
+      },
+      {
+        "name": "Sugar",
+        "quantity_description": "about 2 teaspoons",
+        "quantity_g": 10,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      184.1,
+      213.8,
+      218.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d12",
+    "text": "cold coffee with ice cream",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 250.4,
+      "protein_g": 8.7,
+      "carbs_g": 24.2,
+      "fat_g": 13.4
+    },
+    "expected": {
+      "calories": [
+        235,
+        490
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Milk [ai_estimated] 206g (ai_estimate)",
+      "Vanilla ice cream [usda] 60g (usda_match)",
+      "Instant coffee [indb] 2g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Milk",
+        "quantity_description": "about 200 ml",
+        "quantity_g": 206,
+        "confidence": 0.65
+      },
+      {
+        "name": "Vanilla ice cream",
+        "quantity_description": "1 scoop",
+        "quantity_g": 60,
+        "confidence": 0.6
+      },
+      {
+        "name": "Instant coffee",
+        "quantity_description": "about 1 tsp",
+        "quantity_g": 2,
+        "confidence": 0.45
+      }
+    ],
+    "runCalories": [
+      250.4,
+      299.2,
+      288.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "d13",
+    "text": "warm lemon water with honey",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 17.4,
+      "protein_g": 0,
+      "carbs_g": 4.8,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        15,
+        85
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Warm water [usda] 250g (usda_match)",
+      "Lemon juice [usda] 10g (usda_match)",
+      "Honey [usda] 5g (verified_exact)"
+    ],
+    "resolutions": [
+      "usda_match",
+      "usda_match",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Warm water",
+        "quantity_description": "1 glass",
+        "quantity_g": 250,
+        "confidence": 0.85
+      },
+      {
+        "name": "Lemon juice",
+        "quantity_description": "squeeze",
+        "quantity_g": 10,
+        "confidence": 0.65
+      },
+      {
+        "name": "Honey",
+        "quantity_description": "about 1 teaspoon",
+        "quantity_g": 5,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      17.4,
+      17.4,
+      17.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "d14",
+    "text": "a pint of beer",
+    "category": "drinks-additives",
+    "status": "pass",
+    "predicted": {
+      "calories": 244.2,
+      "protein_g": 2.6,
+      "carbs_g": 20.2,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        140,
+        265
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Beer [usda] 568g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Beer",
+        "quantity_description": "1 pint",
+        "quantity_g": 568,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      244.2,
+      244.2,
+      244.2
+    ],
+    "consistent": true
+  },
+  {
+    "id": "d15",
+    "text": "2 glasses of red wine",
+    "category": "drinks-additives",
+    "status": "fail",
+    "predicted": {
+      "calories": 425,
+      "protein_g": 0.4,
+      "carbs_g": 13.1,
+      "fat_g": 0
+    },
+    "expected": {
+      "calories": [
+        190,
+        335
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Red wine [usda] 500g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Red wine",
+        "quantity_description": "2 glasses",
+        "quantity_g": 500,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      425,
+      425,
+      425
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r01",
+    "text": "an apple",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 84.6,
+      "protein_g": 0,
+      "carbs_g": 21.1,
+      "fat_g": 0.2
+    },
+    "expected": {
+      "calories": [
+        70,
+        125
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Apple [usda] 180g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Apple",
+        "quantity_description": "1 apple",
+        "quantity_g": 180,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      84.6,
+      84.6,
+      84.6
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r02",
+    "text": "a handful of cashews",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 154.8,
+      "protein_g": 5.1,
+      "carbs_g": 8.5,
+      "fat_g": 12.3
+    },
+    "expected": {
+      "calories": [
+        130,
+        235
+      ],
+      "fat_g": [
+        10,
+        20
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cashews [usda] 28g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cashews",
+        "quantity_description": "1 handful",
+        "quantity_g": 28,
+        "confidence": 0.8
+      }
+    ],
+    "runCalories": [
+      154.8,
+      154.8,
+      154.8
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r03",
+    "text": "2 medjool dates",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 133,
+      "protein_g": 0.9,
+      "carbs_g": 36,
+      "fat_g": 0.1
+    },
+    "expected": {
+      "calories": [
+        100,
+        155
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Medjool dates [usda] 48g (reference_match)"
+    ],
+    "resolutions": [
+      "reference_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Medjool dates",
+        "quantity_description": "2 dates",
+        "quantity_g": 48,
+        "confidence": 0.98
+      }
+    ],
+    "runCalories": [
+      133,
+      133,
+      133
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r04",
+    "text": "a bowl of watermelon",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 45.6,
+      "protein_g": 0.9,
+      "carbs_g": 11.5,
+      "fat_g": 0.2
+    },
+    "expected": {
+      "calories": [
+        40,
+        115
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Watermelon [usda] 152g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Watermelon",
+        "quantity_description": "1 bowl",
+        "quantity_g": 150,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      45.6,
+      45.6,
+      45.6
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r05",
+    "text": "an orange",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 61.6,
+      "protein_g": 1.2,
+      "carbs_g": 15.5,
+      "fat_g": 0.1
+    },
+    "expected": {
+      "calories": [
+        45,
+        95
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "orange [ai_estimated] 131g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "orange",
+        "quantity_description": "1 medium orange",
+        "quantity_g": 131,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      61.6,
+      61.1,
+      61.1
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r06",
+    "text": "10 almonds",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 69.5,
+      "protein_g": 2.5,
+      "carbs_g": 2.6,
+      "fat_g": 6
+    },
+    "expected": {
+      "calories": [
+        55,
+        95
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Almonds [usda] 12g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Almonds",
+        "quantity_description": "10 almonds",
+        "quantity_g": 12,
+        "confidence": 0.98
+      }
+    ],
+    "runCalories": [
+      69.5,
+      69.5,
+      69.5
+    ],
+    "consistent": true
+  },
+  {
+    "id": "r07",
+    "text": "a medium boiled potato",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 147.9,
+      "protein_g": 3.2,
+      "carbs_g": 34.2,
+      "fat_g": 0.2
+    },
+    "expected": {
+      "calories": [
+        95,
+        195
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Boiled potato [usda] 170g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Boiled potato",
+        "quantity_description": "1 medium potato",
+        "quantity_g": 170,
+        "confidence": 0.85
+      }
+    ],
+    "runCalories": [
+      147.9,
+      130.5,
+      130.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "r08",
+    "text": "a cup of grapes",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 86.1,
+      "protein_g": 1.2,
+      "carbs_g": 21,
+      "fat_g": 0.7
+    },
+    "expected": {
+      "calories": [
+        80,
+        140
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Grapes [usda] 151g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Grapes",
+        "quantity_description": "1 cup",
+        "quantity_g": 151,
+        "confidence": 0.9
+      }
+    ],
+    "runCalories": [
+      86.1,
+      85.5,
+      85.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "r09",
+    "text": "half a papaya",
+    "category": "raw",
+    "status": "pass",
+    "predicted": {
+      "calories": 107.5,
+      "protein_g": 1.2,
+      "carbs_g": 27,
+      "fat_g": 0.7
+    },
+    "expected": {
+      "calories": [
+        50,
+        165
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Papaya [usda] 250g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Papaya",
+        "quantity_description": "half a papaya",
+        "quantity_g": 250,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      107.5,
+      129,
+      64.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "r10",
+    "text": "a slice of brown bread with peanut butter",
+    "category": "raw",
+    "status": "fail",
+    "predicted": {
+      "calories": 143.2,
+      "protein_g": 5.1,
+      "carbs_g": 14.3,
+      "fat_g": 8.4
+    },
+    "expected": {
+      "calories": [
+        165,
+        295
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Brown bread [usda] 25g (verified_exact)",
+      "Peanut butter [usda] 16g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Brown bread",
+        "quantity_description": "1 slice",
+        "quantity_g": 25,
+        "confidence": 0.95
+      },
+      {
+        "name": "Peanut butter",
+        "quantity_description": "about 1 tablespoon",
+        "quantity_g": 16,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      143.2,
+      143.2,
+      143.2
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e01",
+    "text": "100g grilled chicken breast",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 151,
+      "protein_g": 30.5,
+      "carbs_g": 0,
+      "fat_g": 3.2
+    },
+    "expected": {
+      "calories": [
+        140,
+        195
+      ],
+      "protein_g": [
+        26,
+        34
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Grilled chicken breast [usda] 100g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Grilled chicken breast",
+        "quantity_description": "100 g",
+        "quantity_g": 100,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      151,
+      151,
+      151
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e02",
+    "text": "150g paneer",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 386.9,
+      "protein_g": 28.3,
+      "carbs_g": 18.6,
+      "fat_g": 22.2
+    },
+    "expected": {
+      "calories": [
+        370,
+        510
+      ],
+      "protein_g": [
+        20,
+        33
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Paneer [ifct] 150g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Paneer",
+        "quantity_description": "150 g",
+        "quantity_g": 150,
+        "confidence": 0.98
+      }
+    ],
+    "runCalories": [
+      386.9,
+      386.9,
+      386.9
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e03",
+    "text": "200g cooked white rice",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 260,
+      "protein_g": 4.8,
+      "carbs_g": 57.2,
+      "fat_g": 0.4
+    },
+    "expected": {
+      "calories": [
+        225,
+        305
+      ],
+      "carbs_g": [
+        47,
+        64
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "White rice, cooked [usda] 200g (reference_match)"
+    ],
+    "resolutions": [
+      "reference_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "White rice, cooked",
+        "quantity_description": "200 g",
+        "quantity_g": 200,
+        "confidence": 0.98
+      }
+    ],
+    "runCalories": [
+      260,
+      260,
+      260
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e04",
+    "text": "50g oats with 200ml milk",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 320.2,
+      "protein_g": 15,
+      "carbs_g": 43.1,
+      "fat_g": 10.2
+    },
+    "expected": {
+      "calories": [
+        255,
+        395
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Oats [ai_estimated] 50g (ai_estimate)",
+      "Milk [ai_estimated] 206g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Oats",
+        "quantity_description": "50 g",
+        "quantity_g": 50,
+        "confidence": 0.99
+      },
+      {
+        "name": "Milk",
+        "quantity_description": "200 ml",
+        "quantity_g": 206,
+        "confidence": 0.99
+      }
+    ],
+    "runCalories": [
+      320.2,
+      320.2,
+      320.2
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e05",
+    "text": "1 scoop (30g) whey protein in water",
+    "category": "explicit-weight",
+    "status": "fail",
+    "predicted": {
+      "calories": 107.7,
+      "protein_g": 17.4,
+      "carbs_g": 8.7,
+      "fat_g": 0.3
+    },
+    "expected": {
+      "calories": [
+        98,
+        145
+      ],
+      "protein_g": [
+        19,
+        27
+      ]
+    },
+    "offFields": [
+      "protein_g"
+    ],
+    "macroSources": [
+      "Whey protein powder [usda] 30g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Whey protein powder",
+        "quantity_description": "1 scoop (30 g)",
+        "quantity_g": 30,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      107.7,
+      107.7,
+      107.7
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e06",
+    "text": "250ml full cream milk",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 157.4,
+      "protein_g": 8.1,
+      "carbs_g": 12.4,
+      "fat_g": 8.4
+    },
+    "expected": {
+      "calories": [
+        135,
+        185
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Full-cream milk [ai_estimated] 258g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Full-cream milk",
+        "quantity_description": "250 ml",
+        "quantity_g": 258,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      157.4,
+      157.4,
+      157.4
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e07",
+    "text": "100g grilled salmon",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 206,
+      "protein_g": 22.1,
+      "carbs_g": 0,
+      "fat_g": 12.4
+    },
+    "expected": {
+      "calories": [
+        165,
+        245
+      ],
+      "protein_g": [
+        19,
+        28
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Grilled salmon [ai_estimated] 100g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Grilled salmon",
+        "quantity_description": "100 g",
+        "quantity_g": 100,
+        "confidence": 0.95
+      }
+    ],
+    "runCalories": [
+      206,
+      206,
+      206
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e08",
+    "text": "80g pasta with tomato sauce",
+    "category": "explicit-weight",
+    "status": "fail",
+    "predicted": {
+      "calories": 146.2,
+      "protein_g": 5.1,
+      "carbs_g": 29,
+      "fat_g": 0.9
+    },
+    "expected": {
+      "calories": [
+        290,
+        480
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Pasta [ai_estimated] 80g (ai_estimate)",
+      "Tomato sauce [indb] 60g (verified_exact)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pasta",
+        "quantity_description": "80 g",
+        "quantity_g": 80,
+        "confidence": 0.9
+      },
+      {
+        "name": "Tomato sauce",
+        "quantity_description": "about 1/4 cup",
+        "quantity_g": 60,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      146.2,
+      146.2,
+      147
+    ],
+    "consistent": false
+  },
+  {
+    "id": "e09",
+    "text": "40g peanut butter",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 236,
+      "protein_g": 9.6,
+      "carbs_g": 8.7,
+      "fat_g": 20
+    },
+    "expected": {
+      "calories": [
+        215,
+        275
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Peanut butter [usda] 40g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Peanut butter",
+        "quantity_description": "40 g",
+        "quantity_g": 40,
+        "confidence": 0.99
+      }
+    ],
+    "runCalories": [
+      236,
+      236,
+      236
+    ],
+    "consistent": true
+  },
+  {
+    "id": "e10",
+    "text": "2 eggs and 100g sweet potato",
+    "category": "explicit-weight",
+    "status": "pass",
+    "predicted": {
+      "calories": 249,
+      "protein_g": 14.4,
+      "carbs_g": 24.2,
+      "fat_g": 10.2
+    },
+    "expected": {
+      "calories": [
+        195,
+        305
+      ],
+      "protein_g": [
+        13,
+        20
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Egg [usda] 100g (verified_exact)",
+      "Sweet potato [usda] 100g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Egg",
+        "quantity_description": "2 large eggs",
+        "quantity_g": 100,
+        "confidence": 0.95
+      },
+      {
+        "name": "Sweet potato",
+        "quantity_description": "100 g",
+        "quantity_g": 100,
+        "confidence": 0.98
+      }
+    ],
+    "runCalories": [
+      249,
+      249,
+      249
+    ],
+    "consistent": true
+  },
+  {
+    "id": "v01",
+    "text": "ate some biryani, medium portion",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 573.5,
+      "protein_g": 17.2,
+      "carbs_g": 64.2,
+      "fat_g": 27.8
+    },
+    "expected": {
+      "calories": [
+        350,
+        720
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked biryani rice [ai_estimated] 210g (ai_estimate)",
+      "Biryani ingredients (meat or vegetables) [ai_estimated] 90g (ai_estimate)",
+      "Biryani masala and cooking oil [ai_estimated] 50g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate",
+      "ai_estimate",
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked biryani rice",
+        "quantity_description": "about 60% of a medium portion",
+        "quantity_g": 210,
+        "confidence": 0.7
+      },
+      {
+        "name": "Biryani ingredients (meat or vegetables)",
+        "quantity_description": "about 25% of a medium portion",
+        "quantity_g": 90,
+        "confidence": 0.45
+      },
+      {
+        "name": "Biryani masala and cooking oil",
+        "quantity_description": "about 15% of a medium portion",
+        "quantity_g": 50,
+        "confidence": 0.5
+      }
+    ],
+    "runCalories": [
+      573.5,
+      630,
+      637.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v02",
+    "text": "had a lot of pasta tonight",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 549.5,
+      "protein_g": 20.3,
+      "carbs_g": 107.1,
+      "fat_g": 3.3
+    },
+    "expected": {
+      "calories": [
+        500,
+        960
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Cooked pasta [usda] 350g (usda_match)"
+    ],
+    "resolutions": [
+      "usda_match"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Cooked pasta",
+        "quantity_description": "a large portion",
+        "quantity_g": 350,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      549.5,
+      549.5,
+      439.6
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v03",
+    "text": "just a bite of chocolate cake",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 83.9,
+      "protein_g": 1.5,
+      "carbs_g": 11.3,
+      "fat_g": 3.8
+    },
+    "expected": {
+      "calories": [
+        30,
+        160
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Chocolate cake [indb] 25g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Chocolate cake",
+        "quantity_description": "1 bite",
+        "quantity_g": 25,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      83.9,
+      67.1,
+      83.9
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v04",
+    "text": "a few chips",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 54.5,
+      "protein_g": 0.5,
+      "carbs_g": 5.5,
+      "fat_g": 3.5
+    },
+    "expected": {
+      "calories": [
+        40,
+        165
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Potato chips [usda] 10g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Potato chips",
+        "quantity_description": "a few chips",
+        "quantity_g": 10,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      54.5,
+      65.4,
+      65.4
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v05",
+    "text": "shared a large pizza, i had about a third",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 430,
+      "protein_g": 20.1,
+      "carbs_g": 29.1,
+      "fat_g": 25.5
+    },
+    "expected": {
+      "calories": [
+        400,
+        920
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Pizza [indb] 293g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Pizza",
+        "quantity_description": "about one-third of a large pizza",
+        "quantity_g": 293,
+        "confidence": 0.65
+      }
+    ],
+    "runCalories": [
+      430,
+      752.6,
+      798
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v06",
+    "text": "one spoon of peanut butter",
+    "category": "vague",
+    "status": "fail",
+    "predicted": {
+      "calories": 29.5,
+      "protein_g": 1.2,
+      "carbs_g": 1.1,
+      "fat_g": 2.5
+    },
+    "expected": {
+      "calories": [
+        70,
+        130
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Peanut butter [usda] 5g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Peanut butter",
+        "quantity_description": "1 teaspoon",
+        "quantity_g": 5,
+        "confidence": 0.75
+      }
+    ],
+    "runCalories": [
+      29.5,
+      29.5,
+      29.5
+    ],
+    "consistent": true
+  },
+  {
+    "id": "v07",
+    "text": "half a sandwich",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 225,
+      "protein_g": 8.1,
+      "carbs_g": 27.9,
+      "fat_g": 9
+    },
+    "expected": {
+      "calories": [
+        105,
+        265
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Sandwich, unspecified filling [ai_estimated] 90g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Sandwich, unspecified filling",
+        "quantity_description": "half a sandwich",
+        "quantity_g": 90,
+        "confidence": 0.45
+      }
+    ],
+    "runCalories": [
+      225,
+      250,
+      187.5
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v08",
+    "text": "a tiny piece of kaju barfi",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 45,
+      "protein_g": 0.9,
+      "carbs_g": 6.2,
+      "fat_g": 2
+    },
+    "expected": {
+      "calories": [
+        40,
+        165
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Kaju barfi [ai_estimated] 10g (ai_estimate)"
+    ],
+    "resolutions": [
+      "ai_estimate"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Kaju barfi",
+        "quantity_description": "1 tiny piece",
+        "quantity_g": 10,
+        "confidence": 0.7
+      }
+    ],
+    "runCalories": [
+      45,
+      44,
+      52.8
+    ],
+    "consistent": false
+  },
+  {
+    "id": "v09",
+    "text": "two big parathas",
+    "category": "vague",
+    "status": "pass",
+    "predicted": {
+      "calories": 635.8,
+      "protein_g": 10.5,
+      "carbs_g": 63.9,
+      "fat_g": 35.1
+    },
+    "expected": {
+      "calories": [
+        390,
+        760
+      ]
+    },
+    "offFields": [],
+    "macroSources": [
+      "Paratha [indb] 200g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Paratha",
+        "quantity_description": "2 big parathas",
+        "quantity_g": 200,
+        "confidence": 0.82
+      }
+    ],
+    "runCalories": [
+      635.8,
+      635.8,
+      635.8
+    ],
+    "consistent": true
+  },
+  {
+    "id": "v10",
+    "text": "a light salad",
+    "category": "vague",
+    "status": "fail",
+    "predicted": {
+      "calories": 19,
+      "protein_g": 1.1,
+      "carbs_g": 3.5,
+      "fat_g": 0.3
+    },
+    "expected": {
+      "calories": [
+        35,
+        265
+      ]
+    },
+    "offFields": [
+      "calories"
+    ],
+    "macroSources": [
+      "Lettuce [ifct] 40g (verified_exact)",
+      "Cucumber [usda] 7g (verified_exact)",
+      "Tomato [usda] 60g (verified_exact)"
+    ],
+    "resolutions": [
+      "verified_exact",
+      "verified_exact",
+      "verified_exact"
+    ],
+    "unresolved": [],
+    "roughEstimates": [],
+    "parsedFoods": [
+      {
+        "name": "Lettuce",
+        "quantity_description": "a small handful",
+        "quantity_g": 40,
+        "confidence": 0.55
+      },
+      {
+        "name": "Cucumber",
+        "quantity_description": "a few slices",
+        "quantity_g": 50,
+        "confidence": 0.55
+      },
+      {
+        "name": "Tomato",
+        "quantity_description": "a few pieces",
+        "quantity_g": 60,
+        "confidence": 0.55
+      }
+    ],
+    "runCalories": [
+      19,
+      17.1,
+      18
+    ],
+    "consistent": false
+  },
+  {
+    "id": "n01",
+    "text": "what should i eat for dinner tonight?",
+    "category": "negative",
+    "status": "pass",
+    "offFields": [],
+    "macroSources": []
+  },
+  {
+    "id": "n02",
+    "text": "how much protein do i need daily?",
+    "category": "negative",
+    "status": "pass",
+    "offFields": [],
+    "macroSources": []
+  },
+  {
+    "id": "n03",
+    "text": "i'm feeling really bloated today",
+    "category": "negative",
+    "status": "pass",
+    "offFields": [],
+    "macroSources": []
+  },
+  {
+    "id": "n04",
+    "text": "did i hit my protein goal yesterday?",
+    "category": "negative",
+    "status": "pass",
+    "offFields": [],
+    "macroSources": []
+  },
+  {
+    "id": "n05",
+    "text": "suggest a low calorie snack",
+    "category": "negative",
+    "status": "pass",
+    "offFields": [],
+    "macroSources": []
+  }
+]

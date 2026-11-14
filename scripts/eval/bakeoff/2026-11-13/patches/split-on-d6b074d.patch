@@ -1,0 +1,714 @@
+diff --git a/scripts/eval/run.ts b/scripts/eval/run.ts
+index b6f0a9b..81fef6e 100644
+--- a/scripts/eval/run.ts
++++ b/scripts/eval/run.ts
+@@ -29,13 +29,17 @@
+ 
+ import { createClient } from '@supabase/supabase-js'
+ import { readFileSync, writeFileSync } from 'node:fs'
++import { execSync } from 'node:child_process'
+ import { fileURLToPath } from 'node:url'
+-import { basename, dirname, join } from 'node:path'
++import { dirname, join, resolve } from 'node:path'
+ import { config as loadEnv } from 'dotenv'
+ 
+ import { resolveFoods, type ParsedFood } from '../../supabase/functions/_shared/macroResolver.ts'
+-import { SYSTEM_PROMPT } from '../../supabase/functions/_shared/foodParsePrompt.ts'
+-import { isConsistent, type Band } from './metrics.ts'
++import { SYSTEM_PROMPT, DECOMP_VARIANT } from '../../supabase/functions/_shared/foodParsePrompt.ts'
++import { parseAiContent } from '../../supabase/functions/_shared/parseAiContent.ts'
++import { isConsistent, percentile, signedError, summarizeErrors, type Band } from './metrics.ts'
++// BAKE-OFF WORKTREE ONLY: model swap + per-call JSONL (see bakeHarness.ts)
++import { bakeContext, bakeFatal, bakeFetch, bakeInit, bakeModel, bakeRows, type CallRow } from '../../supabase/functions/_shared/bakeHarness.ts'
+ 
+ const __dirname = dirname(fileURLToPath(import.meta.url))
+ loadEnv({ path: join(__dirname, '.env.local') })
+@@ -53,6 +57,19 @@ if (SEARCH !== 'fts' && SEARCH !== 'ranked') {
+ }
+ const REPEAT = Math.max(1, Number(arg('repeat') ?? 1) || 1)
+ 
++// BAKE-OFF: every run writes to <BAKE_RUNS_DIR>/<label>/ (default: the bake/runs
++// folder next to this worktree), never into scripts/eval/.
++const LABEL = arg('label') ?? process.env.BAKE_LABEL ?? `adhoc-${new Date().toISOString().replace(/[:.]/g, '-')}`
++if (!/^[A-Za-z0-9._-]+$/.test(LABEL)) {
++  console.error(`--label may only use letters, digits, . _ - (got "${LABEL}")`)
++  process.exit(1)
++}
++if (/dataset-v4/.test(DATASET_FILE)) {
++  console.error('dataset-v4 is the held-out set — the bake-off must not touch it. Use dataset-v3.json.')
++  process.exit(1)
++}
++const RUN_DIR = join(resolve(process.env.BAKE_RUNS_DIR ?? join(__dirname, '../../../runs')), LABEL)
++
+ const SUPABASE_URL = process.env.SUPABASE_URL
+ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+ const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
+@@ -84,6 +101,13 @@ interface DatasetExample {
+   note?: string
+ }
+ 
++interface RepItems { rep: number; ok: boolean; error?: string; calories?: number; protein_g?: number; items?: Array<{ name: string; qd: string; g: number; kcal: number; p: number; res: string; src: string }>; unresolved?: string[] }
++function repItems(rep: number, out: Awaited<ReturnType<typeof logOnce>>): RepItems {
++  return { rep, ok: true, calories: out.totals.calories, protein_g: out.totals.protein_g,
++    items: out.foods.map((f) => ({ name: f.name, qd: String(f.quantity_description ?? ''), g: f.quantity_g, kcal: Math.round(f.calories * 10) / 10, p: Math.round(f.protein_g * 10) / 10, res: String(f.resolution ?? '?'), src: String(f.macro_source) })),
++    unresolved: out.unresolved.map((u) => `${u.name} (${u.reason})`) }
++}
++
+ interface ExampleResult {
+   id: string
+   text: string
+@@ -103,6 +127,8 @@ interface ExampleResult {
+   // --repeat > 1 only: calories of every run, and whether they all agree.
+   runCalories?: number[]
+   consistent?: boolean
++  // SPLIT-A/B: every rep's resolved items (name, grams, kcal, protein, tier)
++  reps?: RepItems[]
+   error?: string
+ }
+ 
+@@ -112,7 +138,7 @@ interface ExampleResult {
+ // nothing for the model to call a tool for). ──────────────────────────────
+ async function parseFoods(text: string): Promise<{ intent: string; foods: ParsedFood[] }> {
+   const requestBody = {
+-    model: 'openai/gpt-4o-mini',
++    model: bakeModel('parse'), // BAKE-OFF: was 'openai/gpt-4o-mini'
+     temperature: 0,
+     messages: [
+       { role: 'system', content: SYSTEM_PROMPT },
+@@ -121,7 +147,7 @@ async function parseFoods(text: string): Promise<{ intent: string; foods: Parsed
+     ],
+   }
+ 
+-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
++  const res = await bakeFetch('parse', 'https://openrouter.ai/api/v1/chat/completions', {
+     method: 'POST',
+     headers: {
+       'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+@@ -135,8 +161,14 @@ async function parseFoods(text: string): Promise<{ intent: string; foods: Parsed
+   if (!res.ok) throw new Error(`parse call failed: ${res.status} ${await res.text()}`)
+ 
+   const json = await res.json()
+-  const content = json.choices[0].message.content as string
+-  const parsed = JSON.parse(content)
++  // BAKE-OFF: production's reader (parseAiContent: tolerates a ``` fence, treats
++  // prose as an answer) instead of a bare JSON.parse, so a model is judged the
++  // way the live app would read it. Strict JSON validity is still recorded per
++  // call in calls.jsonl (json_strict_ok).
++  const content = (json.choices?.[0]?.message?.content ?? null) as string | null
++  const read = parseAiContent(content)
++  if (!read.ok) throw new Error(`parse reply unreadable (ai_parse_failed): ${String(content ?? '').slice(0, 120)}`)
++  const parsed = read.value
+   return { intent: String(parsed.intent), foods: Array.isArray(parsed.foods) ? parsed.foods as ParsedFood[] : [] }
+ }
+ 
+@@ -144,8 +176,21 @@ function inRange(value: number, [lo, hi]: Band): boolean {
+   return value >= lo && value <= hi
+ }
+ 
++// BAKE-OFF: wall-clock ms of each logOnce (parse + resolve, incl. DB/USDA), the
++// user-facing latency of one log.
++const logWallMs: number[] = []
++
+ // One parse → resolve pass, exactly as production runs it for a fresh log.
+ async function logOnce(text: string) {
++  const t0 = Date.now()
++  try {
++    return await logOnceInner(text)
++  } finally {
++    logWallMs.push(Date.now() - t0)
++  }
++}
++
++async function logOnceInner(text: string) {
+   const { intent, foods: parsedFoods } = await parseFoods(text)
+   if (intent !== 'log' || parsedFoods.length === 0) {
+     throw new Error(`expected a food log, got intent="${intent}"`)
+@@ -166,6 +211,7 @@ async function logOnce(text: string) {
+ }
+ 
+ async function runExample(example: DatasetExample): Promise<ExampleResult> {
++  bakeContext(example.id, 0)
+   try {
+     if (example.type === 'negative') {
+       // Not a food log: passes when the parse step does not try to log it.
+@@ -177,7 +223,9 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
+       }
+     }
+ 
+-    const { parsedFoods, totals, foods, unresolved } = await logOnce(example.text)
++    const first = await logOnce(example.text)
++    const { parsedFoods, totals, foods, unresolved } = first
++    const reps: RepItems[] = [repItems(0, first)]
+ 
+     const offFields: string[] = []
+     for (const field of ['calories', 'protein_g', 'carbs_g', 'fat_g'] as const) {
+@@ -195,9 +243,14 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
+     if (REPEAT > 1) {
+       runCalories = [totals.calories]
+       for (let r = 1; r < REPEAT; r++) {
++        if (bakeFatal()) break
++        bakeContext(example.id, r)
+         try {
+-          runCalories.push((await logOnce(example.text)).totals.calories)
+-        } catch {
++          const o = await logOnce(example.text)
++          reps.push(repItems(r, o))
++          runCalories.push(o.totals.calories)
++        } catch (e) {
++          reps.push({ rep: r, ok: false, error: String((e as Error)?.message ?? e).slice(0, 200) })
+           // left out of runCalories, so the length check below fails
+         }
+       }
+@@ -226,6 +279,7 @@ async function runExample(example: DatasetExample): Promise<ExampleResult> {
+       parsedFoods,
+       runCalories,
+       consistent,
++      reps,
+     }
+   } catch (err) {
+     return {
+@@ -256,6 +310,29 @@ async function main() {
+     dataset = dataset.filter((e) => ids.has(e.id))
+   }
+ 
++  let init: Awaited<ReturnType<typeof bakeInit>>
++  try {
++    init = await bakeInit(LABEL, RUN_DIR, { force: process.env.BAKE_FORCE === '1' })
++  } catch (err) {
++    console.error(`BAKE init refused: ${(err as Error).message}`)
++    process.exit(1)
++  }
++  console.log(`BAKE label=${LABEL} → ${RUN_DIR}`)
++  for (const k of ['parse', 'match'] as const) {
++    const m = init.models[k]
++    console.log(`  ${k}: ${m.id}${Object.keys(m.extra).length ? ` extra=${JSON.stringify(m.extra)}` : ''}` +
++      (m.pricing ? ` · list $${(m.pricing.prompt * 1e6).toFixed(3)}/$${(m.pricing.completion * 1e6).toFixed(3)} per M in/out` : '') +
++      (m.supported_parameters ? ` · params: ${m.supported_parameters.filter((p) => ['response_format', 'structured_outputs', 'reasoning', 'temperature', 'max_tokens'].includes(p)).join(',')}` : ''))
++  }
++  for (const w of init.warnings) console.log(`  WARNING ${w}`)
++  runMeta = {
++    label: LABEL, dataset: DATASET_FILE, ids: idsArg ? idsArg.slice('--ids='.length) : null, search: SEARCH, repeat: REPEAT,
++    started_at: new Date().toISOString(),
++    git_head: (() => { try { return execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim() } catch { return null } })(),
++    models: init.models, warnings: init.warnings, decomp: DECOMP_VARIANT,
++  }
++  console.log(`  DECOMP variant: ${DECOMP_VARIANT}`)
++
+   console.log(`Running eval on ${dataset.length} examples from ${DATASET_FILE} (search=${SEARCH}, repeat=${REPEAT}, memory=off, persist=false)...\n`)
+ 
+   const results: ExampleResult[] = []
+@@ -264,6 +341,11 @@ async function main() {
+   for (const example of dataset) {
+     const result = await runExample(example)
+     results.push(result)
++    if (bakeFatal()) {
++      console.error(`\nSTOPPING: ${bakeFatal()}`)
++      writeReport(results)
++      process.exit(3)
++    }
+     const icon = result.status === 'pass' ? 'PASS' : result.status === 'fail' ? 'FAIL' : 'ERROR'
+     console.log(`[${icon}] ${example.id} — "${example.text}"`)
+     if (result.status !== 'pass') {
+@@ -281,6 +363,9 @@ async function main() {
+   writeReport(results)
+ }
+ 
++// deno-lint-ignore no-explicit-any
++let runMeta: Record<string, any> = {}
++
+ function writeReport(results: ExampleResult[]) {
+   const total = results.length
+   const passed = results.filter((r) => r.status === 'pass').length
+@@ -342,11 +427,101 @@ function writeReport(results: ExampleResult[]) {
+     console.log(`  ${field}: ${count}`)
+   }
+ 
+-  const outPath = DATASET_FILE === 'dataset.json' && SEARCH === 'fts'
+-    ? join(__dirname, 'results.json')
+-    : join(__dirname, `results-${basename(DATASET_FILE, '.json')}-inprocess-${SEARCH}.json`)
++  const outPath = join(RUN_DIR, 'results.json')
+   writeFileSync(outPath, JSON.stringify(results, null, 2))
+   console.log(`\nFull results written to ${outPath}`)
++  writeBakeSummary(results)
++}
++
++// ── BAKE-OFF summary: accuracy + per-call cost/latency/reliability ───────────
++function writeBakeSummary(results: ExampleResult[]) {
++  const rows = bakeRows()
++  const r4 = (x: number) => Math.round(x * 1e4) / 1e4
++  const sum = (xs: Array<number | null>) => xs.reduce<number>((a, b) => a + (b ?? 0), 0)
++
++  const calErr: number[] = []
++  const protErr: number[] = []
++  for (const r of results) {
++    if (!r.predicted || !r.expected) continue
++    if (r.expected.calories) calErr.push(signedError(r.predicted.calories, r.expected.calories))
++    if (r.expected.protein_g) protErr.push(signedError(r.predicted.protein_g, r.expected.protein_g))
++  }
++  const errs = (xs: number[]) => { const s = summarizeErrors(xs); return { ...s, medianAbs: r4(s.medianAbs), medianSigned: r4(s.medianSigned) } }
++  const logCases = results.filter((r) => r.consistent !== undefined)
++
++  const byKind = (kind: 'parse' | 'match') => {
++    const k = rows.filter((r) => r.kind === kind)
++    const ok = k.filter((r) => r.ok)
++    const lat = k.map((r) => r.latency_ms)
++    return {
++      calls: k.length,
++      retry_calls: k.filter((r) => r.call_in_case > 1).length,
++      http_or_api_errors: k.filter((r) => !r.ok).length,
++      empty: ok.filter((r) => r.empty).length,
++      json_strict_fail: ok.filter((r) => !r.empty && !r.json_strict_ok).length,
++      json_lenient_fail: ok.filter((r) => !r.empty && !r.json_lenient_ok).length,
++      schema_fail: ok.filter((r) => !r.empty && r.json_lenient_ok && !r.schema_ok).length,
++      finish_length: ok.filter((r) => r.finish_reason === 'length').length,
++      served_models: [...new Set(k.map((r) => r.served_model).filter(Boolean))],
++      providers: Object.fromEntries([...new Set(k.map((r) => r.provider ?? 'unknown'))].map((p) => [p, k.filter((r) => (r.provider ?? 'unknown') === p).length])),
++      prompt_tokens: sum(k.map((r) => r.prompt_tokens)),
++      completion_tokens: sum(k.map((r) => r.completion_tokens)),
++      reasoning_tokens: sum(k.map((r) => r.reasoning_tokens)),
++      cached_prompt_tokens: sum(k.map((r) => r.cached_prompt_tokens)),
++      cost_usd: r4(sum(k.map((r) => r.cost_usd)) * 1e2) / 1e2,
++      cost_sources: Object.fromEntries(['openrouter_usage', 'list_price', 'unknown'].map((s) => [s, k.filter((r) => r.cost_source === s).length])),
++      latency_ms: { p50: percentile(lat, 50), p95: percentile(lat, 95), max: lat.length ? Math.max(...lat) : 0 },
++    }
++  }
++
++  // Cost per log = all calls of one (case, rep) — parse + match + retry.
++  const perLog = new Map<string, CallRow[]>()
++  for (const r of rows) {
++    const key = `${r.case_id}#${r.rep}`
++    perLog.set(key, [...(perLog.get(key) ?? []), r])
++  }
++  const perLogCost = [...perLog.values()].map((rs) => sum(rs.map((r) => r.cost_usd)))
++  const totalCost = sum(rows.map((r) => r.cost_usd))
++
++  const summary = {
++    ...runMeta,
++    finished_at: new Date().toISOString(),
++    aborted: bakeFatal(),
++    accuracy: {
++      cases: results.length,
++      passed: results.filter((r) => r.status === 'pass').length,
++      failed: results.filter((r) => r.status === 'fail').length,
++      errored: results.filter((r) => r.status === 'error').length,
++      pass_rate: results.length ? r4(results.filter((r) => r.status === 'pass').length / results.length) : 0,
++      unsure_cases: results.filter((r) => r.unresolved?.length).length,
++      rough_cases: results.filter((r) => r.roughEstimates?.length).length,
++      calories_error: errs(calErr),
++      protein_error: errs(protErr),
++      consistency: REPEAT > 1 ? { identical: logCases.filter((r) => r.consistent).length, of: logCases.length, runs: REPEAT } : null,
++    },
++    calls: { parse: byKind('parse'), match: byKind('match') },
++    per_log: {
++      logs: perLog.size,
++      cost_usd_mean: perLog.size ? totalCost / perLog.size : 0,
++      cost_usd_p50: percentile(perLogCost, 50),
++      cost_usd_p95: percentile(perLogCost, 95),
++      wall_ms_p50: percentile(logWallMs, 50),
++      wall_ms_p95: percentile(logWallMs, 95),
++    },
++    total_cost_usd: totalCost,
++  }
++  const p = join(RUN_DIR, 'summary.json')
++  writeFileSync(p, JSON.stringify(summary, null, 2))
++  console.log(`Bake summary written to ${p}`)
++  const ce = summary.accuracy.calories_error
++  console.log(`BAKE ${LABEL}: pass ${summary.accuracy.passed}/${summary.accuracy.cases} · ` +
++    (ce.n ? `cal |err| p50 ${(ce.medianAbs * 100).toFixed(1)}% bias ${(ce.medianSigned * 100).toFixed(1)}% (n=${ce.n})` : 'cal error n/a (no predictions)') +
++    (summary.accuracy.consistency ? ` · consistent ${summary.accuracy.consistency.identical}/${summary.accuracy.consistency.of}` : '') +
++    ` · $${totalCost.toFixed(5)} total, $${summary.per_log.cost_usd_mean.toFixed(6)}/log · log wall p50 ${summary.per_log.wall_ms_p50}ms p95 ${summary.per_log.wall_ms_p95}ms`)
++  for (const k of ['parse', 'match'] as const) {
++    const c = summary.calls[k]
++    console.log(`  ${k}: ${c.calls} calls (${c.retry_calls} retries) · lat p50 ${c.latency_ms.p50}ms p95 ${c.latency_ms.p95}ms · tok ${c.prompt_tokens}/${c.completion_tokens} (reasoning ${c.reasoning_tokens}) · $${c.cost_usd} · errors ${c.http_or_api_errors} empty ${c.empty} json✗ ${c.json_strict_fail}/${c.json_lenient_fail} schema✗ ${c.schema_fail} · cost src ${JSON.stringify(c.cost_sources)}`)
++  }
+ }
+ 
+ main().catch((err) => {
+diff --git a/supabase/functions/_shared/bakeHarness.ts b/supabase/functions/_shared/bakeHarness.ts
+new file mode 100644
+index 0000000..ded61e3
+--- /dev/null
++++ b/supabase/functions/_shared/bakeHarness.ts
+@@ -0,0 +1,321 @@
++// ── Model bake-off instrumentation (BAKE-OFF WORKTREE ONLY — never ship) ──────
++// Lives only in the scratchpad worktree. It lets scripts/eval/run.ts swap the
++// model behind each of the two LLM calls the in-process eval makes, and
++// records one JSONL row per OpenRouter call: model actually served, provider,
++// tokens (incl. reasoning + cached), latency, cost, and whether the reply was
++// empty / not JSON / the wrong shape.
++//
++//   BAKE_PARSE_MODEL   parse step (scripts/eval/run.ts)        default openai/gpt-4o-mini
++//   BAKE_MATCH_MODEL   matcher (macroResolver.ts matchCall)    default openai/gpt-4o-mini
++//   BAKE_PARSE_EXTRA / BAKE_MATCH_EXTRA
++//                      JSON merged into that call's request body. A null value
++//                      DELETES the key, e.g.
++//                      '{"temperature":null,"reasoning":{"effort":"low"}}'
++//
++// Node-only (process.env, node:fs); run.ts calls bakeInit() before any call.
++
++import { appendFileSync, writeFileSync, existsSync, readFileSync, mkdirSync } from 'node:fs'
++import { join } from 'node:path'
++
++export type BakeKind = 'parse' | 'match'
++
++const env = (k: string): string | undefined => (globalThis as any).process?.env?.[k]
++
++export function bakeModel(kind: BakeKind): string {
++  const v = env(kind === 'parse' ? 'BAKE_PARSE_MODEL' : 'BAKE_MATCH_MODEL')
++  return v && v.trim() ? v.trim() : 'openai/gpt-4o-mini'
++}
++
++export function bakeExtra(kind: BakeKind): Record<string, unknown> {
++  const raw = env(kind === 'parse' ? 'BAKE_PARSE_EXTRA' : 'BAKE_MATCH_EXTRA')
++  if (!raw || !raw.trim()) return {}
++  const v = JSON.parse(raw)
++  if (v === null || typeof v !== 'object' || Array.isArray(v)) throw new Error(`BAKE_${kind.toUpperCase()}_EXTRA must be a JSON object`)
++  return v
++}
++
++// ── run state ────────────────────────────────────────────────────────────────
++export interface CallRow {
++  ts: string
++  label: string
++  case_id: string | null
++  rep: number | null
++  kind: BakeKind
++  call_in_case: number            // 1 = first call of this kind for this case run; match 2 = the retry
++  requested_model: string
++  served_model: string | null     // json.model — what OpenRouter actually ran
++  provider: string | null
++  generation_id: string | null
++  http_status: number | null
++  ok: boolean
++  error: string | null            // truncated error body / exception text
++  latency_ms: number
++  prompt_tokens: number | null
++  completion_tokens: number | null
++  reasoning_tokens: number | null
++  cached_prompt_tokens: number | null
++  cost_usd: number | null
++  cost_source: 'openrouter_usage' | 'list_price' | 'unknown'
++  finish_reason: string | null
++  native_finish_reason: string | null
++  content_chars: number
++  reasoning_chars: number
++  empty: boolean
++  json_strict_ok: boolean         // JSON.parse(content) as-is
++  json_lenient_ok: boolean        // after stripping a ``` fence (what production's parseAiContent tolerates for parse)
++  schema_ok: boolean
++  schema_issue: string | null
++  fatal: boolean
++}
++
++interface Pricing { prompt: number; completion: number; internal_reasoning?: number }
++
++const state = {
++  label: 'unlabelled',
++  dir: '' as string,
++  jsonl: '' as string,
++  caseId: null as string | null,
++  rep: null as number | null,
++  perCaseCounts: new Map<string, number>(),
++  rows: [] as CallRow[],
++  fatal: null as string | null,
++  consecutiveHttpErrors: 0,
++  prices: new Map<string, Pricing>(),
++  modelsMeta: new Map<string, any>(),
++}
++
++export const bakeRows = () => state.rows
++export const bakeFatal = () => state.fatal
++export const bakeDir = () => state.dir
++
++export function bakeContext(caseId: string | null, rep: number | null) {
++  state.caseId = caseId
++  state.rep = rep
++  state.perCaseCounts.clear()
++}
++
++export class BakeFatalError extends Error {}
++
++// Public model list (no auth): exists? pricing? supported params? Cached per run dir.
++async function loadModels(): Promise<void> {
++  const cache = join(state.dir, '..', '_openrouter_models.json') // shared by all runs; delete it to refresh prices
++  let data: any
++  if (existsSync(cache)) data = JSON.parse(readFileSync(cache, 'utf8'))
++  else {
++    const res = await fetch('https://openrouter.ai/api/v1/models')
++    if (!res.ok) throw new Error(`could not load OpenRouter model list: ${res.status}`)
++    data = await res.json()
++    writeFileSync(cache, JSON.stringify(data))
++  }
++  for (const m of data.data ?? []) {
++    state.modelsMeta.set(m.id, m)
++    const p = m.pricing ?? {}
++    state.prices.set(m.id, {
++      prompt: Number(p.prompt ?? NaN),
++      completion: Number(p.completion ?? NaN),
++      internal_reasoning: p.internal_reasoning != null ? Number(p.internal_reasoning) : undefined,
++    })
++  }
++}
++
++export interface BakeInitInfo {
++  models: Record<BakeKind, { id: string; extra: Record<string, unknown>; listed: boolean; pricing?: Pricing; supported_parameters?: string[]; context_length?: number }>
++  warnings: string[]
++}
++
++export async function bakeInit(label: string, dir: string, opts: { force?: boolean } = {}): Promise<BakeInitInfo> {
++  state.label = label
++  state.dir = dir
++  mkdirSync(dir, { recursive: true })
++  state.jsonl = join(dir, 'calls.jsonl')
++  if (existsSync(state.jsonl) && !opts.force) {
++    throw new Error(`${state.jsonl} already exists — pick a new label or set BAKE_FORCE=1 to overwrite`)
++  }
++  await loadModels()
++  const warnings: string[] = []
++  const models = {} as BakeInitInfo['models']
++  for (const kind of ['parse', 'match'] as const) {
++    const id = bakeModel(kind)
++    const extra = bakeExtra(kind)
++    const meta = state.modelsMeta.get(id)
++    models[kind] = {
++      id, extra, listed: !!meta,
++      pricing: state.prices.get(id),
++      supported_parameters: meta?.supported_parameters,
++      context_length: meta?.context_length,
++    }
++    if (!meta) { warnings.push(`${kind}: "${id}" is not in OpenRouter's public model list (typo, or gated?)`); continue }
++    const sp: string[] = meta.supported_parameters ?? []
++    if (kind === 'match' && !sp.includes('response_format')) warnings.push(`match: ${id} does not list response_format — json_object mode may be ignored`)
++    if (!sp.includes('temperature') && !('temperature' in extra)) warnings.push(`${kind}: ${id} does not list temperature — consider BAKE_${kind.toUpperCase()}_EXTRA='{"temperature":null}'`)
++    if (sp.includes('reasoning') && !('reasoning' in extra)) warnings.push(`${kind}: ${id} supports reasoning and none is set — it runs at the provider default effort (cost/latency!). Set BAKE_${kind.toUpperCase()}_EXTRA='{"reasoning":{"effort":"low"}}' (or minimal / {"enabled":false}) to pin it`)
++  }
++  if (Object.values(models).some((m) => !m.listed) && env('BAKE_ALLOW_UNLISTED') !== '1') {
++    throw new Error(`model not in OpenRouter's list: ${warnings.join('; ')} (BAKE_ALLOW_UNLISTED=1 to override)`)
++  }
++  writeFileSync(state.jsonl, '')
++  return { models, warnings }
++}
++
++// ── the fetch wrapper ────────────────────────────────────────────────────────
++const FENCED = /^```[a-zA-Z]*\s*([\s\S]*?)\s*```$/
++
++function tryJson(s: string): { ok: boolean; value?: any } {
++  try { return { ok: true, value: JSON.parse(s) } } catch { return { ok: false } }
++}
++
++function schemaCheck(kind: BakeKind, v: any, requestBody: any): string | null {
++  if (v === null || typeof v !== 'object' || Array.isArray(v)) return 'not a JSON object'
++  if (kind === 'parse') {
++    if (typeof v.intent !== 'string') return 'intent missing'
++    if (v.intent !== 'log') return null
++    if (!Array.isArray(v.foods) || v.foods.length === 0) return 'intent=log but foods empty/missing'
++    for (const f of v.foods) {
++      if (!f || typeof f.name !== 'string' || !f.name.trim()) return 'food without name'
++      if (typeof f.quantity_g !== 'number' || !Number.isFinite(f.quantity_g) || f.quantity_g <= 0) return `food "${f.name}" quantity_g not a positive number`
++    }
++    return null
++  }
++  // match: one entry per "Food N:" block in the prompt
++  const prompt = String(requestBody?.messages?.[0]?.content ?? '')
++  const expected = (prompt.match(/^Food \d+: "/gm) ?? []).length
++  if (!Array.isArray(v.matches)) return 'matches missing'
++  if (expected && v.matches.length !== expected) return `matches has ${v.matches.length} entries, expected ${expected}`
++  for (const m of v.matches) {
++    if (!m || typeof m !== 'object') return 'match entry not an object'
++    if (!(m.candidate_index === null || m.candidate_index === undefined || typeof m.candidate_index === 'number')) return 'candidate_index not number|null'
++    if (!(m.est_per_100g == null || typeof m.est_per_100g === 'object')) return 'est_per_100g not object|null'
++    if (m.candidate_index == null && m.est_per_100g == null) return 'neither candidate nor estimate'
++  }
++  return null
++}
++
++const num = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null)
++
++function listPriceCost(model: string, p: number | null, c: number | null): number | null {
++  const pr = state.prices.get(model)
++  if (!pr || !Number.isFinite(pr.prompt) || !Number.isFinite(pr.completion) || p == null || c == null) return null
++  // OpenRouter bills reasoning tokens as completion tokens (they are inside completion_tokens).
++  return p * pr.prompt + c * pr.completion
++}
++
++const isFatalBody = (status: number, body: string) =>
++  status === 402 || status === 403 || status === 401 || /key limit exceeded/i.test(body)
++
++// Same signature as fetch(url, init). Merges the bake extras into the body,
++// times the call, records a row, and hands the caller an equivalent Response.
++export async function bakeFetch(kind: BakeKind, url: string, init: { method: string; headers: Record<string, string>; body: string }): Promise<Response> {
++  if (state.fatal) throw new BakeFatalError(`bake aborted earlier: ${state.fatal}`)
++  const body = JSON.parse(init.body)
++  for (const [k, v] of Object.entries(bakeExtra(kind))) {
++    if (v === null) delete body[k]
++    else body[k] = v
++  }
++  body.usage = { include: true } // OpenRouter usage accounting → usage.cost, reasoning/cached token details
++
++  const key = state.caseId ?? '_'
++  const n = (state.perCaseCounts.get(`${key}:${kind}`) ?? 0) + 1
++  state.perCaseCounts.set(`${key}:${kind}`, n)
++
++  const row: CallRow = {
++    ts: new Date().toISOString(), label: state.label, case_id: state.caseId, rep: state.rep, kind, call_in_case: n,
++    requested_model: body.model, served_model: null, provider: null, generation_id: null,
++    http_status: null, ok: false, error: null, latency_ms: 0,
++    prompt_tokens: null, completion_tokens: null, reasoning_tokens: null, cached_prompt_tokens: null,
++    cost_usd: null, cost_source: 'unknown', finish_reason: null, native_finish_reason: null,
++    content_chars: 0, reasoning_chars: 0, empty: false, json_strict_ok: false, json_lenient_ok: false,
++    schema_ok: false, schema_issue: null, fatal: false,
++  }
++
++  const t0 = Date.now()
++  let res: Response
++  let text: string
++  try {
++    res = await fetch(url, { ...init, body: JSON.stringify(body) })
++    text = await res.text()
++    if (!res.ok) text = text.replace(/"user_id"\s*:\s*"[^"]*"/g, '"user_id":"<redacted>"')
++  } catch (err) {
++    row.latency_ms = Date.now() - t0
++    row.error = `fetch threw: ${String((err as Error)?.message ?? err).slice(0, 300)}`
++    record(row)
++    throw err
++  }
++  row.latency_ms = Date.now() - t0
++  row.http_status = res.status
++
++  if (!res.ok) {
++    row.error = text.slice(0, 400)
++    if (isFatalBody(res.status, text)) {
++      row.fatal = true
++      state.fatal = `HTTP ${res.status} on ${kind} call: ${text.slice(0, 200)}`
++    }
++    if (++state.consecutiveHttpErrors >= 5 && !state.fatal) state.fatal = `5 consecutive HTTP errors (last ${res.status})`
++    record(row)
++    return new Response(text, { status: res.status })
++  }
++  state.consecutiveHttpErrors = 0
++
++  const parsed = tryJson(text)
++  if (!parsed.ok) {
++    row.error = `response body not JSON: ${text.slice(0, 200)}`
++    record(row)
++    return new Response(text, { status: res.status })
++  }
++  const json = parsed.value
++  // OpenRouter can return 200 with an error object (upstream provider failure).
++  if (json?.error) {
++    row.error = `200 with error: ${JSON.stringify(json.error).slice(0, 300)}`
++    const msg = JSON.stringify(json.error)
++    if (/key limit exceeded/i.test(msg) || json.error?.code === 402 || json.error?.code === 403) {
++      row.fatal = true
++      state.fatal = `error object on ${kind} call: ${msg.slice(0, 200)}`
++    }
++  }
++  row.ok = !json?.error
++  row.served_model = json?.model ?? null
++  row.provider = json?.provider ?? null
++  row.generation_id = json?.id ?? null
++  const u = json?.usage ?? {}
++  row.prompt_tokens = num(u.prompt_tokens)
++  row.completion_tokens = num(u.completion_tokens)
++  row.reasoning_tokens = num(u.completion_tokens_details?.reasoning_tokens)
++  row.cached_prompt_tokens = num(u.prompt_tokens_details?.cached_tokens)
++  if (num(u.cost) !== null) { row.cost_usd = u.cost; row.cost_source = 'openrouter_usage' }
++  else {
++    const est = listPriceCost(body.model, row.prompt_tokens, row.completion_tokens)
++    if (est !== null) { row.cost_usd = est; row.cost_source = 'list_price' }
++  }
++  const choice = json?.choices?.[0]
++  row.finish_reason = choice?.finish_reason ?? null
++  row.native_finish_reason = choice?.native_finish_reason ?? null
++  const content: string = typeof choice?.message?.content === 'string' ? choice.message.content : ''
++  const reasoning: string = typeof choice?.message?.reasoning === 'string' ? choice.message.reasoning : ''
++  row.content_chars = content.length
++  row.reasoning_chars = reasoning.length
++  row.empty = content.trim() === ''
++  if (!row.empty) {
++    const strict = tryJson(content)
++    row.json_strict_ok = strict.ok
++    let value = strict.value
++    if (!strict.ok) {
++      const fence = content.trim().match(FENCED)
++      const lenient = fence ? tryJson(fence[1].trim()) : { ok: false }
++      row.json_lenient_ok = lenient.ok
++      value = lenient.value
++    } else row.json_lenient_ok = true
++    if (row.json_lenient_ok) {
++      row.schema_issue = schemaCheck(kind, value, body)
++      row.schema_ok = row.schema_issue === null
++    } else if (kind === 'parse') {
++      row.schema_issue = 'not JSON'
++    } else row.schema_issue = 'not JSON'
++  } else row.schema_issue = 'empty content'
++
++  record(row)
++  return new Response(text, { status: res.status })
++}
++
++function record(row: CallRow) {
++  state.rows.push(row)
++  if (state.jsonl) appendFileSync(state.jsonl, JSON.stringify(row) + '\n')
++}
+diff --git a/supabase/functions/_shared/foodParsePrompt.ts b/supabase/functions/_shared/foodParsePrompt.ts
+index 0ce9b43..348c4c6 100644
+--- a/supabase/functions/_shared/foodParsePrompt.ts
++++ b/supabase/functions/_shared/foodParsePrompt.ts
+@@ -4,6 +4,17 @@
+ // could silently drift out of sync with production.
+ import { GRAM_HINTS_PROMPT } from './macroResolver.ts'
+ 
++// SPLIT-vs-WHOLE A/B (SCRATCHPAD WORKTREE ONLY — never ship). BAKE_DECOMP picks
++// the ONE logging-rule sentence; everything else in the prompt is identical.
++//   split (default) = today's sentence, byte-for-byte
++//   whole           = whole-dish-first rule
++const BAKE_DECOMP = ((globalThis as any).process?.env?.BAKE_DECOMP ?? 'split').trim()
++if (BAKE_DECOMP !== 'split' && BAKE_DECOMP !== 'whole') throw new Error(`BAKE_DECOMP must be split|whole (got "${BAKE_DECOMP}")`)
++export const DECOMP_VARIANT = BAKE_DECOMP
++const RULE_SPLIT = 'break compound foods into components.'
++const RULE_WHOLE = 'keep a named dish whole — a dish people know by name (e.g. chicken tikka masala, aloo gobi, mac and cheese, a club sandwich) is ONE food, named as the dish, with quantity_g for its plate/bowl/piece portion; its database value already includes its oil and cooking, so do not break it into ingredients. List genuinely separate foods separately: "2 roti, dal, sabzi" is 3 foods, "dal and rice" is 2. Break a meal into ingredients only when it is a home-made or custom combination, or a dish unlikely to exist in a food database — and then also list the cooking oil as its own item. Extras the user names (extra cheese, ghee on top, a side of raita) are separate items.'
++const LOGGING_RULE = BAKE_DECOMP === 'whole' ? RULE_WHOLE : RULE_SPLIT
++
+ export const SYSTEM_PROMPT = `You are STEADY — a personal nutrition coach and AI agent built into a calorie tracking app.
+ 
+ You have two roles:
+@@ -25,7 +36,7 @@ Return ONLY a valid JSON object with this exact structure (no markdown, no prose
+   ],
+   "coach_note": "one brief personalised insight about this meal (qualitative — do NOT state calorie or macro numbers)"
+ }
+-Logging rules: break compound foods into components. Do NOT estimate calories or macros — the app computes them from a verified nutrition database after parsing. Focus on accurate food identification and gram quantities. quantity_g is your best gram estimate for the described portion.
++Logging rules: ${LOGGING_RULE} Do NOT estimate calories or macros — the app computes them from a verified nutrition database after parsing. Focus on accurate food identification and gram quantities. quantity_g is your best gram estimate for the described portion.
+ ${GRAM_HINTS_PROMPT}
+ 
+ ── COACHING (questions, advice, progress, anything non-food) ──
+diff --git a/supabase/functions/_shared/macroResolver.ts b/supabase/functions/_shared/macroResolver.ts
+index 7f6044d..a9f5a5c 100644
+--- a/supabase/functions/_shared/macroResolver.ts
++++ b/supabase/functions/_shared/macroResolver.ts
+@@ -38,6 +38,7 @@
+ 
+ import { searchUsda, UsdaUnavailableError, type UsdaCandidate, type UsdaPortion } from './usda.ts'
+ import { logAiCall } from './aiLogger.ts'
++import { bakeModel, bakeFetch } from './bakeHarness.ts' // BAKE-OFF WORKTREE ONLY
+ import {
+   foodItemIssues, fromRow, isBlocking, issueHints, roughEstimate, toNumber, toPer100g, RULES_VERSION,
+   type IssueCode, type Per100gLike,
+@@ -1574,7 +1575,7 @@ Return ONLY JSON:
+ One entry per food, in order.`
+ 
+   const requestBody = {
+-    model: 'openai/gpt-4o-mini',
++    model: bakeModel('match'), // BAKE-OFF: was 'openai/gpt-4o-mini'
+     temperature: 0,
+     response_format: { type: 'json_object' },
+     messages: [{ role: 'user', content: prompt }],
+@@ -1586,7 +1587,7 @@ One entry per food, in order.`
+     model: requestBody.model,
+     requestPayload: requestBody,
+     run: async () => {
+-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
++      const res = await bakeFetch('match', 'https://openrouter.ai/api/v1/chat/completions', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${openRouterKey}`,

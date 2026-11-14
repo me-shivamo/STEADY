@@ -1,0 +1,94 @@
+{
+  "split-luna-pro": {
+    "cases": 100,
+    "strict_pass_pct": 81,
+    "passed": 81,
+    "failed": 19,
+    "errored_cases": 0,
+    "error_case_ids": [],
+    "calories_in_band_pct": 83.2,
+    "calories_in_band": "79/95",
+    "calorie_median_abs_err_pct": 12.3,
+    "calorie_signed_lean_pct": -8.5,
+    "calorie_above_below": "25 above / 69 below (n=95)",
+    "protein_median_abs_err_pct": 7.9,
+    "protein_signed_lean_pct": -6,
+    "consistency": "35/95 identical x3",
+    "consistency_pct": 36.8,
+    "negatives_handled": "5/5",
+    "unsure_cases": 0,
+    "rough_cases": 0,
+    "calls": {
+      "parse": {
+        "calls": 290,
+        "retries": 0,
+        "http_or_api_errors": 0,
+        "empty": 0,
+        "json_strict_fail": 0,
+        "json_lenient_fail": 0,
+        "schema_fail": 0,
+        "finish_length": 0,
+        "latency_ms_p50": 4445,
+        "latency_ms_p95": 7082,
+        "mean_prompt_tok": 2000.7,
+        "mean_completion_tok": 238.2,
+        "mean_reasoning_tok": 108,
+        "cost_usd": 0.040539,
+        "served_models": [
+          "openai/gpt-6-luna"
+        ],
+        "providers": [
+          "OpenAI"
+        ],
+        "schema_issues": [],
+        "errors_sample": []
+      },
+      "match": {
+        "calls": 188,
+        "retries": 1,
+        "http_or_api_errors": 0,
+        "empty": 0,
+        "json_strict_fail": 0,
+        "json_lenient_fail": 0,
+        "schema_fail": 0,
+        "finish_length": 0,
+        "latency_ms_p50": 8827,
+        "latency_ms_p95": 25292,
+        "mean_prompt_tok": 7247.3,
+        "mean_completion_tok": 882.9,
+        "mean_reasoning_tok": 679.6,
+        "cost_usd": 0.179065,
+        "served_models": [
+          "openai/gpt-6-luna-pro"
+        ],
+        "providers": [
+          "OpenAI"
+        ],
+        "schema_issues": [],
+        "errors_sample": []
+      }
+    },
+    "all_calls_latency_ms": {
+      "p50": 5630,
+      "p95": 17409
+    },
+    "per_log": {
+      "logs": 290,
+      "wall_ms_p50": 14379,
+      "wall_ms_p95": 29599,
+      "llm_ms_p50": 11213,
+      "llm_ms_p95": 26593,
+      "calls_mean": 1.65,
+      "prompt_tok_mean": 6699,
+      "completion_tok_mean": 810.6,
+      "reasoning_tok_mean": 548.5,
+      "cost_usd_mean": 0.0007573,
+      "cost_usd_p95": 0.0020899
+    },
+    "total_cost_usd": 0.2196,
+    "cost_sources": {
+      "openrouter_usage": 478
+    },
+    "aborted": null
+  }
+}

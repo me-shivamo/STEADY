@@ -1,0 +1,4 @@
+
+=== openai/gpt-4o-mini: 85/85 correct (log 60/60, coach 25/25); dishes split into many parts: 0
+
+=== openai/gpt-6-luna: 85/85 correct (log 60/60, coach 25/25); dishes split into many parts: 0

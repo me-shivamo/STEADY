@@ -1,0 +1,166 @@
+{
+  "label": "split-luna-pro",
+  "dataset": "dataset-v3.json",
+  "ids": null,
+  "search": "fts",
+  "repeat": 3,
+  "started_at": "2026-11-13T20:13:32.728Z",
+  "git_head": "86223a0",
+  "models": {
+    "parse": {
+      "id": "openai/gpt-6-luna",
+      "extra": {},
+      "listed": true,
+      "pricing": {
+        "prompt": 1e-7,
+        "completion": 5e-7
+      },
+      "supported_parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "structured_outputs",
+        "tool_choice",
+        "tools",
+        "verbosity"
+      ],
+      "context_length": 1050000
+    },
+    "match": {
+      "id": "openai/gpt-6-luna-pro",
+      "extra": {},
+      "listed": true,
+      "pricing": {
+        "prompt": 1e-7,
+        "completion": 5e-7
+      },
+      "supported_parameters": [
+        "include_reasoning",
+        "max_completion_tokens",
+        "max_tokens",
+        "reasoning",
+        "reasoning_effort",
+        "response_format",
+        "seed",
+        "structured_outputs",
+        "tool_choice",
+        "tools",
+        "verbosity"
+      ],
+      "context_length": 1050000
+    }
+  },
+  "warnings": [
+    "parse: openai/gpt-6-luna does not list temperature — consider BAKE_PARSE_EXTRA='{\"temperature\":null}'",
+    "parse: openai/gpt-6-luna supports reasoning and none is set — it runs at the provider default effort (cost/latency!). Set BAKE_PARSE_EXTRA='{\"reasoning\":{\"effort\":\"low\"}}' (or minimal / {\"enabled\":false}) to pin it",
+    "match: openai/gpt-6-luna-pro does not list temperature — consider BAKE_MATCH_EXTRA='{\"temperature\":null}'",
+    "match: openai/gpt-6-luna-pro supports reasoning and none is set — it runs at the provider default effort (cost/latency!). Set BAKE_MATCH_EXTRA='{\"reasoning\":{\"effort\":\"low\"}}' (or minimal / {\"enabled\":false}) to pin it"
+  ],
+  "finished_at": "2026-11-13T21:20:22.415Z",
+  "aborted": null,
+  "accuracy": {
+    "cases": 100,
+    "passed": 81,
+    "failed": 19,
+    "errored": 0,
+    "pass_rate": 0.81,
+    "unsure_cases": 0,
+    "rough_cases": 0,
+    "calories_error": {
+      "n": 95,
+      "medianAbs": 0.123,
+      "medianSigned": -0.085,
+      "above": 25,
+      "below": 69
+    },
+    "protein_error": {
+      "n": 19,
+      "medianAbs": 0.0788,
+      "medianSigned": -0.0596,
+      "above": 7,
+      "below": 12
+    },
+    "consistency": {
+      "identical": 35,
+      "of": 95,
+      "runs": 3
+    }
+  },
+  "calls": {
+    "parse": {
+      "calls": 290,
+      "retry_calls": 0,
+      "http_or_api_errors": 0,
+      "empty": 0,
+      "json_strict_fail": 0,
+      "json_lenient_fail": 0,
+      "schema_fail": 0,
+      "finish_length": 0,
+      "served_models": [
+        "openai/gpt-6-luna"
+      ],
+      "providers": {
+        "OpenAI": 290
+      },
+      "prompt_tokens": 580206,
+      "completion_tokens": 69092,
+      "reasoning_tokens": 31319,
+      "cached_prompt_tokens": 578360,
+      "cost_usd": 0.040539,
+      "cost_sources": {
+        "openrouter_usage": 290,
+        "list_price": 0,
+        "unknown": 0
+      },
+      "latency_ms": {
+        "p50": 4445,
+        "p95": 7082,
+        "max": 10566
+      }
+    },
+    "match": {
+      "calls": 188,
+      "retry_calls": 1,
+      "http_or_api_errors": 0,
+      "empty": 0,
+      "json_strict_fail": 0,
+      "json_lenient_fail": 0,
+      "schema_fail": 0,
+      "finish_length": 0,
+      "served_models": [
+        "openai/gpt-6-luna-pro"
+      ],
+      "providers": {
+        "OpenAI": 188
+      },
+      "prompt_tokens": 1362495,
+      "completion_tokens": 165989,
+      "reasoning_tokens": 127756,
+      "cached_prompt_tokens": 480230,
+      "cost_usd": 0.179065,
+      "cost_sources": {
+        "openrouter_usage": 188,
+        "list_price": 0,
+        "unknown": 0
+      },
+      "latency_ms": {
+        "p50": 8827,
+        "p95": 25292,
+        "max": 33849
+      }
+    }
+  },
+  "per_log": {
+    "logs": 290,
+    "cost_usd_mean": 0.0007572531034482763,
+    "cost_usd_p50": 0.0007168000000000001,
+    "cost_usd_p95": 0.00208989,
+    "wall_ms_p50": 14379,
+    "wall_ms_p95": 29599
+  },
+  "total_cost_usd": 0.21960340000000012
+}
