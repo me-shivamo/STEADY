@@ -2601,3 +2601,13 @@ The split-vs-whole test pointed at a few suspicious dish rows, so we audited the
 *2026-11-15 · Decision*
 
 Our dal makhani row said 74 kcal per 100 g because the recipe book keeps every drop of its 960 ml of cooking water, which makes a thin dal nobody actually serves. We went looking for a measured dal makhani and found none: no Indian lab has analysed it. The closest measurement is a UK study of five home-cooked urad dals at 74.7% water. At that water, the same Indian recipe gives 110 kcal per 100 g, which sits sensibly below the 127 median of 17 packaged Indian dal makhanis. The founder approved 110 for "dal makhani" (and the spellings "dal makhni" and "daal makhani"), so a katori goes from 111 to 166 kcal. It ships in migration 058 alongside the other dish fixes, marked as our lowest confidence grade until someone weighs a real home batch.
+
+### Planning the follow-up build, and letting a critic tear it up first
+*2026-11-15 · Decision*
+
+Next on the list is everything the founder has already approved but we haven't built. Personal sizes that work for every user ("my cup is 350 ml"), food preferences, Indian data first for Indian food, tap-button follow-up questions, common cooking oils, Indian drink sizes, the whole-dish wording fix, and the official chain menus with a web lookup only for what's missing. Three readers mapped the server, the data and the app. A planner split the work into thirteen packages, and a critic checked the plan against the code and found 38 real problems. Turning personalisation on at deploy would have changed every user's logging with no test, and the chain-menu rows would have leaked into search before their switch was on. Chai already contains milk and sugar, so a sugar preference would have counted it twice. The plan now ships every package dark behind a test-account switch first. We also found that our calls on eight earlier open questions had never been written into the spec, so they're recorded now.
+
+### Four packages built side by side, each in its own checkout
+*2026-11-15 · Setup*
+
+While migration 058 finishes in the main checkout, we started the four follow-up packages that touch separate files. They are the switch Gate B needs, research on Indian drink sizes, a cuisine classifier for "Indian data first", and the generator for the chain-menu table. Each runs in its own git worktree on its own branch, gets a builder and then a reviewer who tries to break it, and ships dark: nothing changes for real users until its own check passes.

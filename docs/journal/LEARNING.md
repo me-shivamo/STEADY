@@ -1857,3 +1857,8 @@ Whether to log "poha" as one dish or as its ingredients only helps if the pieces
 *2026-11-14 · Tool*
 
 When two tests share a resource, here the same API key and the same rate limits, the resource's total can't tell you which test spent what, and each test's timing is slowed by the other. Our model comparison overlapped a prompt test on the same key, so the key's spend made the newer model look 8x as expensive when its own recorded calls said 3.8x, and its timings were inflated. For STEADY the rule is: one experiment on a key at a time, cost taken from the per-call records, and the key total only as a cross-check.
+
+### Git worktrees: several checkouts of one repository
+*2026-11-15 · Tool*
+
+`git worktree add <dir> -b <branch>` creates a second working folder for the same repository, checked out on its own branch, sharing one history and object store, a bit like opening the same project twice on different branches without cloning. Changes in one folder can't clobber files in another, and each branch is merged back when it's reviewed. For STEADY it lets us build several independent packages at once, while a migration is being prepared in the main checkout, without any of them editing the same files.
