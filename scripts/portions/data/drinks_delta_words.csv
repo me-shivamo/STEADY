@@ -1,0 +1,29 @@
+kind,word,target,replaces,priority,head_only,size,count,note
+category_word,lassi,lassi,beverage,80,false,,,re-point (054 has lassi -> beverage); mango lassi / sweet lassi follow the head noun
+category_word,shake,shake,beverage,80,false,,,re-point (054 has shake -> beverage)
+category_word,milkshake,shake,beverage,82,false,,,re-point (054 has milkshake -> beverage)
+category_word,smoothie,shake,beverage,80,false,,,re-point (054 has smoothie -> beverage); McCafe India smoothies 280-325 ml sit inside the shake range
+category_word,cold coffee,cold_coffee,beverage,95,false,,,re-point (054 has cold coffee -> beverage)
+category_word,iced coffee,cold_coffee,beverage,95,false,,,re-point (054 has iced coffee -> beverage)
+unit_word,kulhad,cup,,,,,,"clay chai cup: retail chai kulhads 80-150 ml; the 2004 railway kulhad held ~100 ml of a 150 ml serving (The Telegraph, via Wikipedia) -> the 120 ml Indian teacup; the unit CHECK has no kulhad unit"
+unit_word,kulhads,cup,,,,,,plural of kulhad
+unit_word,kulhar,cup,,,,,,spelling of kulhad
+unit_word,kulhars,cup,,,,,,spelling of kulhad
+unit_word,kullad,cup,,,,,,spelling of kulhad
+unit_word,kullads,cup,,,,,,spelling of kulhad
+unit_word,kulladh,cup,,,,,,spelling of kulhad
+unit_word,kullhad,cup,,,,,,spelling of kulhad
+unit_word,kulhad wali,cup,,,,,,"""kulhad wali chai"""
+unit_word,steel glass,glass,,,,,,"North Indian steel glass = the 200 ml Indian glass (054 research glass)"
+unit_word,steel glasses,glass,,,,,,plural of steel glass
+unit_word,steel tumbler,glass,,,,,,steel tumbler = glass (tumbler already maps to glass in 054)
+unit_word,half cup,cup,,,,,0.5,"defensive: the V2 prompt already asks for count 0.5 with unit_word ""cup"", and the V1 description reader already reads it; mirrors 054's half plate"
+unit_word,aadha cup,cup,,,,,0.5,see half cup
+unit_word,aadhi cup,cup,,,,,0.5,see half cup
+unit_word,adha cup,cup,,,,,0.5,see half cup
+unit_word,adhi cup,cup,,,,,0.5,see half cup
+unit_word,half glass,glass,,,,,0.5,see half cup
+unit_word,aadha glass,glass,,,,,0.5,see half cup
+unit_word,aadhi glass,glass,,,,,0.5,see half cup
+unit_word,adha glass,glass,,,,,0.5,see half cup
+unit_word,adhi glass,glass,,,,,0.5,see half cup

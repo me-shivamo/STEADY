@@ -1,0 +1,4 @@
+category,parent,density_g_per_ml,s_ratio,l_ratio,serving_unit,inherit_vessels,kcal100_min,kcal100_max,note
+lassi,beverage,,0.75,1.38,,true,,,"lassi (sweet, salted, mango): NEW, neutral on insert (no density, beverage's ratios, no serving unit or kcal clamp), so it changes no gram value until its proposed rows are promoted; docs/research/reports/Indian drink sizes.md"
+shake,beverage,,0.75,1.38,,true,,,"milkshake, shake, smoothie: NEW, neutral on insert (see lassi); Indian chain servings 260-355 ml; docs/research/reports/Indian drink sizes.md"
+cold_coffee,beverage,,0.75,1.38,,true,,,"cold coffee, iced coffee: NEW, neutral on insert (see lassi); Indian chain servings 230-355 ml; docs/research/reports/Indian drink sizes.md"
