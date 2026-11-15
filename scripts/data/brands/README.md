@@ -2,7 +2,7 @@
 
 Collected 13 Nov 2026 for branded food logging ("starbucks tall cappuccino", "mcaloo tikki"). Every
 number is copied exactly as the brand prints it, typos included, with the source URL, document
-date and page on each row. Not yet imported into the app.
+date and page on each row. Not yet served to users: the import below waits in `supabase/pending/`.
 
 ## Layout
 
@@ -26,6 +26,15 @@ checks) stay local and are git-ignored; both can be regenerated.
 - Many rows publish no gram weight (793) or millilitres only (1,161). Don't invent a weight to
   convert them to per-100 g; store them per serving.
 - Every imported value must pass the Atwater check (4P + 4C + 9F close to kcal).
+
+## Import (v1.2 follow-up WP10, generator half)
+
+`npx tsx scripts/import-brands.ts` turns `raw/_combined.csv` into `supabase/pending/brand_items.sql` (one
+`brand_items` row per CSV row, numbers copied as printed), its rollback, `scripts/brands/out/review_list.csv` (every
+row that is not served, with the reason) and `scripts/brands/out/manifest.json`. `--check` regenerates in memory and
+fails on any difference. The founder's data choices (Starbucks guide, McDonald's region, Behrouz city, Domino's
+duplicates, default sizes, per-100 g brands, Atwater tolerance, ...) live in `scripts/brands/decisions.json`, each
+with a proposed default; edit that file and regenerate, never the SQL. Per-brand sign-offs go in the same file.
 
 ## Decisions
 

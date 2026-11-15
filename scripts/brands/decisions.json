@@ -1,0 +1,189 @@
+{
+  "_about": [
+    "Brand data choices read by scripts/import-brands.ts (v1.2 follow-up plan WP10, open question Q16).",
+    "Each decision has a proposed default. status is \"PENDING FOUNDER\" until the founder answers; then set status to \"DECIDED\" and put the answer in chosen (copy proposed to accept it).",
+    "While a decision is PENDING the generator uses proposed, with one exception: a pending answer never releases a held row. behrouz_city and dominos_duplicates resolve conflict-tier rows, so they take effect only once DECIDED.",
+    "Rows with qa_severity error are never released by any decision (they change only when the brand publishes a corrected document).",
+    "Decisions marked 'recorded only' do not change any row; the generator copies them into the migration header and scripts/brands/out/manifest.json for the resolver half of WP10.",
+    "Promotion (npx tsx scripts/import-brands.ts --number NNN) refuses while any decision is PENDING FOUNDER or a brand with served rows has no sign-off.",
+    "After editing this file run: npx tsx scripts/import-brands.ts && npx tsx scripts/import-brands.ts --check"
+  ],
+  "decisions": {
+    "atwater_rule": {
+      "question": "Which Atwater tolerance gates a brand row? A row passes when |kcal - (4P + 4C + 9F)| is within pct% of kcal OR within kcal_slack kcal. kcal_slack 0 means a pure +/-pct% rule.",
+      "options": [
+        { "pct": 15, "kcal_slack": 15 },
+        { "pct": 15, "kcal_slack": 0 }
+      ],
+      "proposed": { "pct": 15, "kcal_slack": 15 },
+      "why": "This is REPORT.md's QA rule. Founder (n) says +/-15%, but a pure percentage fails near-zero items where the brand's own rounding dominates (Burger King Hot Espresso Small: 4 kcal printed, 5.1 from its macros). The 15 kcal slack only matters below 100 kcal; a pure 15% rule fails 30 more rows, almost all drinks, sachets and teas under 40 kcal.",
+      "effect": "Rows that fail are held (gate:atwater_mismatch). Rows without all of P, C and F cannot be checked; see macros_incomplete.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "starbucks_guide": {
+      "question": "Starbucks India: which nutrition guide is the source of truth?",
+      "options": ["linked_2023", "feb_2026"],
+      "proposed": "linked_2023",
+      "why": "linked_2023 is the PDF starbucks.in links today (content dated 02-01-2023, file Jun 2026), and it is the only guide in _combined.csv. The Feb-2026 guide sits on Tata Starbucks' pre-production storage; we could not confirm the live site links it, and it disagrees on 194 of 529 item+size pairs. The linked guide's known errors (Short = Tall Cappuccino at 104 kcal) are already held by the size check.",
+      "effect": "feb_2026 withholds all 976 current Starbucks rows (unserved, decision:starbucks_guide) until that guide is collected and QA'd into _combined.csv.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "mcdonalds_default_region": {
+      "question": "McDonald's India has two franchisees with different numbers (17 of 26 shared item+size pairs differ). Which region serves when we do not know the user's region within India?",
+      "options": ["IN-WS", "IN-NE"],
+      "proposed": "IN-WS",
+      "why": "The West & South booklet covers more items (134 vs 93), is 97% clean and prints a gram or ml weight on every row. North & East is newer (Dec 2025) but 27 of its rows have no weight and 14 are kcal-only.",
+      "effect": "Sets is_default_region on McDonald's rows. Both regions stay verified; the default region wins when both publish the item, and an item only one region publishes is still served from that region.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "behrouz_city": {
+      "question": "Behrouz Biryani prints different values for the same item in different cities (50 conflict rows). Which city's values do we serve?",
+      "options": ["IN-NCR", "IN-BLR", "none"],
+      "proposed": "IN-NCR",
+      "why": "Both cities' listings say 'Served with 1 Gulab Jamun & Mint Raita'. The Gurgaon/Delhi (IN-NCR) values include the gulab jamun's sugar (e.g. Lazeez Bhuna Murgh 948 kcal, 40 g sugar), so they match the box as sold; the Bengaluru values (733 kcal, 5 g sugar) look like the biryani alone. Under the whole-dish rule a named branded item is one food.",
+      "effect": "Once DECIDED: the chosen city's duplicate_conflict rows are released when that city has a single value; other cities' conflict rows stay held (decision:behrouz_city). 'none' keeps all 50 held. Also sets is_default_region for Behrouz rows. While PENDING nothing is released.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "dominos_duplicates": {
+      "question": "Domino's charts some pizzas twice with different numbers (68 conflict rows, e.g. Double Cheese Margherita, Peppy Paneer). Which value do we keep?",
+      "options": [
+        { "policy": "hold_both", "keep_rows": [] },
+        { "policy": "keep_higher_kcal", "keep_rows": [] },
+        { "policy": "keep_rows", "keep_rows": ["<source_row numbers from scripts/brands/out/review_list.csv>"] }
+      ],
+      "proposed": { "policy": "hold_both", "keep_rows": [] },
+      "why": "Nothing in the charts says which image is current, so we serve neither until a person compares them (or Domino's republishes). keep_higher_kcal is the cautious automatic pick if the founder prefers serving something.",
+      "effect": "Once DECIDED: keep_higher_kcal releases the higher-kcal row of each conflict group (ties stay held); keep_rows releases exactly the listed Domino's source rows (at most one per group). While PENDING nothing is released.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "dominos_mni_34_40": {
+      "question": "Domino's regional chart images MNI-34..40 were not transcribed. Transcribe them?",
+      "options": ["transcribe_next_pass", "skip"],
+      "proposed": "transcribe_next_pass",
+      "why": "They are official charts like the other 40; the collectors stopped for time, not because of a data problem.",
+      "effect": "Recorded only: a collection task, not a generator rule. Those items have no rows until then.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "default_size": {
+      "question": "When a user names a branded item without a size ('starbucks cappuccino', 'mcd fries'), which size do we serve? Per brand, an ordered list of size labels (normalized: lowercase, punctuation to spaces); within each item, the first label that matches exactly one served row is the default. A label also matches a longer variant that starts with it ('personal' matches 'personal pan pizza').",
+      "options": ["any ordered label lists; fallback is always 'no default' (the resolver asks or falls through)"],
+      "proposed": {
+        "single_row_is_default": true,
+        "brands": {
+          "starbucks": ["tall"],
+          "mcdonalds": ["regular r", "regular", "regular cone", "medium", "10 oz", "6 pcs", "6 piece", "4 pc", "4pc", "standard regular serving"],
+          "kfc": ["regular", "1 pc"],
+          "burger_king": ["regular", "4 pcs", "4pcs"],
+          "dominos": ["new hand tossed regular", "fresh pan regular", "thin crust regular", "cheese burst regular", "single serve"],
+          "pizza_hut": ["personal", "medium"],
+          "subway": ["6 inch"],
+          "ccd": ["regular", ""],
+          "blue_tokai": [""],
+          "theobroma": ["1 piece", ""],
+          "taco_bell": ["", "dining"],
+          "behrouz": ["serves 1", "single listing default selection"],
+          "faasos": ["single listing default selection", "serves 1"]
+        }
+      },
+      "why": "Each brand's standard serve: Starbucks Tall (the founder's own example), the 'Regular' size where a brand has one (McDonald's desserts and coffee, KFC and BK sides and drinks), Medium for McDonald's soft drinks (sold Small/Medium/Large), a Regular hand-tossed Domino's pizza (Domino's 'Regular serves 1'), a Personal Pizza Hut pizza, a 6-inch Subway. Note: McDonald's fries default to Regular (77 g); if meals are what users mean, Medium (109 g) is the alternative.",
+      "effect": "Sets is_default_size. An item listed once is its own default when single_row_is_default is true. Groups where no label matches, or a label matches two rows, get no default.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "per100_no_portion": {
+      "question": "La Pino'z (199 rows), Wow! Momo (8) and 2 Haldiram's rows publish values per 100 g with no portion weight. How are they served?",
+      "options": ["stated_amount_only", "keep_unserved"],
+      "proposed": "stated_amount_only",
+      "why": "The per-100 g numbers are official; only the portion is missing. Serving them when the user states grams ('200 g la pinoz farmhouse pizza') uses no invented weight. Without a stated amount the item falls through to the normal path (the row still exists, so no web lookup).",
+      "effect": "stated_amount_only: served with amount_rule stated_only. keep_unserved: unserved (decision:per100_no_portion). Wow! Momo rows are also kcal-only, so macros_incomplete holds them either way.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "macros_incomplete": {
+      "question": "139 rows publish kcal without all of protein, carbs and fat (all 98 CCD rows, 14 McDonald's N&E menu rows, 10 Pizza Hut, all 8 Wow! Momo, 7 Blue Tokai, both Barista). They cannot pass the Atwater check (n) requires. Keep them in brand_items?",
+      "options": ["keep_unserved", "omit_from_table"],
+      "proposed": "keep_unserved",
+      "why": "Kept, they are never served but they count as 'we hold this item', so WP11 does not spend a web lookup on a brand whose only official numbers are these. Omitted, WP11 may look them up (CCD publishes nothing better).",
+      "effect": "keep_unserved: status unserved (decision:macros_incomplete). omit_from_table: the rows are left out of brand_items entirely (listed in the review list as omitted).",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "brand_tier_precedence": {
+      "question": "When a brand word or a reviewed brand-only name is present ('mcd mcchicken', 'mcaloo tikki'), does the brand tier answer before the generic exact key?",
+      "options": ["above_generic_key_when_brand_named", "below_generic_key"],
+      "proposed": "above_generic_key_when_brand_named",
+      "why": "REPORT.md order: user memory, then brand match, then verified key. The brand's own number beats a generic dish when the user named the brand. Without a brand word the generic key keeps answering ('masala chai' stays the home-made dish).",
+      "effect": "Recorded only (resolver half of WP10). User-taught memory always stays above the brand tier.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "mcchicken_live_key": {
+      "question": "'mcchicken burger' is already a live food_items key. Repoint it to the official McDonald's row?",
+      "options": ["leave", "repoint"],
+      "proposed": "leave",
+      "why": "With the brand tier on, 'mcchicken' is a brand-only name and the brand row answers first, so the live key stops being reached for that phrase. Repointing would change real users' results before the flag is on.",
+      "effect": "Recorded only (resolver half). brand_items never writes food_items.",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "ml_only_rows": {
+      "question": "Rows that publish millilitres only (1,161): convert with 1 g/ml?",
+      "options": ["per_serving_no_density"],
+      "proposed": "per_serving_no_density",
+      "why": "Adversarial review #20 and scripts/data/brands/README.md: never invent a weight. They are stored and served per serving; serving_ml is kept and serving_g stays NULL.",
+      "effect": "Fixed rule; the generator refuses any other value.",
+      "status": "DECIDED",
+      "chosen": "per_serving_no_density",
+      "source": "plan adversarial review #20; scripts/data/brands/README.md 'Rules for the import'"
+    },
+    "no_weight_rows": {
+      "question": "Per-serve rows with no published weight or volume (793, e.g. Domino's slices, Faasos wraps): serve them?",
+      "options": ["per_serving"],
+      "proposed": "per_serving",
+      "why": "Adversarial review #20: serve per serving, never invent a weight.",
+      "effect": "Fixed rule; the generator refuses any other value. serving_g and serving_ml stay NULL.",
+      "status": "DECIDED",
+      "chosen": "per_serving",
+      "source": "plan adversarial review #20"
+    },
+    "amul_source": {
+      "question": "Amul's numbers come from Dudhsagar Dairy (an Amul member union), not amul.com. Keep them?",
+      "options": ["keep"],
+      "proposed": "keep",
+      "why": "Founder, 13 Nov 2026: real manufacturer data.",
+      "effect": "Amul rows are treated like any other brand.",
+      "status": "DECIDED",
+      "chosen": "keep",
+      "source": "spec v1.2-phase5-7 (n) addendum; scripts/data/brands/README.md"
+    }
+  },
+  "signoffs": {
+    "_about": "Per-brand human sign-off: read about 10 random served rows against the cited page and record {\"by\": name, \"date\": \"YYYY-MM-DD\", \"rows_checked\": n, \"note\": \"...\"}. null = not signed. REPORT.md section 3.3.",
+    "amul": null,
+    "barista": null,
+    "behrouz_biryani": null,
+    "blue_tokai": null,
+    "burger_king_india": null,
+    "cafe_coffee_day": null,
+    "dominos": null,
+    "faasos": null,
+    "haldirams": null,
+    "kfc_india": null,
+    "lapinoz_pizza": null,
+    "mcdonalds_india_north_east": null,
+    "mcdonalds_india_west_south": null,
+    "naturals_ice_cream": null,
+    "pizza_hut": null,
+    "starbucks_india": null,
+    "subway_india": null,
+    "taco_bell_india": null,
+    "theobroma": null,
+    "wow_momo": null
+  }
+}

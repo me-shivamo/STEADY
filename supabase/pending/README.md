@@ -8,6 +8,7 @@ for 054 would therefore also apply anything numbered after it. The files here ar
 | `055_usda_local_foods.sql` | `npx tsx scripts/import-usda.ts` | Adds 11,986 verified rows with no key. The deployed functions' FTS query only ignores key-less rows once the FTS guard (`.not('normalized_name','is',null)`, spec (g)1) is deployed; before that, real users would see imported rows. |
 | `056_usda_local_portions.sql` | `npx tsx scripts/import-usda.ts` | Needs 055. |
 | `057_apple_identity.sql` | hand-written, reviewed | Keys one of 055's rows (`apple`). Runs with or without 056. |
+| `brand_items.sql` | `npx tsx scripts/import-brands.ts` | v1.2 follow-up WP10: official chain-menu rows in their own `brand_items` table (no food_items keys, invisible to fts and search_foods). Not numbered yet: it gets its number at push time with `--number NNN`, which refuses while any choice in `scripts/brands/decisions.json` is PENDING FOUNDER or a served brand has no sign-off. Push it only after WP10's gate. Rollback: `supabase/rollback/brand_items_down.sql`. |
 
 ## When to move them into `supabase/migrations/`
 
