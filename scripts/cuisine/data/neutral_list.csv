@@ -1,0 +1,95 @@
+phrase,portion_category,basis,status,note
+almonds,almond,live_key,draft,
+americano,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
+apple,apple,indb;live_key,draft,
+banana,banana,founder;indb;live_key,draft,Founder (m)2 example.
+biscuit,biscuit,indb;live_key,draft,India: a cookie; US: a scone-like bread. The region decides the row.
+biscuits,biscuit,common,draft,
+black coffee,coffee,live_key,draft,
+black tea,tea,live_key,draft,
+boiled egg,egg,indb;live_key,draft,
+boiled rice,cooked_rice,indb;live_key,draft,
+bread,bread,indb;live_key,draft,
+brown bread,bread,live_key,draft,
+brown rice,cooked_rice,common,draft,
+buffalo milk,milk,live_key,draft,
+butter,fat,indb;live_key,draft,
+buttermilk,buttermilk,indb;live_key,draft,India: chaas (thin spiced curd drink); US: cultured whole buttermilk. The region decides the row.
+cake,,indb;live_key,draft,
+cappuccino,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
+cashews,cashew,live_key,draft,
+cereal,cereal_dry,indb;live_key,draft,
+cheese,,indb;live_key,draft,
+chicken,,indb;live_key,draft,
+chicken breast,,live_key,draft,
+chili sauce,condiment,live_key,draft,Bottled chilli sauce: shadows the Western word chili (US chili with beans).
+chips,,indb;live_key,draft,
+chocolate,,indb;live_key,draft,
+coffee,coffee,indb;live_key,draft,India: usually coffee with milk and sugar; US: brewed black coffee. The region decides the row.
+cold coffee,coffee,indb;live_key,draft,
+corn flakes,cereal_dry,live_key,draft,
+cornflakes,cereal_dry,indb;live_key,draft,
+cottage cheese,,indb;live_key,draft,India: cottage cheese = paneer (~258 kcal/100 g); US: cottage cheese (~81). The region decides the row.
+curd,curd,indb;live_key,draft,"India: curd = dahi (052 alias, founder); US: rarely typed (cheese curds). The region decides the row."
+dates,date_fruit,indb;live_key,draft,
+egg,egg,founder;indb;live_key,draft,Founder (m)2 example.
+eggs,egg,indb;live_key,draft,
+espresso,cafe_coffee,common,draft,"Cafe drink: the region decides the cup size (founder l3, Q13)."
+fish,,indb;live_key,draft,
+fried egg,egg,indb;live_key,draft,
+fried rice,cooked_rice,indb;live_key,draft,"Indo-Chinese in India, Chinese-American in the US: left to the region."
+fruit,fruit,indb;live_key,draft,
+grapes,fruit,indb;live_key,draft,
+greek yogurt,curd,live_key,draft,
+green curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
+green tea,tea,live_key,draft,
+grilled chicken,,live_key,draft,
+honey,honey,indb;live_key,draft,
+ice cream,ice_cream,indb;live_key,draft,
+iced tea,tea,indb;live_key,draft,
+jam,spread,indb;live_key,draft,
+japanese curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
+juice,juice,indb;live_key,draft,
+latte,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
+lemon tea,tea,common,draft,
+mango,fruit,indb;live_key,draft,
+milk,milk,founder;indb;live_key,draft,Founder (m)2 example of a neutral food.
+milkshake,beverage,indb;live_key,draft,
+mocha,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
+noodles,,indb;live_key,draft,
+nuts,nuts,indb;live_key,draft,
+oats,porridge,indb;live_key,draft,
+omelet,omelette,common,draft,
+omelette,omelette,indb;live_key,draft,
+orange,fruit,indb;live_key,draft,
+orange juice,juice,live_key,draft,
+papaya,fruit,indb;live_key,draft,
+peanuts,peanut,live_key,draft,
+pickle,condiment,indb;live_key,draft,India: oil-based achar; US: a dill pickle. The region decides the row.
+potato,,indb;live_key,draft,
+potato chips,,live_key,draft,
+potatoes,,indb;live_key,draft,
+prawns,,live_key,draft,
+protein shake,beverage,common,draft,
+red curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
+rice,cooked_rice,founder;indb;live_key,draft,Founder (m)2 example.
+salad,,indb;live_key,draft,
+sandwich bread,bread,live_key,draft,Plain sliced bread: shadows the Western word sandwich.
+scrambled eggs,egg,live_key,draft,
+skim milk,milk,live_key,draft,
+skimmed milk,milk,live_key,draft,
+smoothie,beverage,indb;live_key,draft,
+soup,liquid_dish,indb;live_key,draft,
+steamed rice,cooked_rice,live_key,draft,
+sugar,sugar,live_key,draft,
+sweet potato,,indb;live_key,draft,
+tea,tea,indb;live_key,draft,India: tea = milk chai (053 tea row); US: plain brewed tea. The region decides the row.
+thai curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
+toast,bread,indb;live_key,draft,
+tofu,,live_key,draft,
+water,beverage,indb;live_key,draft,
+watermelon,fruit,live_key,draft,
+whey protein,protein_powder,live_key,draft,
+white rice,cooked_rice,live_key,draft,
+yoghurt,curd,common,draft,
+yogurt,curd,indb;live_key,draft,

@@ -1,0 +1,33 @@
+normalized_name,food_item_id,fdc_id,source,has_portions,key_cuisine,matched_word,via
+amul lassi,44be7974-b8c7-4766-a641-1bf6479489dd,1892102,usda,false,in,lassi,head
+baingan bharta,cba8f58c-dd36-41d9-8de1-35aa8c88438d,2031599,usda,false,in,bharta,head
+beans ki sabji,e8c1a6ba-e936-49e0-b191-c274a725b8d9,169032,usda,false,in,sabji,head
+biryani,a6958211-43b7-446c-a785-262846a37ae0,2706538,usda,true,in,biryani,head
+boiled rice uble chawal,fb88e535-7422-5276-a5b7-17a3812c772a,168930,usda,true,in,chawal,head
+buttermilk chaas,29c65def-14f9-424e-b9e8-fa04bb2f78fd,172225,usda,false,in,chaas,head
+buttermilk curry,b065425b-cbc7-4416-ba5d-34d9d52fbe60,172225,usda,true,in,curry,head
+buttermilk kadhi,b44bb4fe-7829-41e7-a820-60d23b4b5a7a,172225,usda,false,in,kadhi,head
+chawal,db851c61-ef57-5f7d-bad8-c1dcdf45b0bc,168930,usda,true,in,chawal,head
+chutney,397c24c0-7e82-4e3b-8d42-0ed5cafd64b8,2709309,usda,false,in,chutney,head
+cottage cheese paneer cubes,0d4c5ed9-07e8-5ea6-8bb3-c42e7b17d21f,2705740,ifct,false,in,paneer,head
+dahi,50d9a39a-bd2c-4f55-a78e-0416f7a4d63f,2651751,usda,false,in,dahi,head
+dosa,98ec8567-9d7c-4331-978c-bc6784e7efe7,2708347,usda,false,in,dosa,head
+dosa crepe,d9493182-3b47-4fd6-8fd3-39b4761d11b7,2709129,usda,true,in,dosa crepe,head
+filter coffee,88221799-1e89-4c15-b25d-5c0b8b2ad6a1,171881,usda,false,in,filter coffee,head
+ghee,777d20f9-d7d1-4dbe-af8b-4e918d8ec72f,171314,usda,false,in,ghee,head
+ghee on parathas,10b5d736-342b-4432-ae3e-7ad1e42ef3b9,171314,usda,false,in,ghee,head
+haldiram bhujia sev,c625b040-ed72-4c66-bb71-1931b646e581,904996,usda,false,in,sev,head
+kodo millet,68cb4775-a30c-4aaf-aec3-39d35f47022b,168871,usda,false,in,kodo,head
+kodo millet upma,c1f3917c-72a5-42d9-aa1d-002581476961,168871,usda,false,in,upma,head
+lassi,c4de0397-04fd-42cc-b5b0-d6f052bcaa58,2490375,usda,false,in,lassi,head
+medu vada,24a866dc-fd87-4fd4-bc4b-0fdfd57b84a7,2709130,usda,true,in,medu vada,head
+medu vada urad dal fritter,3ea22a99-b40a-4c3c-8ba3-9af0d14d7c78,2709130,usda,false,in,dal,head
+methi seeds,de121695-cfa6-4b11-b5b3-bd80448e1bc9,170595,usda,false,in,methi,head
+paani patashe,87d56173-fa7a-478f-87b5-f986b77dcad7,1913634,usda,false,in,paani patashe,head
+palak paneer,1a343a80-011d-4c3b-9e3b-6821503d4b36,2709631,usda,true,in,paneer,head
+paneer,42528f88-2dff-4cda-951e-d7c55fe6c32e,2705740,ifct,false,in,paneer,head
+paneer parantha,1e06517d-5317-4034-bc91-e5e4dea1b97d,2705740,usda,false,in,parantha,head
+paneer tikka,1807172a-318f-420c-a731-df230d4c8123,2705740,usda,false,in,tikka,head
+sambhar,211d91b8-eaa4-4e50-a00e-c1a57cd1e677,2707430,usda,true,in,sambhar,head
+samosa,2b57d4e1-b860-46fc-aa59-67937641a114,2708730,usda,false,in,samosa,head
+tomato garlic chutney,71d0d6b6-0fb4-4e9a-a0ac-34635c7153d4,170463,usda,false,in,chutney,head
