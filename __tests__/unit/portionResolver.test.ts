@@ -116,6 +116,28 @@ describe('effectivePortion matrix: PORTION_EVAL_PROPOSED x email x PORTION_MODE'
     expect(effectivePortion('eval_only', 'eval@steadyapp.internal')).toEqual(TP)
   })
 
+  it('a value that is set but is neither on nor off is logged (it reads as on, so a Gate B leg would serve proposed rows)', () => {
+    const warn = console.warn as jest.Mock
+    for (const v of [undefined, '', 'on', 'off']) {
+      warn.mockClear()
+      if (v === undefined) delete process.env.PORTION_EVAL_PROPOSED
+      else process.env.PORTION_EVAL_PROPOSED = v
+      effectivePortion('eval_only', 'eval@steadyapp.internal')
+      expect(warn).not.toHaveBeenCalled()
+    }
+    for (const v of ['OFF', 'Off', ' off', 'false']) {
+      warn.mockClear()
+      process.env.PORTION_EVAL_PROPOSED = v
+      expect(effectivePortion('eval_only', 'eval@steadyapp.internal')).toEqual(TP)
+      expect(effectivePortion('eval_only', 'someone@gmail.com')).toEqual(L)
+      expect(warn).toHaveBeenCalledTimes(2)
+      expect(String(warn.mock.calls[0][0])).toMatch(/PORTION_EVAL_PROPOSED/)
+    }
+    warn.mockClear()
+    expect(effectivePortion('eval_only', 'eval@steadyapp.internal', 'off')).toEqual(T)   // explicit argument: no env read
+    expect(warn).not.toHaveBeenCalled()
+  })
+
   it('ships dark: for every non-eval email, off gives exactly what on gives, in every mode', () => {
     for (const [mode, cls, email, on] of CASES) {
       if (cls === 'eval') continue
