@@ -1,7 +1,8 @@
 -- scripts/eval/calibration-intercept-real-users.sql — READ-ONLY input for
 --   npx tsx scripts/eval/calibration-intercept-check.ts --real-users
 --
--- Real users' own chat messages (role 'user'), eval accounts (@steadyapp.internal) excluded. The script runs
+-- Real users' own chat messages (role 'user': text messages and photo captions; a successful edit saves no
+-- chat row), eval accounts (@steadyapp.internal) excluded. The script runs
 -- this through `npx supabase db query --linked -o csv -f <this file>`, keeps the output in memory only, and
 -- prints counts. Its output IS user free text: never run it by hand into a file, a terminal or a log.
 --

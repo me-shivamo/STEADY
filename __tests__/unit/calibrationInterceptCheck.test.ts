@@ -73,6 +73,15 @@ describe('--real-users counting (counts only)', () => {
     expect(formatRealUsers(countRealUsers([['1', 'false', SECRET[0]]]))).toMatch(/RESULT: PASS/)
   })
 
+  it('the result line: 0 intercepts, only non-log intercepts (named, so a gate reader sees them), or a food log hit', () => {
+    const result = (rs: string[][]) => formatRealUsers(countRealUsers(rs)).split('\n').filter((l) => l.startsWith('RESULT'))
+    expect(result([['1', 'true', 'poha'], ['2', 'false', 'is dal healthy']])).toEqual(['RESULT: PASS (0 intercepts)'])
+    const nonLog = result([['1', 'false', SECRET[0]], ['2', 'false', SECRET[3]], ['3', 'true', 'poha']])
+    expect(nonLog).toHaveLength(1)
+    expect(nonLog[0]).toMatch(/^RESULT: PASS \(no message that became a food log would be intercepted; 2 other message\(s\)/)
+    expect(result([['1', 'true', SECRET[0]]])).toEqual([expect.stringMatching(/^RESULT: REVIEW \(1 message/)])
+  })
+
   it('a malformed row fails without quoting any cell', () => {
     const bad = (r: string[][]) => { try { countRealUsers(r); return '' } catch (e) { return (e as Error).message } }
     const m1 = bad([['1', 'false']])

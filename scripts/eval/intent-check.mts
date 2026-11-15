@@ -33,8 +33,9 @@ const models = args.filter(a => !a.startsWith('--'))
 const promptArg = flags.find(f => f.startsWith('--prompt='))?.slice('--prompt='.length) ?? 'v1'
 const dryRun = flags.includes('--dry-run')
 const badFlag = flags.find(f => f !== '--dry-run' && !f.startsWith('--prompt='))
-if (badFlag || !PROMPTS[promptArg] || (models.length === 0 && !dryRun)) {
-  console.error(badFlag ? `unknown flag ${badFlag}` : !PROMPTS[promptArg] ? `unknown prompt "${promptArg}" (v1 or v2)` : 'no model given')
+const knownPrompt = Object.hasOwn(PROMPTS, promptArg)   // own keys only: --prompt=__proto__ is not a prompt
+if (badFlag || !knownPrompt || (models.length === 0 && !dryRun)) {
+  console.error(badFlag ? `unknown flag ${badFlag}` : !knownPrompt ? `unknown prompt "${promptArg}" (v1 or v2)` : 'no model given')
   console.error(USAGE)
   process.exit(2)
 }

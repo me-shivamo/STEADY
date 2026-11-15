@@ -27,8 +27,11 @@
 //   a real log the intercept would have answered instead; someone with live access reviews those rows by
 //   hand), 2 when the query fails or its output has an unexpected shape.
 //   Counts are an upper bound on what the endpoint would answer: handleCalibrationStatement() can still
-//   decline a match (an unknown food word, an implausible amount), and edit texts are counted although the
-//   intercept skips edits.
+//   decline a match (an unknown food word, an implausible amount), and photo captions are counted although
+//   only the text endpoint has the intercept. Not visible here: edit texts (a successful edit saves no chat
+//   row, and the intercept skips edits anyway) and messages whose reply was never saved (a parse failure).
+//   PASS also reports how many messages that were NOT food logs would now get a calibration reply instead
+//   of the model's (a question, a coaching message): check by kind that those are genuine statements.
 //
 // Kinds: set_amount ("my cup is 350 ml"), set_size_word ("my katori is small"), set_piece ("my roti is 50 g"),
 // revoke_unit ("forget my cup size"), revoke_all ("forget my portion sizes"), list ("what are my portion sizes").
@@ -176,6 +179,11 @@ const KIND_LABEL: Record<InterceptKind, string> = {
 
 export function formatRealUsers(r: RealUserReport): string {
   const pad = (s: string) => s.padEnd(36)
+  const result = r.interceptedLogged > 0
+    ? `RESULT: REVIEW (${r.interceptedLogged} message(s) that became food logs would be answered as calibration statements instead; review those rows by hand with live access, this script never prints them)`
+    : r.intercepted === 0
+      ? 'RESULT: PASS (0 intercepts)'
+      : `RESULT: PASS (no message that became a food log would be intercepted; ${r.interceptedNotLogged} other message(s) would now get a calibration reply instead of the model's: check by kind above that they are genuine statements)`
   const lines = [
     'Calibration-statement intercept replay on real users (read-only, live; counts only, no text printed)',
     `  ${pad('user messages read')}${r.messages}  (from ${r.users} users; eval accounts excluded)`,
@@ -184,10 +192,8 @@ export function formatRealUsers(r: RealUserReport): string {
     ...KINDS.map((k) => `    ${KIND_LABEL[k].padEnd(34)}${r.byKind[k]}`),
     `  ${pad('of those, sent as a food log')}${r.interceptedLogged}`,
     `  ${pad('of those, not a food log')}${r.interceptedNotLogged}`,
-    'Upper bound: the endpoint can still decline a match (unknown food word, implausible amount), and edits are counted.',
-    r.interceptedLogged === 0
-      ? 'RESULT: PASS (no message that became a food log would be intercepted)'
-      : `RESULT: REVIEW (${r.interceptedLogged} message(s) that became food logs would be answered as calibration statements instead; review those rows by hand with live access, this script never prints them)`,
+    'Upper bound: the endpoint can still decline a match (unknown food word, implausible amount), and photo captions are counted.',
+    result,
   ]
   return lines.join('\n')
 }
