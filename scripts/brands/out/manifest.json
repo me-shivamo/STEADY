@@ -1,0 +1,796 @@
+{
+  "generated_by": "scripts/import-brands.ts",
+  "inputs_sha256": "0a1017167b582ef00f0cd98a967c2b413a2a49d290483fbc4318e2632f6ab077",
+  "migration": "supabase/pending/brand_items.sql",
+  "rollback": "supabase/rollback/brand_items_down.sql",
+  "migration_number": null,
+  "csv_rows": 3741,
+  "totals": {
+    "verified": 3261,
+    "held": 339,
+    "unserved": 141,
+    "omitted": 0,
+    "default_size": 2154,
+    "default_region": 245
+  },
+  "default_size_groups": {
+    "groups": 2204,
+    "withDefault": 2154,
+    "ambiguous": 8,
+    "noMatch": 38,
+    "defaultNotServed": 4
+  },
+  "reasons": {
+    "decision:collector_suspect=withhold": 40,
+    "decision:macros_incomplete=keep_unserved": 139,
+    "duplicate_exact": 3,
+    "gate:atwater_mismatch": 74,
+    "gate:atwater_mismatch,sugar_gt_carbs": 4,
+    "gate:size_not_monotonic": 37,
+    "gate:sugar_gt_carbs": 40,
+    "qa_conflict:duplicate_conflict": 154,
+    "qa_conflict:listed_twice_conflict": 16,
+    "qa_conflict:name_collision": 2,
+    "qa_error:added_sugar_gt_sugar": 1,
+    "qa_error:atwater_mismatch": 65,
+    "qa_error:atwater_mismatch,macro_mass_gt_serving": 4,
+    "qa_error:atwater_mismatch,satfat_gt_fat": 5,
+    "qa_error:atwater_mismatch,sugar_gt_carbs": 4,
+    "qa_error:kcal_density_gt_900,macro_mass_gt_serving": 2,
+    "qa_error:macro_mass_gt_serving": 6,
+    "qa_error:satfat_gt_fat": 3,
+    "qa_error:size_not_monotonic": 37,
+    "qa_error:sugar_gt_carbs": 40
+  },
+  "by_brand": [
+    {
+      "brand_slug": "amul",
+      "brand_key": "amul",
+      "rows": 66,
+      "verified": 64,
+      "held": 1,
+      "unserved": 1,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 36,
+      "default_size": 64
+    },
+    {
+      "brand_slug": "barista",
+      "brand_key": "barista",
+      "rows": 2,
+      "verified": 0,
+      "held": 0,
+      "unserved": 2,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 0
+    },
+    {
+      "brand_slug": "behrouz_biryani",
+      "brand_key": "behrouz",
+      "rows": 110,
+      "verified": 59,
+      "held": 51,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 52,
+      "served_ml_only": 4,
+      "served_per_100": 0,
+      "default_size": 59
+    },
+    {
+      "brand_slug": "blue_tokai",
+      "brand_key": "blue_tokai",
+      "rows": 158,
+      "verified": 143,
+      "held": 8,
+      "unserved": 7,
+      "omitted": 0,
+      "served_no_weight": 16,
+      "served_ml_only": 51,
+      "served_per_100": 0,
+      "default_size": 129
+    },
+    {
+      "brand_slug": "burger_king_india",
+      "brand_key": "burger_king",
+      "rows": 111,
+      "verified": 99,
+      "held": 12,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 32,
+      "served_per_100": 0,
+      "default_size": 78
+    },
+    {
+      "brand_slug": "cafe_coffee_day",
+      "brand_key": "ccd",
+      "rows": 98,
+      "verified": 0,
+      "held": 0,
+      "unserved": 98,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 0
+    },
+    {
+      "brand_slug": "dominos",
+      "brand_key": "dominos",
+      "rows": 477,
+      "verified": 408,
+      "held": 69,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 402,
+      "served_ml_only": 6,
+      "served_per_100": 0,
+      "default_size": 92
+    },
+    {
+      "brand_slug": "faasos",
+      "brand_key": "faasos",
+      "rows": 93,
+      "verified": 92,
+      "held": 1,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 88,
+      "served_ml_only": 4,
+      "served_per_100": 0,
+      "default_size": 92
+    },
+    {
+      "brand_slug": "haldirams",
+      "brand_key": "haldirams",
+      "rows": 29,
+      "verified": 28,
+      "held": 0,
+      "unserved": 1,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 26,
+      "default_size": 28
+    },
+    {
+      "brand_slug": "kfc_india",
+      "brand_key": "kfc",
+      "rows": 232,
+      "verified": 189,
+      "held": 43,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 51,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 136
+    },
+    {
+      "brand_slug": "lapinoz_pizza",
+      "brand_key": "lapinoz",
+      "rows": 199,
+      "verified": 197,
+      "held": 0,
+      "unserved": 2,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 197,
+      "default_size": 197
+    },
+    {
+      "brand_slug": "mcdonalds_india_north_east",
+      "brand_key": "mcdonalds",
+      "rows": 121,
+      "verified": 104,
+      "held": 5,
+      "unserved": 12,
+      "omitted": 0,
+      "served_no_weight": 27,
+      "served_ml_only": 14,
+      "served_per_100": 0,
+      "default_size": 83
+    },
+    {
+      "brand_slug": "mcdonalds_india_west_south",
+      "brand_key": "mcdonalds",
+      "rows": 192,
+      "verified": 186,
+      "held": 6,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 84,
+      "served_per_100": 0,
+      "default_size": 131
+    },
+    {
+      "brand_slug": "naturals_ice_cream",
+      "brand_key": "naturals",
+      "rows": 150,
+      "verified": 107,
+      "held": 42,
+      "unserved": 1,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 107,
+      "default_size": 103
+    },
+    {
+      "brand_slug": "pizza_hut",
+      "brand_key": "pizza_hut",
+      "rows": 314,
+      "verified": 295,
+      "held": 12,
+      "unserved": 7,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 171
+    },
+    {
+      "brand_slug": "starbucks_india",
+      "brand_key": "starbucks",
+      "rows": 976,
+      "verified": 892,
+      "held": 83,
+      "unserved": 1,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 787,
+      "served_per_100": 0,
+      "default_size": 412
+    },
+    {
+      "brand_slug": "subway_india",
+      "brand_key": "subway",
+      "rows": 186,
+      "verified": 180,
+      "held": 6,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 174
+    },
+    {
+      "brand_slug": "taco_bell_india",
+      "brand_key": "taco_bell",
+      "rows": 105,
+      "verified": 105,
+      "held": 0,
+      "unserved": 0,
+      "omitted": 0,
+      "served_no_weight": 6,
+      "served_ml_only": 9,
+      "served_per_100": 0,
+      "default_size": 103
+    },
+    {
+      "brand_slug": "theobroma",
+      "brand_key": "theobroma",
+      "rows": 114,
+      "verified": 113,
+      "held": 0,
+      "unserved": 1,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 102
+    },
+    {
+      "brand_slug": "wow_momo",
+      "brand_key": "wow_momo",
+      "rows": 8,
+      "verified": 0,
+      "held": 0,
+      "unserved": 8,
+      "omitted": 0,
+      "served_no_weight": 0,
+      "served_ml_only": 0,
+      "served_per_100": 0,
+      "default_size": 0
+    }
+  ],
+  "decisions": {
+    "atwater_rule": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": {
+        "pct": 15,
+        "kcal_slack": 15
+      },
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "starbucks_guide": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "linked_2023",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "mcdonalds_default_region": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "IN-WS",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "behrouz_city": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "IN-NCR",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": true
+    },
+    "dominos_duplicates": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": {
+        "policy": "hold_both",
+        "keep_rows": []
+      },
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": true
+    },
+    "dominos_mni_34_40": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "transcribe_next_pass",
+      "recorded_only": true,
+      "releases_held_rows_only_when_decided": false
+    },
+    "default_size": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": {
+        "single_row_is_default": true,
+        "brands": {
+          "starbucks": [
+            "tall"
+          ],
+          "mcdonalds": [
+            "regular r",
+            "regular",
+            "regular cone",
+            "medium",
+            "10 oz",
+            "6 pcs",
+            "6 piece",
+            "4 pc",
+            "4pc",
+            "standard regular serving"
+          ],
+          "kfc": [
+            "regular",
+            "1 pc"
+          ],
+          "burger_king": [
+            "regular",
+            "4 pcs",
+            "4pcs"
+          ],
+          "dominos": [
+            "new hand tossed regular",
+            "fresh pan regular",
+            "thin crust regular",
+            "cheese burst regular",
+            "single serve"
+          ],
+          "pizza_hut": [
+            "personal",
+            "medium"
+          ],
+          "subway": [
+            "6 inch"
+          ],
+          "ccd": [
+            "regular",
+            ""
+          ],
+          "blue_tokai": [
+            ""
+          ],
+          "theobroma": [
+            "1 piece",
+            ""
+          ],
+          "taco_bell": [
+            "",
+            "dining"
+          ],
+          "behrouz": [
+            "serves 1",
+            "single listing default selection"
+          ],
+          "faasos": [
+            "single listing default selection",
+            "serves 1"
+          ]
+        }
+      },
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "per100_no_portion": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "stated_amount_only",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "macros_incomplete": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "keep_unserved",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "collector_suspect": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "withhold",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "brand_tier_precedence": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "above_generic_key_when_brand_named",
+      "recorded_only": true,
+      "releases_held_rows_only_when_decided": false
+    },
+    "mcchicken_live_key": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "leave",
+      "recorded_only": true,
+      "releases_held_rows_only_when_decided": false
+    },
+    "ml_only_rows": {
+      "status": "DECIDED",
+      "source": "plan adversarial review #20; scripts/data/brands/README.md 'Rules for the import'",
+      "effective": "per_serving_no_density",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "no_weight_rows": {
+      "status": "DECIDED",
+      "source": "plan adversarial review #20",
+      "effective": "per_serving",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "amul_source": {
+      "status": "DECIDED",
+      "source": "spec v1.2-phase5-7 (n) addendum; scripts/data/brands/README.md",
+      "effective": "keep",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    }
+  },
+  "pending_founder": [
+    "atwater_rule",
+    "starbucks_guide",
+    "mcdonalds_default_region",
+    "behrouz_city",
+    "dominos_duplicates",
+    "dominos_mni_34_40",
+    "default_size",
+    "per100_no_portion",
+    "macros_incomplete",
+    "collector_suspect",
+    "brand_tier_precedence",
+    "mcchicken_live_key"
+  ],
+  "impact_if_decided": {
+    "atwater_rule": [
+      {
+        "option": {
+          "pct": 15,
+          "kcal_slack": 15
+        },
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": {
+          "pct": 15,
+          "kcal_slack": 0
+        },
+        "totals": {
+          "verified": 3238,
+          "held": 362,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2136,
+          "default_region": 245
+        }
+      }
+    ],
+    "starbucks_guide": [
+      {
+        "option": "linked_2023",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "feb_2026",
+        "totals": {
+          "verified": 2369,
+          "held": 339,
+          "unserved": 1033,
+          "omitted": 0,
+          "default_size": 1742,
+          "default_region": 245
+        }
+      }
+    ],
+    "mcdonalds_default_region": [
+      {
+        "option": "IN-WS",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "IN-NE",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 174
+        }
+      }
+    ],
+    "behrouz_city": [
+      {
+        "option": "IN-NCR",
+        "totals": {
+          "verified": 3286,
+          "held": 314,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2179,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "IN-BLR",
+        "totals": {
+          "verified": 3286,
+          "held": 314,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2179,
+          "default_region": 247
+        }
+      },
+      {
+        "option": "none",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 192
+        }
+      }
+    ],
+    "dominos_duplicates": [
+      {
+        "option": {
+          "policy": "hold_both",
+          "keep_rows": []
+        },
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": {
+          "policy": "keep_higher_kcal",
+          "keep_rows": []
+        },
+        "totals": {
+          "verified": 3295,
+          "held": 305,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2158,
+          "default_region": 245
+        }
+      }
+    ],
+    "per100_no_portion": [
+      {
+        "option": "stated_amount_only",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "keep_unserved",
+        "totals": {
+          "verified": 3063,
+          "held": 339,
+          "unserved": 339,
+          "omitted": 0,
+          "default_size": 1956,
+          "default_region": 245
+        }
+      }
+    ],
+    "macros_incomplete": [
+      {
+        "option": "keep_unserved",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "omit_from_table",
+        "totals": {
+          "verified": 3261,
+          "held": 334,
+          "unserved": 7,
+          "omitted": 139,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      }
+    ],
+    "collector_suspect": [
+      {
+        "option": "withhold",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "serve",
+        "totals": {
+          "verified": 3265,
+          "held": 339,
+          "unserved": 137,
+          "omitted": 0,
+          "default_size": 2158,
+          "default_region": 245
+        }
+      }
+    ],
+    "ml_only_rows": [
+      {
+        "option": "per_serving_no_density",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      }
+    ],
+    "no_weight_rows": [
+      {
+        "option": "per_serving",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      }
+    ],
+    "amul_source": [
+      {
+        "option": "keep",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      }
+    ]
+  },
+  "signoffs": {
+    "amul": null,
+    "barista": null,
+    "behrouz_biryani": null,
+    "blue_tokai": null,
+    "burger_king_india": null,
+    "cafe_coffee_day": null,
+    "dominos": null,
+    "faasos": null,
+    "haldirams": null,
+    "kfc_india": null,
+    "lapinoz_pizza": null,
+    "mcdonalds_india_north_east": null,
+    "mcdonalds_india_west_south": null,
+    "naturals_ice_cream": null,
+    "pizza_hut": null,
+    "starbucks_india": null,
+    "subway_india": null,
+    "taco_bell_india": null,
+    "theobroma": null,
+    "wow_momo": null
+  },
+  "served_brands_without_signoff": [
+    "amul",
+    "behrouz_biryani",
+    "blue_tokai",
+    "burger_king_india",
+    "dominos",
+    "faasos",
+    "haldirams",
+    "kfc_india",
+    "lapinoz_pizza",
+    "mcdonalds_india_north_east",
+    "mcdonalds_india_west_south",
+    "naturals_ice_cream",
+    "pizza_hut",
+    "starbucks_india",
+    "subway_india",
+    "taco_bell_india",
+    "theobroma"
+  ]
+}
