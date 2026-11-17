@@ -118,6 +118,15 @@ describe('A3: a splash only where it is one', () => {
     expect(portionOf([raw('dal', 1, 'splash')], 'a little dal', 'dal').size).toBe('S')
     expect(portionOf([raw('honey', 1, 'splash')], 'a splash of honey', 'honey')).toMatchObject({ unit: null, size: null })
   })
+  it('a "thoda" that is another food\'s word never shrinks this one', () => {
+    const meal = [raw('rice', 1, null, { unit_word: 'thoda' }), raw('cornflakes', 1, 'bowl'), raw('milk', 1, 'splash')]
+    expect(portionOf(meal, 'thoda chawal, cornflakes with milk', 'milk')).toMatchObject({ unit: null, size: null })
+    expect(portionOf(meal, 'thoda chawal, cornflakes with milk', 'rice')).toMatchObject({ unit: null, size: 'S' })
+    // two of them typed, one claimed by the milk in the chai: the other is the rice's
+    const two = [raw('chai', 1, 'cup'), raw('milk', 1, null, { unit_word: 'thoda' }), raw('rice', 1, 'splash')]
+    expect(portionOf(two, 'chai with thoda doodh, thoda chawal', 'rice')).toMatchObject({ unit: null, size: 'S' })
+    expect(portionOf(two, 'chai with thoda doodh, thoda chawal', 'milk').unit).toBe('splash')
+  })
 })
 
 describe('A4: a scoop nobody typed', () => {
@@ -132,6 +141,13 @@ describe('A4: a scoop nobody typed', () => {
     expect(validateParsedFoodV2(raw('whey', 1, null, { unit_word: 'scoop' }), 'one scoop whey').food!.portion.unit).toBe('scoop')
     expect(validateParsedFoodV2(raw('ice cream', 2, 'scoop'), 'dessert', { channel: 'photo' }).food!.portion.unit).toBe('scoop')
     expect(validateParsedFoodV2(raw('chutney', 1, 'katori'), 'idli with chutney').food!.portion.unit).toBe('katori')
+  })
+  it('a dropped scoop with a count other than 1 is that many servings, not pieces', () => {
+    const v = validateParsedFoodV2(raw('whey protein', 2, 'scoop'), 'had whey twice today')
+    expect(v.food!.portion).toMatchObject({ count: 2, unit: null })
+    expect(v.issues).toContain('invented_unit')
+    expect(v.issues).not.toContain('count_without_unit')
+    expect(weigh(v.food!.portion, 'whey protein')).toMatchObject({ grams: 64, portion: { source: 'serving_default' } })
   })
 })
 
@@ -160,10 +176,30 @@ describe('A5: amounts written as words', () => {
     expect(validateParsedFoodV2(raw('milk', 1, 'glass', { stated_amount: 250, stated_unit: 'ml' }), 'half a glass of milk').invented_stated).toBe(true)
   })
   it('reads the amounts', () => {
-    expect(numbersInText('half litre milk and 2 rotis')).toEqual([2, 0.5])
+    expect(numbersInText('half litre milk and 2 rotis')).toEqual([2])
     expect(statedInText('half a litre of milk, 250ml juice, 8 fl oz soda')).toEqual([
       { amount: 0.5, unit: 'l', word: true }, { amount: 250, unit: 'ml', word: false }, { amount: 8, unit: 'fl_oz', word: false },
     ])
+  })
+  it.each([
+    ['a half litre of milk', 0.5, 'l'], ['a quarter kg paneer', 0.25, 'kg'], ['a quarter kilo of paneer', 0.25, 'kg'],
+    ['one and a half litre water', 1.5, 'l'], ['2 and a half kg chicken', 2.5, 'kg'], ['two and half litres of chaas', 2.5, 'l'],
+    ['1 1/2 kg dahi', 1.5, 'kg'], ['half a litre', 0.5, 'l'],
+  ])('%s reads as %d %s, and nothing else', (text, amount, unit) => {
+    expect(statedInText(text).map(({ amount: a, unit: u }) => [a, u])).toEqual([[amount, unit]])
+  })
+  it('"a quarter kg" and "a half litre" keep the stated amount in any unit', () => {
+    expect(validateParsedFoodV2(raw('paneer', 1, null, { stated_amount: 250, stated_unit: 'g' }), 'a quarter kg paneer').food!.portion)
+      .toMatchObject({ stated_amount: 250, stated_unit: 'g' })
+    expect(validateParsedFoodV2(raw('milk', 1, null, { stated_amount: 500, stated_unit: 'ml' }), 'a half litre of milk').invented_stated).toBe(false)
+    expect(validateParsedFoodV2(raw('water', 1, null, { stated_amount: 1.5, stated_unit: 'l' }), 'one and a half litre water').invented_stated).toBe(false)
+  })
+  it('a word amount vouches only for its own weight or volume', () => {
+    expect(statedInText('half and half creamer in my coffee')).toEqual([])
+    // "a litre" of milk is not "1 kg" of rice the user never weighed
+    const v = validateParsedFoodV2(raw('rice', 1, null, { stated_amount: 1, stated_unit: 'kg' }), 'a litre of milk and some rice')
+    expect(v.invented_stated).toBe(true)
+    expect(v.food!.portion.stated_amount).toBeNull()
   })
 })
 
@@ -180,9 +216,13 @@ describe('B: the V2 prompt revision', () => {
     expect(SYSTEM_PROMPT_V2).toContain('the curry with count 1, unit null')
     expect(SYSTEM_PROMPT_V2).toContain('Never add a katori, bowl or plate the user did not type')
     expect(SYSTEM_PROMPT_V2).not.toMatch(/curry with count 1, unit "katori"/)
+    // the rice in "<curry> chawal" keeps the plate the rule above gives it (the founder's rice plate)
+    expect(SYSTEM_PROMPT_V2).toContain('the rice with the user\'s amount (or count 1, unit "plate")')
+    expect(SYSTEM_PROMPT_V2).toContain('the rice\'s plate in "<curry> chawal" above is the only exception')
   })
-  it('a splash is milk or cream in tea or coffee only', () => {
+  it('a splash is milk or cream in tea or coffee only, unless the user typed one', () => {
     expect(SYSTEM_PROMPT_V2).toContain('Only milk or cream added to tea or coffee is a "splash"')
+    expect(SYSTEM_PROMPT_V2).toContain('A "splash" or "dash" the user typed for any other food is copied like any typed unit')
     expect(SYSTEM_PROMPT_V2).not.toContain('A drink additive ("coffee with milk", "chai with thoda doodh") is its own food with unit "splash"')
   })
   it('"a lot of" is L; a size word inside a product name is not a size', () => {

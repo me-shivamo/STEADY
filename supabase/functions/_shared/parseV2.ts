@@ -40,6 +40,8 @@ const DRINK_ITSELF = /\b(tea|chai|chay|coffee|kaapi|kapi|espresso|latte|cappucci
 const POURABLE = /\b(milk|doodh|dudh|cream|creamer|malai|water|soda|tonic|juice|whisky|whiskey|rum|vodka|gin|brandy|tequila|wine|beer|liqueur|vermouth|bitters)\b/
 const TYPED_SPLASH = /\b(splash|splashes|dash|dashes)\b/
 const LITTLE = /\b(thoda|thodi|a little)\b/
+const LITTLE_ALL = /\b(thoda|thodi|a little)\b/g
+const littles = (s: string) => (s.match(LITTLE_ALL) ?? []).length
 
 function keepsSplash(name: string, others: string[], text: string): boolean {
   const n = normText(name).replace(/\bhalf and half\b/g, 'creamer')
@@ -51,12 +53,14 @@ function keepsSplash(name: string, others: string[], text: string): boolean {
   return POURABLE.test(n) && TYPED_SPLASH.test(text)
 }
 
-function guardSplash(f: ParsedFoodV2, others: string[], userText: string | null | undefined): ParsedFoodV2 {
+function guardSplash(f: ParsedFoodV2, others: ParsedFoodV2[], userText: string | null | undefined): ParsedFoodV2 {
   if (f.portion.unit !== 'splash') return f
   const text = normText(userText ?? '')
-  if (keepsSplash(f.name, others, text)) return f
-  // "thoda chawal": the model's word, or (with no word) the user's text, says the serving is small
-  const little = LITTLE.test(f.unit_word ? normText(f.unit_word) : text)
+  if (keepsSplash(f.name, others.map((o) => o.name), text)) return f
+  // "thoda chawal": the model's word says the serving is small; with no word, the user's text does, unless
+  // each "thoda" in it is already another food's word ("thoda chawal, cornflakes with milk": not the milk)
+  const claimed = others.reduce((n, o) => n + (o.unit_word ? littles(normText(o.unit_word)) : 0), 0)
+  const little = f.unit_word ? LITTLE.test(normText(f.unit_word)) : littles(text) > claimed
   const portion = { ...f.portion, unit: null, size: f.portion.size ?? (little ? 'S' as const : null) }
   return { ...f, portion, quantity_description: describePortion(portion, f.name, f.unit_word) }
 }
@@ -72,6 +76,6 @@ export function parsedFoodsFromV2(rawFoods: unknown, userText: string | null | u
     if (v.invented_stated) invented++
     return v.ok && v.food ? [v.food] : []
   })
-  const foods = valid.map((f, i) => v2ToParsed(guardSplash(f, valid.filter((_, j) => j !== i).map((o) => o.name), userText)))
+  const foods = valid.map((f, i) => v2ToParsed(guardSplash(f, valid.filter((_, j) => j !== i), userText)))
   return { foods, invented }
 }
