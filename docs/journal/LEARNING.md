@@ -1872,3 +1872,8 @@ Before pushing 058 we re-ran its snapshot query on live to make sure nothing had
 *2026-11-17 · Pattern*
 
 A gate is a test written down before the result is known, with a rule that decides go or no-go: here, "the new engine must be at least as accurate as today on meals we never tuned on". When it fails, it has done its job by catching a regression before users saw it. For STEADY the portion engine logged about 20% low on held-out meals. Shipping it on faith would have quietly under-counted every gainer's day.
+
+### Errors that cancel out hide real bugs
+*2026-11-17 · Pattern*
+
+An average can look fine while the individual answers are badly wrong in both directions. On our practice meals the portion engine was only 7% low in total, because a "splash" rule made milk 30 ml (too little) and butter 30 ml (six times too much), and the two cancelled. For STEADY this is why we judge accuracy per meal against its expected range, not by comparing daily totals, and why the held-out test caught what the practice set hid.
