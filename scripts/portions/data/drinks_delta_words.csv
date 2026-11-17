@@ -27,3 +27,8 @@ unit_word,aadha glass,glass,,,,,0.5,see half cup
 unit_word,aadhi glass,glass,,,,,0.5,see half cup
 unit_word,adha glass,glass,,,,,0.5,see half cup
 unit_word,adhi glass,glass,,,,,0.5,see half cup
+category_word,espresso,espresso,coffee,86,false,,,re-point (054 has espresso -> coffee); keeps the count-only coffee cup off a 30-60 ml shot
+category_word,iced tea,iced_tea,,85,false,,,"insert: 054 reads ""iced tea"" through ""tea"" (tea), so the new word moves only those phrases, to tea's neutral child"
+category_word,ice tea,iced_tea,,85,false,,,"insert, as iced tea (BK India, McCafe India: ""Ice Tea"")"
+category_word,bubble tea,bubble_tea,,85,false,,,"insert: 054 reads ""bubble tea"" through ""tea"" (tea)"
+category_word,boba tea,bubble_tea,,85,false,,,"insert, as bubble tea"

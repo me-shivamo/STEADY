@@ -20,7 +20,7 @@ import { join } from 'path'
 import {
   normalizeUnitWord, normText, SIZE_WORDS, UNITS, type RowUnit, type Size, type Unit, type UnitWordResult,
 } from '../../supabase/functions/_shared/portionText'
-import type { CategoryWord, Region } from '../../supabase/functions/_shared/portions'
+import { categoryFromWords, type CategoryWord, type Region } from '../../supabase/functions/_shared/portions'
 import {
   confidenceFor, DATA, engineTables, INPUT_FILES, naturalKey, NS_PORTION_UNITS, parseCsv, uuid5,
   type Seed054, type SeedRow,
@@ -116,7 +116,13 @@ export function loadDrinkDelta(): DrinkDelta {
 //  - new categories are new names, children of an existing category, and NEUTRAL: no density, the parent's
 //    S/L ratios and inherit_vessels, no serving unit and no kcal clamp, so a chain through them weighs
 //    exactly as the parent does until rows are promoted;
-//  - a category-word re-point names the word's current 054 category (compare-and-swap); an insert is a new word;
+//  - a category-word re-point names the word's current 054 category (compare-and-swap), keeps its priority and
+//    head_only, and moves it to a NEW category whose parent is exactly that category, so the chain still holds
+//    every row, density and serving unit it had;
+//  - a category-word insert is a multi-word phrase 054 already reads through a shorter suffix word of it ("iced
+//    tea" through "tea"); the new word moves exactly those phrases to a NEW child of that word's category;
+//  - the category a word leaves has no AI kcal clamp (the clamp is per category, not inherited, so moving a word
+//    out of a clamped category would drop its clamp);
 //  - every unit word is one 054's vocabulary does NOT know today (otherwise it is no gap).
 export function validateDrinkDelta(seed: Seed054, d: DrinkDelta): void {
   const errs: string[] = []
@@ -139,7 +145,16 @@ export function validateDrinkDelta(seed: Seed054, d: DrinkDelta): void {
   }
 
   const baseWords = new Map(seed.words.map((w) => [w.word, w]))
+  const deltaCats = new Map(d.categories.map((c) => [c.category, c]))
   const seenWords = new Set<string>()
+  // the word may only move into a NEW (neutral) child of `from`, and `from` must carry no AI kcal clamp
+  const neutralMove = (w: CategoryWordDelta, from: string) => {
+    const target = deltaCats.get(w.category)
+    if (!target) errs.push(`word ${w.word}: target ${w.category} is not a new delta category (not neutral)`)
+    else if (target.parent !== from) errs.push(`word ${w.word}: ${w.category}'s parent is ${target.parent}, not ${from} (not neutral)`)
+    const src = baseCats.get(from)
+    if (src && (src.kcal100_min !== null || src.kcal100_max !== null)) errs.push(`word ${w.word}: leaves ${from}, which has a kcal clamp (not neutral)`)
+  }
   for (const w of d.words) {
     if (w.word !== normText(w.word)) errs.push(`word ${w.word} not normalized`)
     if (seenWords.has(w.word)) errs.push(`word ${w.word} twice`)
@@ -149,7 +164,26 @@ export function validateDrinkDelta(seed: Seed054, d: DrinkDelta): void {
     if (w.replaces) {
       if (!cur) errs.push(`word ${w.word}: re-point of a word 054 does not have`)
       else if (cur.category !== w.replaces) errs.push(`word ${w.word}: 054 has it in ${cur.category}, not ${w.replaces}`)
+      else {
+        if (cur.priority !== w.priority || !!cur.head_only !== w.head_only) errs.push(`word ${w.word}: priority / head_only must stay 054's (${cur.priority} / ${!!cur.head_only})`)
+        neutralMove(w, cur.category)
+      }
     } else if (cur) errs.push(`word ${w.word}: already in 054 (${cur.category}); a change must name replaces`)
+    else {
+      // an insert: 054 must already read the phrase through a shorter word that ends it
+      const old = categoryFromWords(w.word, seed.words)
+      const oldWord = old ? baseWords.get(old.word) : undefined
+      if (!old || !oldWord) errs.push(`word ${w.word}: 054 reads no category for it (an insert would change real users' category)`)
+      else if (!w.word.endsWith(` ${old.word}`)) errs.push(`word ${w.word}: 054 reads it through '${old.word}', which does not end it (not neutral)`)
+      else if (oldWord.head_only) errs.push(`word ${w.word}: 054 reads it through head-only '${old.word}' (not neutral)`)
+      else neutralMove(w, old.category)
+    }
+  }
+  // every delta word is reachable: with the delta merged, the phrase itself resolves to the word's category
+  const merged = mergeDrinkDelta(seed, d).words
+  for (const w of d.words) {
+    const hit = categoryFromWords(w.word, merged)
+    if (hit?.category !== w.category) errs.push(`word ${w.word}: resolves to ${hit?.category ?? 'nothing'} with the delta, not ${w.category}`)
   }
 
   const seenUnitWords = new Set<string>()

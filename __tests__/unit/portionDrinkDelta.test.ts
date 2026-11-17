@@ -46,8 +46,9 @@ describe('the delta is valid, proposed-only and outside 054', () => {
     expect(() => validateDrinkDelta(seed, delta)).not.toThrow()
   })
   it('every row ships proposed with no approved_by, a source_ref and the research report as evidence', () => {
-    // 4 IN count-only, 6 IN cafe (cup + piece S/M/L), 3 US cafe, 5 US tea, 5 US coffee, 3 lassi, 2 shake, 2 cold coffee
-    expect(delta.rows.length).toBe(30)
+    // 4 IN count-only, 6 IN cafe (cup + piece S/M/L), 3 US cafe, 5 US tea, 5 US coffee, 3 lassi, 2 shake, 2 cold coffee,
+    // and the rows that keep the count-only cups off drinks that inherit them: 2 espresso, 1 iced tea, 2 bubble tea
+    expect(delta.rows.length).toBe(35)
     for (const r of delta.rows) {
       expect(r.status).toBe('proposed')
       expect(r.approved_by).toBeNull()
@@ -72,15 +73,40 @@ describe('the delta is valid, proposed-only and outside 054', () => {
     expect(bad((d) => ({ ...d, unitWords: [...d.unitWords, { word: 'tumbler', unit: 'glass', size: null, count: null, note: '' }] }))).toThrow(/already reads it/)
     expect(bad((d) => ({ ...d, rows: [...d.rows, { ...d.rows[0], source_ref: 'mapping:drink-sizes#dup', id: 'x', is_default: false }] }))).toThrow(/two active rows/)
   })
+  it('rejects a word move that is not neutral', () => {
+    const bad = (mutate: (d: DrinkDelta) => DrinkDelta) => () => validateDrinkDelta(seed, mutate(loadDrinkDelta()))
+    const word = (w: DrinkDelta['words'][number]) => (d: DrinkDelta) => ({ ...d, words: [...d.words, w] })
+    // a re-point must keep 054's priority (a new priority changes which word wins elsewhere)
+    expect(bad((d) => ({ ...d, words: d.words.map((w) => (w.word === 'lassi' ? { ...w, priority: 99 } : w)) }))).toThrow(/priority \/ head_only must stay/)
+    // the target must be a NEW child of the word's current category, so the chain keeps every row it had
+    expect(bad(word({ word: 'water', category: 'iced_tea', priority: 80, head_only: false, replaces: 'beverage', note: '' }))).toThrow(/parent is tea, not beverage/)
+    expect(bad(word({ word: 'water', category: 'juice', priority: 80, head_only: false, replaces: 'beverage', note: '' }))).toThrow(/not a new delta category/)
+    // the AI kcal clamp is per category (aiMacros: ranges.get(category)), so leaving a clamped category drops it
+    const frappe = (d: DrinkDelta) => ({
+      ...d,
+      categories: [...d.categories, { ...d.categories[0], category: 'frappe_x', parent: 'cafe_coffee', s_ratio: 0.75, l_ratio: 1.46 }],
+      words: [...d.words, { word: 'frappe', category: 'frappe_x', priority: 90, head_only: false, replaces: 'cafe_coffee', note: '' }],
+    })
+    expect(bad(frappe)).toThrow(/leaves cafe_coffee, which has a kcal clamp/)
+    // an insert must be a phrase 054 already reads through a shorter word that ends it
+    expect(bad(word({ word: 'boba', category: 'bubble_tea', priority: 85, head_only: false, replaces: null, note: '' }))).toThrow(/054 reads no category for it/)
+    expect(bad(word({ word: 'tea kettle', category: 'iced_tea', priority: 85, head_only: false, replaces: null, note: '' }))).toThrow(/does not end it/)
+    expect(bad(word({ word: 'tea masala', category: 'iced_tea', priority: 85, head_only: false, replaces: null, note: '' }))).toThrow(/head-only 'masala'/)
+  })
 })
 
 describe('ships dark: with the delta loaded, real users (proposed rows off) get exactly today\'s answers', () => {
   // grams, source, confidence, unit, size, options and needs_follow_up are all compared. Only the category LABEL
-  // may differ, for the six re-pointed words (lassi, shake, milkshake, smoothie, cold coffee, iced coffee).
+  // may differ: for the seven re-pointed words (lassi, shake, milkshake, smoothie, cold coffee, iced coffee,
+  // espresso) and for phrases that end in an inserted word (iced tea, ice tea, bubble tea, boba tea).
   const strip = (r: PortionResult | null) => (r ? { ...r, category: undefined } : null)
   const units: Array<PortionParse['unit']> = [null, 'piece', 'cup', 'glass', 'mug', 'katori', 'bowl', 'cutting', 'can']
-  it('every 054 category word x 9 units x 2 regions x home/restaurant, plus the live drink rows', () => {
+  // phrases that END in a delta word but are not 054 words themselves, so the 054 word list alone misses them
+  const DELTA_PHRASES = ['peach iced tea', 'lemon ice tea', 'long island iced tea', 'taro bubble tea', 'brown sugar boba tea',
+    'double espresso', 'mango lassi', 'chocolate milkshake', 'banana shake', 'mango smoothie', 'cold coffee with ice cream', 'vietnamese iced coffee']
+  it('every 054 category word and delta word x 9 units x 2 regions x home/restaurant, plus the live drink rows', () => {
     const rows = [...seed.words.map((w) => [w.word, priv(w.word)] as const),
+      ...[...delta.words.map((w) => w.word), ...DELTA_PHRASES].map((p) => [p, priv(p)] as const),
       ...[CHAI, BLACK_TEA, COFFEE, FILTER_COFFEE, CAPPUCCINO, LASSI, ORANGE_JUICE, CHAAS].map((r) => [r.name!, r] as const)]
     let n = 0
     for (const [phrase, r] of rows) for (const u of units) for (const region of ['IN', 'US'] as const) for (const context of [null, 'restaurant'] as const) {
@@ -90,10 +116,16 @@ describe('ships dark: with the delta loaded, real users (proposed rows off) get 
     }
     expect(n).toBeGreaterThan(9000)
   }, 60_000)
-  it('only the re-pointed words change their category label', () => {
-    const changed = seed.words.filter((w) => run(withDelta, P(1, 'glass'), w.word, priv(w.word), 'IN', false)!.category !==
-      run(base, P(1, 'glass'), w.word, priv(w.word), 'IN', false)!.category).map((w) => w.word).sort()
-    expect(changed).toEqual(['cold coffee', 'iced coffee', 'lassi', 'milkshake', 'shake', 'smoothie'])
+  it('only the re-pointed words change their category label, each to a new child of its old category', () => {
+    const label = (t: Tables, w: string) => run(t, P(1, 'glass'), w, priv(w), 'IN', false)!.category
+    const changed = seed.words.filter((w) => label(withDelta, w.word) !== label(base, w.word)).map((w) => w.word).sort()
+    expect(changed).toEqual(['cold coffee', 'espresso', 'iced coffee', 'lassi', 'milkshake', 'shake', 'smoothie'])
+    const parent = new Map(delta.categories.map((c) => [c.category, c.parent]))
+    for (const p of [...delta.words.map((w) => w.word), ...DELTA_PHRASES]) {
+      const before = label(base, p)
+      const after = label(withDelta, p)
+      if (after !== before) expect([p, parent.get(after!)]).toEqual([p, before])
+    }
   })
 })
 
@@ -156,6 +188,41 @@ describe('gaps proved against today\'s 054 seed, and what the proposed rows give
     const d = run(withDelta, P(1, 'cup'), 'black tea', BLACK_TEA, 'US', true)!
     expect([t.grams, t.portion.source, t.needs_follow_up]).toEqual([249.6, 'volume', true])
     expect([d.grams, d.portion.source, d.needs_follow_up]).toEqual([249.6, 'category', false])
+  })
+})
+
+describe('the count-only cups reach every drink that inherits them; three child categories keep them off', () => {
+  // A category row serves the whole chain under it (portions.ts categoryChain), and R4 region-tagged category rows
+  // outrank R5 untagged food rows. So the tea / coffee piece rows above would also answer "1 espresso", "1 iced tea"
+  // and "1 bubble tea", confidently (medium band, no follow-up). Each case: today (054), the delta WITHOUT the child
+  // rows (what the parent rows alone would serve), and the delta.
+  const CHILD = ['espresso', 'iced_tea', 'bubble_tea']
+  const parentOnly = drinkDeltaTables(seed, { ...delta, rows: delta.rows.filter((r) => !CHILD.includes(r.category!)) })
+  type Case = [string, PortionParse, string, Region, [number, string], number, [number, string]]
+  const cases: Case[] = [
+    ['IN "1 espresso" = one 30 ml shot', P(1, 'piece'), 'espresso', 'IN', [240, 'ai'], 154.5, [30.9, 'category']],
+    ['IN "espresso" (no amount): today the 150 ml coffee cup', P(1, null), 'espresso', 'IN', [154.5, 'serving_default'], 154.5, [30.9, 'serving_default']],
+    ['US "1 espresso" = FNDDS 60 g', P(1, 'piece'), 'espresso', 'US', [240, 'ai'], 370.8, [61.8, 'category']],
+    ['IN "1 iced tea" = 300 ml chain median', P(1, 'piece'), 'iced tea', 'IN', [240, 'ai'], 124.8, [312, 'category']],
+    ['IN "peach iced tea" (no amount): today the 120 ml teacup', P(1, null), 'peach iced tea', 'IN', [124.8, 'serving_default'], 124.8, [312, 'serving_default']],
+    ['IN "1 ice tea" (BK / McCafe spelling)', P(1, 'piece'), 'ice tea', 'IN', [240, 'ai'], 124.8, [312, 'category']],
+    ['IN "1 bubble tea" = FNDDS 435 g', P(1, 'piece'), 'bubble tea', 'IN', [240, 'ai'], 124.8, [435, 'category']],
+    ['US "1 boba tea" = FNDDS 435 g', P(1, 'piece'), 'boba tea', 'US', [240, 'ai'], 374.4, [435, 'category']],
+  ]
+  it.each(cases)('%s', (_label, parse, phrase, region, [g0, s0], gParent, [g1, s1]) => {
+    const r = priv(phrase)
+    const t = run(base, parse, phrase, r, region, true)!
+    expect([t.grams, t.portion.source]).toEqual([g0, s0])
+    expect(run(parentOnly, parse, phrase, r, region, true)!.grams).toBe(gParent)
+    const d = run(withDelta, parse, phrase, r, region, true)!
+    expect([d.grams, d.portion.source]).toEqual([g1, s1])
+    expect(d.portion.ref).toMatch(/drink-sizes#(espresso|iced-tea|bubble-tea)/)
+  })
+  it('a US iced tea needs no row: the US count-only tea is FNDDS\'s own iced-tea default (360 g)', () => {
+    expect(run(withDelta, P(1, 'piece'), 'iced tea', priv('iced tea'), 'US', true)).toMatchObject({ grams: 374.4, portion: { source: 'category' } })
+  })
+  it('a sized espresso scales from the shot, not from the coffee cup', () => {
+    expect(run(withDelta, P(1, 'piece', 'L'), 'espresso', priv('espresso'), 'IN', true)!.grams).toBeLessThan(60)
   })
 })
 
