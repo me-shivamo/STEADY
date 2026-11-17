@@ -1,4 +1,5 @@
 import { buildSeed, engineTables } from '../../scripts/portions/lib'
+import { SYSTEM_PROMPT_V2 } from '../../supabase/functions/_shared/foodParsePrompt'
 import { weighFoods, type PortionContext } from '../../supabase/functions/_shared/macroResolver'
 import { numbersInText, sizeOfWord, statedInText, validateParsedFoodV2 } from '../../supabase/functions/_shared/parseSchema'
 import { parsedFoodsFromV2 } from '../../supabase/functions/_shared/parseV2'
@@ -8,7 +9,7 @@ import { clearPortionCache } from '../../supabase/functions/_shared/portionStore
 import { portionFake } from '../../test-utils/portionFake'
 
 // The Gate B diagnosis fixes (docs/testing/gate-b-diagnosis-2026-11-17.md, section 4, steps 1 and 2):
-// code guards on the parse and on the engine's input. No portion value changes.
+// code guards on the parse and on the engine's input, and the V2 prompt revision. No portion value changes.
 
 const { tables, foodRows } = engineTables(buildSeed())
 const P = (count: number, unit: PortionParse['unit'], size: PortionParse['size'] = null, extra: Partial<PortionParse> = {}): PortionParse =>
@@ -174,3 +175,18 @@ describe('size: "a lot of" is large', () => {
   })
 })
 
+describe('B: the V2 prompt revision', () => {
+  it('a curry with no amount has no unit; nothing adds a vessel the user did not type', () => {
+    expect(SYSTEM_PROMPT_V2).toContain('the curry with count 1, unit null')
+    expect(SYSTEM_PROMPT_V2).toContain('Never add a katori, bowl or plate the user did not type')
+    expect(SYSTEM_PROMPT_V2).not.toMatch(/curry with count 1, unit "katori"/)
+  })
+  it('a splash is milk or cream in tea or coffee only', () => {
+    expect(SYSTEM_PROMPT_V2).toContain('Only milk or cream added to tea or coffee is a "splash"')
+    expect(SYSTEM_PROMPT_V2).not.toContain('A drink additive ("coffee with milk", "chai with thoda doodh") is its own food with unit "splash"')
+  })
+  it('"a lot of" is L; a size word inside a product name is not a size', () => {
+    expect(SYSTEM_PROMPT_V2).toContain('"a lot of", "lots of" or "plenty of" = L')
+    expect(SYSTEM_PROMPT_V2).toMatch(/part of a product's name .* is not a size: null/)
+  })
+})
