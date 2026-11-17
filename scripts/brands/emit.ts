@@ -3,7 +3,7 @@
 // the build in scripts/brands/lib.ts; scripts/import-brands.ts writes or --checks them.
 
 import { createHash } from 'crypto'
-import { readFileSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 
 import {
@@ -152,8 +152,8 @@ const COMMENTS = [
   'Not a food_items source: no name keys, invisible to fts and search_foods. Only the brand tier reads it, behind RESOLVER_BRAND (off by default). '
   'held = QA error, QA conflict or a failed gate, awaiting review; unserved = usable numbers withheld by a founder rule. '
   'A row of any status means "we hold this item" (WP11 web lookup: missing = no row at all).';`,
-  `COMMENT ON COLUMN public.brand_items.basis IS 'per_serving: the numbers are for one serving as serving_desc describes; serving_g / serving_ml only when printed (never derived; ml is never treated as grams). per_100g / per_100ml: the numbers are per 100 g / 100 ml.';`,
-  `COMMENT ON COLUMN public.brand_items.amount_rule IS 'serving: count x the serving. stated_or_portion: per-100 numbers scaled by the stated amount or the portion engine. stated_only: per-100 numbers with no published portion, served only when the user states grams or ml (decisions.json per100_no_portion).';`,
+  `COMMENT ON COLUMN public.brand_items.basis IS 'per_serving: the numbers are for one serving as serving_desc describes; serving_g / serving_ml only when printed (never derived; ml is never treated as grams). per_100g / per_100ml: the numbers are per 100 g / 100 ml, and serving_g / serving_ml = 100 is that reference amount, not a portion.';`,
+  `COMMENT ON COLUMN public.brand_items.amount_rule IS 'serving: count x the serving. stated_or_portion: per-100 numbers scaled by an amount in the basis unit (grams for per_100g, millilitres for per_100ml), stated by the user or from the portion engine; a per_100ml row is never scaled by a gram amount (no density is assumed). stated_only: per-100 numbers with no published portion, served only when the user states an amount in the basis unit (decisions.json per100_no_portion).';`,
   `COMMENT ON COLUMN public.brand_items.atwater_ok IS 'Atwater gate (decisions.json atwater_rule): |kcal - (4P+4C+9F)| within pct% of kcal or within kcal_slack kcal. NULL = P, C or F not published.';`,
   `COMMENT ON COLUMN public.brand_items.is_default_size IS 'The serving used when the user names the item without a size (decisions.json default_size); at most one per (brand_key, region, item_norm, veg).';`,
   `COMMENT ON COLUMN public.brand_items.is_default_region IS 'Tie-break when the same item is published for several regions (McDonald''s franchisees, Behrouz cities); decisions.json.';`,
@@ -222,6 +222,7 @@ export function renderManifest(b: Build, f: DecisionsFile, raw: readonly RawRow[
     by_brand: countsByBrand(b),
     decisions: Object.fromEntries(DECISION_IDS.map((id) => [id, {
       status: ds[id].status,
+      source: ds[id].source ?? null,
       effective: effective(ds, id),
       recorded_only: RECORDED_ONLY.includes(id),
       releases_held_rows_only_when_decided: RELEASING.includes(id),
@@ -295,7 +296,8 @@ export function renderMigration(b: Build, f: DecisionsFile, raw: readonly RawRow
   P('--   existing table.')
   P('--')
   P(`-- MANIFEST: ${raw.length} CSV rows -> ${b.items.length} brand_items rows (${t.verified} verified, ${t.held} held, ${t.unserved} unserved); ${t.omitted} omitted.`)
-  P(`--   default size on ${t.default_size} rows (${b.defaults.groups} served item groups: ${b.defaults.withDefault} with a default, ${b.defaults.ambiguous} ambiguous, ${b.defaults.noMatch} without a matching label).`)
+  P(`--   default size on ${t.default_size} rows (${b.defaults.groups} served item groups: ${b.defaults.withDefault} with a default, ${b.defaults.ambiguous} ambiguous, ${b.defaults.noMatch} without a matching label,`)
+  P(`--   ${b.defaults.defaultNotServed} whose default-size row is held or unserved; the pick is made over the whole listing, never over served rows only).`)
   P('--   brand_slug: rows verified/held/unserved/omitted | served per serving with no weight, ml only, per 100 | default sizes')
   for (const c of byBrand) {
     P(`--   ${c.brand_slug.padEnd(28)} ${String(c.rows).padStart(4)}: ${c.verified}/${c.held}/${c.unserved}/${c.omitted} | ${c.served_no_weight}, ${c.served_ml_only}, ${c.served_per_100} | ${c.default_size}`)
@@ -306,7 +308,7 @@ export function renderMigration(b: Build, f: DecisionsFile, raw: readonly RawRow
   for (const id of DECISION_IDS) {
     const d = ds[id]
     const tag = RECORDED_ONLY.includes(id) ? ' (recorded only)' : ''
-    P(`--   ${id}: ${d.status}${tag}; ${d.status === 'DECIDED' ? 'chosen' : 'using proposed'} ${JSON.stringify(effective(ds, id))}`)
+    P(`--   ${id}: ${d.status}${tag}; ${d.status === 'DECIDED' ? 'chosen' : 'using proposed'} ${JSON.stringify(effective(ds, id))}${d.source ? ` (source: ${d.source})` : ''}`)
   }
   P('-- PER-BRAND SIGN-OFF (REPORT.md 3.3: about 10 random served rows read against the cited page):')
   for (const c of byBrand) {
@@ -355,7 +357,7 @@ export function renderMigration(b: Build, f: DecisionsFile, raw: readonly RawRow
   P('BEGIN')
   P(`  SELECT count(*) INTO n FROM public.brand_items;`)
   P(`  IF n <> ${b.items.length} THEN RAISE EXCEPTION 'brand_items: % rows, expected ${b.items.length}', n; END IF;`)
-  P(`  SELECT string_agg(brand_slug || ':' || status || ':' || c, ',' ORDER BY brand_slug, status) INTO t`)
+  P(`  SELECT string_agg(brand_slug || ':' || status || ':' || c, ',' ORDER BY brand_slug COLLATE "C", status COLLATE "C") INTO t`)
   P('    FROM (SELECT brand_slug, status, count(*) AS c FROM public.brand_items GROUP BY brand_slug, status) s;')
   P(`  IF t IS DISTINCT FROM ${q(expectBrand)} THEN`)
   P("    RAISE EXCEPTION 'brand_items: per-brand status counts differ from the manifest: %', t;")
@@ -423,6 +425,20 @@ export function renderDown(sha: string, p: Paths): string {
   ].join('\n')
 }
 
+/**
+ * Other files that already carry this migration number, in migrations/ or waiting in pending/ (055-057 keep their
+ * numbers there). The CLI keys applied migrations by that number, so two files sharing it break the push.
+ */
+export function numberTaken(number: string, root: string = REPO): string[] {
+  const out: string[] = []
+  for (const dir of ['supabase/migrations', 'supabase/pending']) {
+    const d = join(root, dir)
+    if (!existsSync(d)) continue
+    for (const f of readdirSync(d).sort()) if (f.startsWith(`${number}_`) && f !== `${number}_brand_items.sql`) out.push(`${dir}/${f}`)
+  }
+  return out
+}
+
 // ── Everything ────────────────────────────────────────────────────────────────────────────────────────────
 export interface RenderOpts { number?: string | null; raw?: RawRow[]; decisions?: DecisionsFile; sha?: string }
 export function renderAll(opts: RenderOpts = {}): Record<string, string> {
@@ -436,6 +452,8 @@ export function renderAll(opts: RenderOpts = {}): Record<string, string> {
     if (pend.length) throw new Error(`--number refuses: decisions still PENDING FOUNDER: ${pend.join(', ')}`)
     const unsigned = servedUnsigned(b, f)
     if (unsigned.length) throw new Error(`--number refuses: brands with served rows and no sign-off: ${unsigned.join(', ')}`)
+    const taken = numberTaken(p.number)
+    if (taken.length) throw new Error(`--number refuses: ${p.number} is already used by ${taken.join(', ')}`)
   }
   return {
     [p.migration]: renderMigration(b, f, raw, sha, p),

@@ -1,25 +1,27 @@
 {
   "generated_by": "scripts/import-brands.ts",
-  "inputs_sha256": "9d7e1fd7b76615597b38ac505d6a1089011724e55b4ed7d97b5c88dd552d5225",
+  "inputs_sha256": "0a1017167b582ef00f0cd98a967c2b413a2a49d290483fbc4318e2632f6ab077",
   "migration": "supabase/pending/brand_items.sql",
   "rollback": "supabase/rollback/brand_items_down.sql",
   "migration_number": null,
   "csv_rows": 3741,
   "totals": {
-    "verified": 3265,
+    "verified": 3261,
     "held": 339,
-    "unserved": 137,
+    "unserved": 141,
     "omitted": 0,
-    "default_size": 2166,
+    "default_size": 2154,
     "default_region": 245
   },
   "default_size_groups": {
-    "groups": 2208,
-    "withDefault": 2166,
-    "ambiguous": 1,
-    "noMatch": 41
+    "groups": 2204,
+    "withDefault": 2154,
+    "ambiguous": 8,
+    "noMatch": 38,
+    "defaultNotServed": 4
   },
   "reasons": {
+    "decision:collector_suspect=withhold": 40,
     "decision:macros_incomplete=keep_unserved": 139,
     "duplicate_exact": 3,
     "gate:atwater_mismatch": 74,
@@ -45,14 +47,14 @@
       "brand_slug": "amul",
       "brand_key": "amul",
       "rows": 66,
-      "verified": 65,
+      "verified": 64,
       "held": 1,
-      "unserved": 0,
+      "unserved": 1,
       "omitted": 0,
       "served_no_weight": 0,
       "served_ml_only": 0,
-      "served_per_100": 37,
-      "default_size": 65
+      "served_per_100": 36,
+      "default_size": 64
     },
     {
       "brand_slug": "barista",
@@ -130,7 +132,7 @@
       "served_no_weight": 402,
       "served_ml_only": 6,
       "served_per_100": 0,
-      "default_size": 94
+      "default_size": 92
     },
     {
       "brand_slug": "faasos",
@@ -149,14 +151,14 @@
       "brand_slug": "haldirams",
       "brand_key": "haldirams",
       "rows": 29,
-      "verified": 29,
+      "verified": 28,
       "held": 0,
-      "unserved": 0,
+      "unserved": 1,
       "omitted": 0,
       "served_no_weight": 0,
       "served_ml_only": 0,
-      "served_per_100": 27,
-      "default_size": 29
+      "served_per_100": 26,
+      "default_size": 28
     },
     {
       "brand_slug": "kfc_india",
@@ -214,14 +216,14 @@
       "brand_slug": "naturals_ice_cream",
       "brand_key": "naturals",
       "rows": 150,
-      "verified": 108,
+      "verified": 107,
       "held": 42,
-      "unserved": 0,
+      "unserved": 1,
       "omitted": 0,
       "served_no_weight": 0,
       "served_ml_only": 0,
-      "served_per_100": 108,
-      "default_size": 104
+      "served_per_100": 107,
+      "default_size": 103
     },
     {
       "brand_slug": "pizza_hut",
@@ -234,7 +236,7 @@
       "served_no_weight": 0,
       "served_ml_only": 0,
       "served_per_100": 0,
-      "default_size": 173
+      "default_size": 171
     },
     {
       "brand_slug": "starbucks_india",
@@ -247,7 +249,7 @@
       "served_no_weight": 0,
       "served_ml_only": 787,
       "served_per_100": 0,
-      "default_size": 416
+      "default_size": 412
     },
     {
       "brand_slug": "subway_india",
@@ -279,14 +281,14 @@
       "brand_slug": "theobroma",
       "brand_key": "theobroma",
       "rows": 114,
-      "verified": 114,
+      "verified": 113,
       "held": 0,
-      "unserved": 0,
+      "unserved": 1,
       "omitted": 0,
       "served_no_weight": 0,
       "served_ml_only": 0,
       "served_per_100": 0,
-      "default_size": 103
+      "default_size": 102
     },
     {
       "brand_slug": "wow_momo",
@@ -305,6 +307,7 @@
   "decisions": {
     "atwater_rule": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": {
         "pct": 15,
         "kcal_slack": 15
@@ -314,24 +317,28 @@
     },
     "starbucks_guide": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "linked_2023",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "mcdonalds_default_region": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "IN-WS",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "behrouz_city": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "IN-NCR",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": true
     },
     "dominos_duplicates": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": {
         "policy": "hold_both",
         "keep_rows": []
@@ -341,12 +348,14 @@
     },
     "dominos_mni_34_40": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "transcribe_next_pass",
       "recorded_only": true,
       "releases_held_rows_only_when_decided": false
     },
     "default_size": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": {
         "single_row_is_default": true,
         "brands": {
@@ -418,42 +427,56 @@
     },
     "per100_no_portion": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "stated_amount_only",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "macros_incomplete": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "keep_unserved",
+      "recorded_only": false,
+      "releases_held_rows_only_when_decided": false
+    },
+    "collector_suspect": {
+      "status": "PENDING FOUNDER",
+      "source": null,
+      "effective": "withhold",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "brand_tier_precedence": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "above_generic_key_when_brand_named",
       "recorded_only": true,
       "releases_held_rows_only_when_decided": false
     },
     "mcchicken_live_key": {
       "status": "PENDING FOUNDER",
+      "source": null,
       "effective": "leave",
       "recorded_only": true,
       "releases_held_rows_only_when_decided": false
     },
     "ml_only_rows": {
       "status": "DECIDED",
+      "source": "plan adversarial review #20; scripts/data/brands/README.md 'Rules for the import'",
       "effective": "per_serving_no_density",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "no_weight_rows": {
       "status": "DECIDED",
+      "source": "plan adversarial review #20",
       "effective": "per_serving",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
     },
     "amul_source": {
       "status": "DECIDED",
+      "source": "spec v1.2-phase5-7 (n) addendum; scripts/data/brands/README.md",
       "effective": "keep",
       "recorded_only": false,
       "releases_held_rows_only_when_decided": false
@@ -469,6 +492,7 @@
     "default_size",
     "per100_no_portion",
     "macros_incomplete",
+    "collector_suspect",
     "brand_tier_precedence",
     "mcchicken_live_key"
   ],
@@ -480,11 +504,11 @@
           "kcal_slack": 15
         },
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
@@ -494,11 +518,11 @@
           "kcal_slack": 0
         },
         "totals": {
-          "verified": 3242,
+          "verified": 3238,
           "held": 362,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2148,
+          "default_size": 2136,
           "default_region": 245
         }
       }
@@ -507,22 +531,22 @@
       {
         "option": "linked_2023",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
       {
         "option": "feb_2026",
         "totals": {
-          "verified": 2373,
+          "verified": 2369,
           "held": 339,
-          "unserved": 1029,
+          "unserved": 1033,
           "omitted": 0,
-          "default_size": 1750,
+          "default_size": 1742,
           "default_region": 245
         }
       }
@@ -531,22 +555,22 @@
       {
         "option": "IN-WS",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
       {
         "option": "IN-NE",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 174
         }
       }
@@ -555,33 +579,33 @@
       {
         "option": "IN-NCR",
         "totals": {
-          "verified": 3290,
+          "verified": 3286,
           "held": 314,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2191,
+          "default_size": 2179,
           "default_region": 245
         }
       },
       {
         "option": "IN-BLR",
         "totals": {
-          "verified": 3290,
+          "verified": 3286,
           "held": 314,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2191,
+          "default_size": 2179,
           "default_region": 247
         }
       },
       {
         "option": "none",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 192
         }
       }
@@ -593,11 +617,11 @@
           "keep_rows": []
         },
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
@@ -607,11 +631,11 @@
           "keep_rows": []
         },
         "totals": {
-          "verified": 3299,
+          "verified": 3295,
           "held": 305,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2169,
+          "default_size": 2158,
           "default_region": 245
         }
       }
@@ -620,22 +644,22 @@
       {
         "option": "stated_amount_only",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
       {
         "option": "keep_unserved",
         "totals": {
-          "verified": 3066,
+          "verified": 3063,
           "held": 339,
-          "unserved": 336,
+          "unserved": 339,
           "omitted": 0,
-          "default_size": 1967,
+          "default_size": 1956,
           "default_region": 245
         }
       }
@@ -644,22 +668,46 @@
       {
         "option": "keep_unserved",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       },
       {
         "option": "omit_from_table",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 334,
-          "unserved": 3,
+          "unserved": 7,
           "omitted": 139,
-          "default_size": 2166,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      }
+    ],
+    "collector_suspect": [
+      {
+        "option": "withhold",
+        "totals": {
+          "verified": 3261,
+          "held": 339,
+          "unserved": 141,
+          "omitted": 0,
+          "default_size": 2154,
+          "default_region": 245
+        }
+      },
+      {
+        "option": "serve",
+        "totals": {
+          "verified": 3265,
+          "held": 339,
+          "unserved": 137,
+          "omitted": 0,
+          "default_size": 2158,
           "default_region": 245
         }
       }
@@ -668,11 +716,11 @@
       {
         "option": "per_serving_no_density",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       }
@@ -681,11 +729,11 @@
       {
         "option": "per_serving",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       }
@@ -694,11 +742,11 @@
       {
         "option": "keep",
         "totals": {
-          "verified": 3265,
+          "verified": 3261,
           "held": 339,
-          "unserved": 137,
+          "unserved": 141,
           "omitted": 0,
-          "default_size": 2166,
+          "default_size": 2154,
           "default_region": 245
         }
       }

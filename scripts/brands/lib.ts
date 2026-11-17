@@ -148,6 +148,7 @@ export interface Decisions {
   default_size: Decision<DefaultSizeRule>
   per100_no_portion: Decision<'stated_amount_only' | 'keep_unserved'>
   macros_incomplete: Decision<'keep_unserved' | 'omit_from_table'>
+  collector_suspect: Decision<'withhold' | 'serve'>
   brand_tier_precedence: Decision<'above_generic_key_when_brand_named' | 'below_generic_key'>
   mcchicken_live_key: Decision<'leave' | 'repoint'>
   ml_only_rows: Decision<'per_serving_no_density'>
@@ -160,7 +161,7 @@ export interface DecisionsFile { decisions: Decisions; signoffs: Record<string, 
 
 export const DECISION_IDS: readonly DecisionId[] = [
   'atwater_rule', 'starbucks_guide', 'mcdonalds_default_region', 'behrouz_city', 'dominos_duplicates', 'dominos_mni_34_40',
-  'default_size', 'per100_no_portion', 'macros_incomplete', 'brand_tier_precedence', 'mcchicken_live_key',
+  'default_size', 'per100_no_portion', 'macros_incomplete', 'collector_suspect', 'brand_tier_precedence', 'mcchicken_live_key',
   'ml_only_rows', 'no_weight_rows', 'amul_source',
 ]
 /** Decisions that change no row: copied into the header and manifest for the resolver half. */
@@ -175,6 +176,7 @@ const ENUMS: Partial<Record<DecisionId, readonly string[]>> = {
   dominos_mni_34_40: ['transcribe_next_pass', 'skip'],
   per100_no_portion: ['stated_amount_only', 'keep_unserved'],
   macros_incomplete: ['keep_unserved', 'omit_from_table'],
+  collector_suspect: ['withhold', 'serve'],
   brand_tier_precedence: ['above_generic_key_when_brand_named', 'below_generic_key'],
   mcchicken_live_key: ['leave', 'repoint'],
   ml_only_rows: ['per_serving_no_density'],
@@ -222,9 +224,14 @@ export function parseDecisions(text: string): DecisionsFile {
     for (const f of ['question', 'why', 'effect'] as const) if (typeof d[f] !== 'string' || !d[f]) throw new Error(`decisions.json ${id}: missing ${f}`)
     if (!Array.isArray(d.options) || d.options.length === 0) throw new Error(`decisions.json ${id}: missing options`)
     if (d.status !== 'PENDING FOUNDER' && d.status !== 'DECIDED') throw new Error(`decisions.json ${id}: status must be "PENDING FOUNDER" or "DECIDED"`)
+    // source (who decided) is printed into a SQL comment line of the migration header: one line, no control characters
+    if (d.source !== undefined && (typeof d.source !== 'string' || !d.source || /[\p{Cc}\p{Zl}\p{Zp}]/u.test(d.source))) {
+      throw new Error(`decisions.json ${id}: source must be single-line text`)
+    }
     checkValue(id, d.proposed, brandKeys)
     if (d.status === 'DECIDED') {
       if (d.chosen === null || d.chosen === undefined) throw new Error(`decisions.json ${id}: DECIDED needs chosen`)
+      if (!d.source) throw new Error(`decisions.json ${id}: DECIDED needs source (who decided, and where it is recorded)`)
       checkValue(id, d.chosen, brandKeys)
     } else if (d.chosen !== null) throw new Error(`decisions.json ${id}: chosen must stay null while PENDING FOUNDER`)
   }
@@ -238,6 +245,11 @@ export function parseDecisions(text: string): DecisionsFile {
     const o = v as Signoff
     if (typeof o !== 'object' || typeof o.by !== 'string' || !o.by || !/^\d{4}-\d{2}-\d{2}$/.test(o.date) || !Number.isInteger(o.rows_checked) || o.rows_checked < 1) {
       throw new Error(`decisions.json signoffs.${s}: needs {by, date YYYY-MM-DD, rows_checked >= 1}`)
+    }
+    // by and note are printed into SQL comment lines of the migration header: one line, no control characters
+    // (a newline would end the comment and turn the rest of the note into SQL).
+    for (const t of [o.by, o.note ?? '']) {
+      if (typeof t !== 'string' || /[\p{Cc}\p{Zl}\p{Zp}]/u.test(t)) throw new Error(`decisions.json signoffs.${s}: by and note must be single-line text`)
     }
     signoffs[s] = o
   }
@@ -482,8 +494,13 @@ export interface Build {
   items: BrandItem[]
   /** Rows left out of brand_items entirely by a decision (macros_incomplete = omit_from_table). */
   omitted: BrandItem[]
-  defaults: { groups: number; withDefault: number; ambiguous: number; noMatch: number }
+  /** Served item groups, and how each got (or did not get) a default size; defaultNotServed = the label picked a held or unserved row. */
+  defaults: { groups: number; withDefault: number; ambiguous: number; noMatch: number; defaultNotServed: number }
 }
+
+/** The collector's notes call the printed numbers suspect ("SUSPECT (numbers kept as published) ..."). */
+export const isCollectorSuspect = (it: Pick<BrandItem, 'qa_codes' | 'notes'>): boolean =>
+  it.qa_codes.includes('collector_noted') && /\bsuspect\b/i.test(it.notes ?? '')
 
 /** Every rule in one pass. Order of reasons: qa_error, qa_conflict, gate, decision, duplicate. */
 export function buildItems(raw: readonly RawRow[], ds: Decisions): Build {
@@ -549,11 +566,13 @@ export function buildItems(raw: readonly RawRow[], ds: Decisions): Build {
       }
     }
   }
+  const releasedRows = new Set<number>()
   items.forEach((it, i) => {
     if (it.qa_severity !== 'conflict') return
     const codes = it.qa_codes.filter((c) => QA_TIER[c] === 'conflict')
     // only a pure duplicate_conflict can be resolved by a choice; listed_twice / name_collision stay held
     if (released.has(i) && codes.every((c) => c === 'duplicate_conflict')) {
+      releasedRows.add(i)
       reasons[i].push(it.brand_key === 'behrouz' ? `decision:behrouz_city=${behrouz.chosen} released the conflict` : `decision:dominos_duplicates=${dom.chosen?.policy} released the conflict`)
       return
     }
@@ -577,12 +596,14 @@ export function buildItems(raw: readonly RawRow[], ds: Decisions): Build {
   const guide = effective(ds, 'starbucks_guide')
   const p100 = effective(ds, 'per100_no_portion')
   const macros = effective(ds, 'macros_incomplete')
+  const suspect = effective(ds, 'collector_suspect')
   const omit = new Set<number>()
   items.forEach((it, i) => {
     if (it.atwater_ok === null) {
       if (macros === 'omit_from_table') omit.add(i)
       unserved[i] = true; reasons[i].push(`decision:macros_incomplete=${macros} (Atwater not checkable)`)
     }
+    if (suspect === 'withhold' && isCollectorSuspect(it)) { unserved[i] = true; reasons[i].push('decision:collector_suspect=withhold (the collector marked the numbers SUSPECT)') }
     if (it.brand_key === 'starbucks' && guide === 'feb_2026') { unserved[i] = true; reasons[i].push('decision:starbucks_guide=feb_2026 (not yet collected)') }
     if (it.qa_codes.includes('per100_no_portion')) {
       if (it.basis === 'per_serving') throw new Error(`${it.brand_slug} row ${it.source_row}: per100_no_portion on a per-serving row`)
@@ -605,30 +626,47 @@ export function buildItems(raw: readonly RawRow[], ds: Decisions): Build {
     else it.is_default_region = true
   }
 
-  // 6. Default size, among served rows of one brand, region, item and veg flag.
+  // 6. Default size. The pick is made over the brand's whole listing of one brand, region, item and veg flag (every
+  //    status, including rows a decision omits; exact repeats count once), and it sticks only when the picked row is
+  //    served. So a held Tall never hands the default to Grande, and an item sold in three sizes whose other two are
+  //    held does not become "listed once". Only groups with at least one served row are counted.
+  //    A duplicate_conflict row whose group had another row released by a DECIDED choice in the same listing is no
+  //    longer a second listing of that size: the decision replaced it (as an exact repeat is not one). Without this,
+  //    Domino's keep_higher_kcal would leave every released double-listed pizza with an 'ambiguous' Regular.
   const size = effective(ds, 'default_size')
+  const listKey = (it: BrandItem): string => [it.brand_key, it.region, it.item_norm, it.veg ?? ''].join('|')
+  const superseded = new Set<number>()
+  for (const g of conflictGroups.values()) {
+    for (const w of g) {
+      if (!releasedRows.has(w)) continue
+      for (const i of g) if (i !== w && listKey(items[i]) === listKey(items[w])) superseded.add(i)
+    }
+  }
   const groups = new Map<string, BrandItem[]>()
-  for (const it of items) {
-    if (it.status !== 'verified') continue
-    const k = [it.brand_key, it.region, it.item_norm, it.veg ?? ''].join('|')
+  items.forEach((it, i) => {
+    if (it.qa_codes.includes('duplicate_exact') || superseded.has(i)) return
+    const k = listKey(it)
     const g = groups.get(k)
     if (g) g.push(it); else groups.set(k, [it])
-  }
-  const stats = { groups: groups.size, withDefault: 0, ambiguous: 0, noMatch: 0 }
+  })
+  const stats = { groups: 0, withDefault: 0, ambiguous: 0, noMatch: 0, defaultNotServed: 0 }
   for (const g of groups.values()) {
-    if (g.length === 1) {
-      if (size.single_row_is_default) { g[0].is_default_size = true; stats.withDefault++ } else stats.noMatch++
-      continue
+    if (!g.some((it) => it.status === 'verified')) continue
+    stats.groups++
+    let pick: BrandItem | 'ambiguous' | null = null
+    if (g.length === 1) pick = size.single_row_is_default ? g[0] : null
+    else {
+      for (const label of size.brands[g[0].brand_key] ?? []) {
+        const hits = g.filter((it) => labelMatches(label, it.variant_norm))
+        if (hits.length === 0) continue
+        pick = hits.length === 1 ? hits[0] : 'ambiguous'
+        break
+      }
     }
-    let done = false
-    for (const label of size.brands[g[0].brand_key] ?? []) {
-      const hits = g.filter((it) => labelMatches(label, it.variant_norm))
-      if (hits.length === 0) continue
-      if (hits.length === 1) { hits[0].is_default_size = true; stats.withDefault++ } else stats.ambiguous++
-      done = true
-      break
-    }
-    if (!done) stats.noMatch++
+    if (pick === null) stats.noMatch++
+    else if (pick === 'ambiguous') stats.ambiguous++
+    else if (pick.status !== 'verified') stats.defaultNotServed++
+    else { pick.is_default_size = true; stats.withDefault++ }
   }
 
   const kept = items.filter((_, i) => !omit.has(i))

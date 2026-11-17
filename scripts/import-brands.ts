@@ -54,7 +54,11 @@ function main(): void {
     renameSync(tmp, path)
     console.log(`wrote ${rel} (${Buffer.byteLength(text)} bytes)`)
   }
-  if (number) console.log(`now delete supabase/pending/brand_items.sql and supabase/rollback/brand_items_down.sql in the same commit`)
+  if (number) {
+    console.log('now, in the same commit: delete supabase/pending/brand_items.sql and supabase/rollback/brand_items_down.sql;')
+    console.log(`check with --check --number ${number} from then on (a plain --check renders the pending paths); and update`)
+    console.log('__tests__/unit/brandItems.test.ts, which pins the pending paths on purpose, plus the row in supabase/pending/README.md')
+  }
 }
 
 main()

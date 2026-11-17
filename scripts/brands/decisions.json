@@ -1,7 +1,7 @@
 {
   "_about": [
     "Brand data choices read by scripts/import-brands.ts (v1.2 follow-up plan WP10, open question Q16).",
-    "Each decision has a proposed default. status is \"PENDING FOUNDER\" until the founder answers; then set status to \"DECIDED\" and put the answer in chosen (copy proposed to accept it).",
+    "Each decision has a proposed default. status is \"PENDING FOUNDER\" until the founder answers; then set status to \"DECIDED\", put the answer in chosen (copy proposed to accept it) and say who decided and where it is recorded in source (for example \"founder, 2026-11-20, spec v1.2-phase5-7 (p)\"). The generator refuses a DECIDED entry without source.",
     "While a decision is PENDING the generator uses proposed, with one exception: a pending answer never releases a held row. behrouz_city and dominos_duplicates resolve conflict-tier rows, so they take effect only once DECIDED.",
     "Rows with qa_severity error are never released by any decision (they change only when the brand publishes a corrected document).",
     "Decisions marked 'recorded only' do not change any row; the generator copies them into the migration header and scripts/brands/out/manifest.json for the resolver half of WP10.",
@@ -71,7 +71,7 @@
       "chosen": null
     },
     "default_size": {
-      "question": "When a user names a branded item without a size ('starbucks cappuccino', 'mcd fries'), which size do we serve? Per brand, an ordered list of size labels (normalized: lowercase, punctuation to spaces); within each item, the first label that matches exactly one served row is the default. A label also matches a longer variant that starts with it ('personal' matches 'personal pan pizza').",
+      "question": "When a user names a branded item without a size ('starbucks cappuccino', 'mcd fries'), which size do we serve? Per brand, an ordered list of size labels (normalized: lowercase, punctuation to spaces); within each item's listing (every size the brand prints, served or not), the first label that matches any row decides, and that row is the default only if it is the single match and is served. A label also matches a longer variant that starts with it ('personal' matches 'personal pan pizza').",
       "options": ["any ordered label lists; fallback is always 'no default' (the resolver asks or falls through)"],
       "proposed": {
         "single_row_is_default": true,
@@ -92,7 +92,7 @@
         }
       },
       "why": "Each brand's standard serve: Starbucks Tall (the founder's own example), the 'Regular' size where a brand has one (McDonald's desserts and coffee, KFC and BK sides and drinks), Medium for McDonald's soft drinks (sold Small/Medium/Large), a Regular hand-tossed Domino's pizza (Domino's 'Regular serves 1'), a Personal Pizza Hut pizza, a 6-inch Subway. Note: McDonald's fries default to Regular (77 g); if meals are what users mean, Medium (109 g) is the alternative.",
-      "effect": "Sets is_default_size. An item listed once is its own default when single_row_is_default is true. Groups where no label matches, or a label matches two rows, get no default.",
+      "effect": "Sets is_default_size. The pick is made over the brand's whole listing of the item (held and unserved sizes included; exact repeats count once, and so does a double-listed size once a DECIDED choice releases one copy) and sticks only if the picked row is served: a held Tall never hands the default to Grande, and an item whose other sizes are held is not 'listed once'. An item listed once is its own default when single_row_is_default is true. Groups where no label matches, a label matches two rows, or the picked row is not served get no default (the resolver asks or falls through).",
       "status": "PENDING FOUNDER",
       "chosen": null
     },
@@ -100,7 +100,7 @@
       "question": "La Pino'z (199 rows), Wow! Momo (8) and 2 Haldiram's rows publish values per 100 g with no portion weight. How are they served?",
       "options": ["stated_amount_only", "keep_unserved"],
       "proposed": "stated_amount_only",
-      "why": "The per-100 g numbers are official; only the portion is missing. Serving them when the user states grams ('200 g la pinoz farmhouse pizza') uses no invented weight. Without a stated amount the item falls through to the normal path (the row still exists, so no web lookup).",
+      "why": "The per-100 g numbers are official; only the portion is missing. Serving them when the user states grams ('200 g la pinoz farmhouse pizza') uses no invented weight. Without a stated amount the item falls through to the normal path (the row still exists, so no web lookup). Note the tension with founder (n): 'every extracted row must ... have a serving size'; these rows have none, which is why keep_unserved is offered.",
       "effect": "stated_amount_only: served with amount_rule stated_only. keep_unserved: unserved (decision:per100_no_portion). Wow! Momo rows are also kcal-only, so macros_incomplete holds them either way.",
       "status": "PENDING FOUNDER",
       "chosen": null
@@ -111,6 +111,15 @@
       "proposed": "keep_unserved",
       "why": "Kept, they are never served but they count as 'we hold this item', so WP11 does not spend a web lookup on a brand whose only official numbers are these. Omitted, WP11 may look them up (CCD publishes nothing better).",
       "effect": "keep_unserved: status unserved (decision:macros_incomplete). omit_from_table: the rows are left out of brand_items entirely (listed in the review list as omitted).",
+      "status": "PENDING FOUNDER",
+      "chosen": null
+    },
+    "collector_suspect": {
+      "question": "40 rows carry a collector note calling the printed numbers SUSPECT (REPORT.md caveat collector_noted: 'usable, but read the note first'). 36 are already held by an error-tier flag; 4 pass every gate: Theobroma Cappuccino 250 ml at 647.5 kcal ('implausible ... verify before use'), Amul IC Strawberry (every value identical to Amul IC Vanilla), Haldiram's Kaju Katli (sugar 0.25 g, sodium 615 mg) and Natural's Tropical Sundae (sugar 27 g > carbs 26 g, inside the 2% + 0.5 g tolerance). Serve those 4?",
+      "options": ["withhold", "serve"],
+      "proposed": "withhold",
+      "why": "Caveat rows are importable (README), but nothing in the import reads the note, and the per-brand sign-off samples only about 10 rows. The collectors traced these to the brand's own document and still called them suspect; a 647.5 kcal cappuccino served as verified is worse than falling through to the generic row. Withheld rows still count as 'we hold this item', so WP11 makes no web lookup for them.",
+      "effect": "withhold: the rows are unserved (decision:collector_suspect) and listed in the review list. serve: they are served like any other caveat row. Rows already held stay held either way.",
       "status": "PENDING FOUNDER",
       "chosen": null
     },

@@ -51,7 +51,7 @@ describe('real data, proposed decisions', () => {
     expect(held).toEqual(qaBad)
     const counts = { verified: 0, held: 0, unserved: 0 }
     for (const it of base.items) counts[it.status]++
-    expect(counts).toEqual({ verified: 3265, held: 339, unserved: 137 })
+    expect(counts).toEqual({ verified: 3261, held: 339, unserved: 141 })
   })
 
   it("the generator's own gates agree with the QA flags row for row", () => {
@@ -67,7 +67,7 @@ describe('real data, proposed decisions', () => {
 
   it('every served row passes Atwater (independent float check, REPORT rule), has full macros and no QA error or conflict', () => {
     const served = base.items.filter((i) => i.status === 'verified')
-    expect(served).toHaveLength(3265)
+    expect(served).toHaveLength(3261)
     const bad = served.filter((it) => {
       const k = Number(it.kcal)
       const est = 4 * Number(it.protein_g) + 4 * Number(it.carbs_g) + 9 * Number(it.fat_g)
@@ -147,7 +147,36 @@ describe('real data, proposed decisions', () => {
     expect(def('mcdonalds', 'coca cola', 'IN-WS')).toBe('medium')
     expect(def('mcdonalds', 'cappuccino', 'IN-WS')).toBe('regular r')
     expect(def('burger_king', 'fries')).toBe('regular')
-    expect(base.defaults).toEqual({ groups: 2208, withDefault: 2166, ambiguous: 1, noMatch: 41 })
+    expect(base.defaults).toEqual({ groups: 2204, withDefault: 2154, ambiguous: 8, noMatch: 38, defaultNotServed: 4 })
+  })
+
+  it('default size is picked over the whole listing: a held size never hands the default to another size', () => {
+    const grp = (brand: string, item: string) => base.items.filter((i) => i.brand_key === brand && i.region === 'IN' && i.item_norm === item)
+    // Starbucks prints Short, Tall and Grande; Tall (the default label) and Grande are held, Short is served:
+    // the served Short must not become the default just because it is the only served row.
+    const nitro = grp('starbucks', 'salted caramel nitro cold brew')
+    expect(nitro.map((i) => [i.variant_norm, i.status])).toEqual([['short', 'verified'], ['tall', 'held'], ['grande', 'held']])
+    expect(nitro.some((i) => i.is_default_size)).toBe(false)
+    // Domino's prints Caprese Medium (served) and Large (held), no Regular: no label matches, so no default.
+    expect(grp('dominos', 'caprese').some((i) => i.is_default_size)).toBe(false)
+    // Pizza Hut 7 UP 250 ml (unserved) and 330 ml (served): two sizes and no label, so no default.
+    expect(grp('pizza_hut', '7 up').some((i) => i.is_default_size)).toBe(false)
+    // an exact repeat (duplicate_exact) counts once: La Pino'z Veg Hawaiian is still listed once
+    const haw = grp('lapinoz', 'veg hawaiian pizza')
+    expect(haw.map((i) => [i.status, i.is_default_size])).toEqual([['verified', true], ['unserved', false]])
+  })
+
+  it('collector SUSPECT rows that pass every gate are withheld while collector_suspect is pending (proposed withhold)', () => {
+    const sus = base.items.filter((i) => i.qa_codes.includes('collector_noted') && /\bsuspect\b/i.test(i.notes ?? ''))
+    expect(sus).toHaveLength(40)
+    expect(sus.every((i) => i.status !== 'verified')).toBe(true)
+    const withheld = sus.filter((i) => i.status === 'unserved').map(key).sort()
+    expect(withheld).toEqual(['amul:34', 'haldirams:5', 'naturals_ice_cream:138', 'theobroma:115'])
+    for (const it of sus) expect(it.status_reason).toContain('decision:collector_suspect=withhold')
+    // 'serve' releases exactly those 4; the 36 held ones stay held
+    const served = byRow(buildItems(raw, decided(file.decisions, 'collector_suspect', 'serve')))
+    expect(sus.filter((i) => served.get(key(i))?.status === 'verified').map(key).sort()).toEqual(withheld)
+    expect(sus.filter((i) => i.status === 'held').every((i) => served.get(key(i))?.status === 'held')).toBe(true)
   })
 
   it('per-100 rows: scaled by an amount; La Pino\'z (no portion) only by a stated amount', () => {
@@ -204,6 +233,21 @@ describe('decisions take effect only as documented', () => {
     expect(() => buildItems(raw, decided(file.decisions, 'dominos_duplicates', { policy: 'keep_rows', keep_rows: [Number(clean.source_row)] }))).toThrow(/not a Domino's duplicate_conflict row/)
   })
 
+  it("a released double-listed size is one listing again: its default size applies (the losing copy is not a second 'Regular')", () => {
+    const hi = buildItems(raw, decided(file.decisions, 'dominos_duplicates', { policy: 'keep_higher_kcal', keep_rows: [] }))
+    const rel = hi.items.filter((i) => i.brand_key === 'dominos' && i.qa_severity === 'conflict' && i.status === 'verified')
+    expect(rel).toHaveLength(34)
+    // Domino's charts these pizzas twice; once a copy of each size is released, the brand's first label (new hand
+    // tossed regular) matches one listing, not two, so the released Regular is the default
+    for (const item of ['double cheese margherita', 'cheese tomato', 'cheese corn', 'peppy paneer']) {
+      const d = hi.items.filter((i) => i.brand_key === 'dominos' && i.item_norm === item && i.is_default_size)
+      expect(d.map((i) => [i.variant_norm, i.status, i.qa_severity])).toEqual([['new hand tossed regular', 'verified', 'conflict']])
+    }
+    expect(hi.defaults.ambiguous).toBeLessThan(base.defaults.ambiguous)
+    // while the decision is pending both copies are held and still count twice: no default is guessed
+    expect(base.items.some((i) => i.brand_key === 'dominos' && i.item_norm === 'double cheese margherita' && i.is_default_size)).toBe(false)
+  })
+
   it('feb_2026 withholds every Starbucks row; IN-NE flips the McDonald\'s default region', () => {
     const sb = buildItems(raw, decided(file.decisions, 'starbucks_guide', 'feb_2026'))
     const rows = sb.items.filter((i) => i.brand_key === 'starbucks')
@@ -236,7 +280,7 @@ describe('decisions.json', () => {
     expect(Object.keys(f.decisions).sort()).toEqual([...DECISION_IDS].sort())
     const pending = DECISION_IDS.filter((id) => f.decisions[id].status === 'PENDING FOUNDER')
     expect(pending).toEqual(['atwater_rule', 'starbucks_guide', 'mcdonalds_default_region', 'behrouz_city', 'dominos_duplicates', 'dominos_mni_34_40',
-      'default_size', 'per100_no_portion', 'macros_incomplete', 'brand_tier_precedence', 'mcchicken_live_key'])
+      'default_size', 'per100_no_portion', 'macros_incomplete', 'collector_suspect', 'brand_tier_precedence', 'mcchicken_live_key'])
     for (const id of pending) expect(f.decisions[id].chosen).toBeNull()
     expect(Object.keys(f.signoffs).sort()).toEqual(Object.keys(BRAND_BY_SLUG).sort())
   })
@@ -254,6 +298,16 @@ describe('decisions.json', () => {
     expect(() => parseDecisions(edit((j) => { j.decisions.dominos_duplicates.proposed = { policy: 'hold_both', keep_rows: [12] } }))).toThrow(/only used with policy keep_rows/)
     expect(() => parseDecisions(edit((j) => { j.signoffs.kfc_india = { by: 'x', date: '13 Nov', rows_checked: 10 } }))).toThrow(/signoffs.kfc_india/)
     expect(() => parseDecisions(edit((j) => { delete j.signoffs.kfc_india }))).toThrow(/every brand slug/)
+    // sign-off text lands in SQL comment lines: a newline would turn the rest of the note into SQL
+    expect(() => parseDecisions(edit((j) => { j.signoffs.kfc_india = { by: 'x', date: '2026-11-20', rows_checked: 10, note: 'ok\nDROP TABLE public.food_items;' } }))).toThrow(/single-line/)
+    expect(() => parseDecisions(edit((j) => { j.signoffs.kfc_india = { by: 'x\u2028y', date: '2026-11-20', rows_checked: 10 } }))).toThrow(/single-line/)
+    expect(parseDecisions(edit((j) => { j.signoffs.kfc_india = { by: 'founder', date: '2026-11-20', rows_checked: 10, note: '10/10 match p.3-p.20' } })).signoffs.kfc_india?.rows_checked).toBe(10)
+    expect(() => parseDecisions(edit((j) => { j.decisions.collector_suspect.proposed = 'hold' }))).toThrow(/must be one of withhold, serve/)
+    // a DECIDED entry says who decided (the header prints it, so a review rule never reads as a founder answer)
+    expect(() => parseDecisions(edit((j) => { Object.assign(j.decisions.starbucks_guide, { status: 'DECIDED', chosen: 'linked_2023' }) }))).toThrow(/DECIDED needs source/)
+    expect(() => parseDecisions(edit((j) => { delete j.decisions.ml_only_rows.source }))).toThrow(/DECIDED needs source/)
+    expect(() => parseDecisions(edit((j) => { Object.assign(j.decisions.starbucks_guide, { status: 'DECIDED', chosen: 'linked_2023', source: 'founder\nDROP TABLE x;' }) }))).toThrow(/source must be single-line/)
+    expect(parseDecisions(edit((j) => { Object.assign(j.decisions.starbucks_guide, { status: 'DECIDED', chosen: 'linked_2023', source: 'founder, 2026-11-20' }) })).decisions.starbucks_guide.chosen).toBe('linked_2023')
   })
 })
 
@@ -279,15 +333,19 @@ describe('rendered files', () => {
     expect(code.match(/\bGRANT\b[^;]*;/g)).toEqual(['GRANT SELECT ON public.brand_items TO authenticated, service_role;'])
     expect(code).toMatch(/FOR SELECT TO authenticated USING \(status = 'verified'\);/)
     expect(code).not.toMatch(/\bBEGIN;|\bCOMMIT;/)
+    // the per-brand count check compares against a code-point-ordered string, so its ORDER BY must not follow the database collation
+    expect(code).toContain('ORDER BY brand_slug COLLATE "C", status COLLATE "C"')
     expect(sql).toMatch(/^-- brand_items\.sql — GENERATED by scripts\/import-brands\.ts; inputs_sha256 [0-9a-f]{64}; do not edit\n/)
     expect(sql).toContain('-- MIGRATION NUMBER: not assigned.')
-    expect(sql).toContain('--   starbucks_guide: PENDING FOUNDER; using proposed "linked_2023"')
+    expect(sql).toContain('--   starbucks_guide: PENDING FOUNDER; using proposed "linked_2023"\n')
+    // rules fixed by the review, not by the founder, say so
+    expect(sql).toContain('--   ml_only_rows: DECIDED; chosen "per_serving_no_density" (source: plan adversarial review #20;')
     expect(sql).toContain('--   mcdonalds_india_west_south   NOT SIGNED')
   })
 
   it('the review list holds exactly the rows that are not served', () => {
     const csv = readFileSync(join(REPO, 'scripts/brands/out/review_list.csv'), 'utf8').trim().split('\n')
-    expect(csv.length - 1).toBe(339 + 137)
+    expect(csv.length - 1).toBe(339 + 141)
     const ids = new Set(csv.slice(1).map((l) => (l.match(/"([0-9a-f-]{36})"$/) as RegExpMatchArray)[1]))
     expect(ids).toEqual(new Set(base.items.filter((i) => i.status !== 'verified').map((i) => i.id)))
   })
@@ -296,7 +354,10 @@ describe('rendered files', () => {
     expect(() => renderAll({ number: '065' })).toThrow(/PENDING FOUNDER/)
     expect(() => pathsFor('65')).toThrow(/three digits/)
     const j = JSON.parse(DECISIONS_TEXT)
-    for (const id of DECISION_IDS) { j.decisions[id].status = 'DECIDED'; j.decisions[id].chosen = j.decisions[id].proposed }
+    for (const id of DECISION_IDS) {
+      if (j.decisions[id].status === 'DECIDED') continue
+      Object.assign(j.decisions[id], { status: 'DECIDED', chosen: j.decisions[id].proposed, source: 'founder, 2026-11-20 (test)' })
+    }
     expect(() => renderAll({ number: '065', raw, decisions: parseDecisions(JSON.stringify(j)), sha: '0'.repeat(64) })).toThrow(/no sign-off: amul, behrouz_biryani/)
     for (const s of Object.keys(BRAND_BY_SLUG)) j.signoffs[s] = { by: 'founder', date: '2026-11-20', rows_checked: 10 }
     const files = renderAll({ number: '065', raw, decisions: parseDecisions(JSON.stringify(j)), sha: '0'.repeat(64) })
@@ -304,6 +365,10 @@ describe('rendered files', () => {
     expect(Object.keys(files)).toContain('supabase/rollback/065_brand_items_down.sql')
     expect(files['supabase/migrations/065_brand_items.sql']).toContain('-- MIGRATION NUMBER: 065, assigned at push time')
     expect(files['supabase/rollback/065_brand_items_down.sql']).toContain('supabase migration repair --status reverted 065')
+    // a number another migration already holds (applied, or waiting in pending/ with its number) is refused
+    const ready = parseDecisions(JSON.stringify(j))
+    expect(() => renderAll({ number: '054', raw, decisions: ready, sha: '0'.repeat(64) })).toThrow(/054 is already used by supabase\/migrations\/054_portion_units\.sql/)
+    expect(() => renderAll({ number: '055', raw, decisions: ready, sha: '0'.repeat(64) })).toThrow(/055 is already used by supabase\/pending\/055_usda_local_foods\.sql/)
   })
 
   it('no PDF or image from the collection is in the tree (numbers and attribution only)', () => {
