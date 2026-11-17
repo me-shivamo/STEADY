@@ -50,6 +50,7 @@ import {
   type PortionTables, type Region,
 } from './portions.ts'
 import { MASS_G, portionFromDescription, VOLUME_ML, type Unit } from './portionText.ts'
+import { computePortionGuarded } from './portionGuards.ts'
 import { readMemoryPortions } from './portionMemory.ts'
 import { loadCalibrations, loadFoodPortionRows, loadPortionTables, type EffectivePortion } from './portionStore.ts'
 import { AI_COMPUTED_MAX_CONFIDENCE, computeEstimate, loadAiMacroContext, type AiMacroContext } from './aiMacros.ts'
@@ -1473,7 +1474,7 @@ export function parseFromDescription(p: Pick<ParsedFood, 'name' | 'quantity_desc
 // The engine's answer, or — with no data AND no fallback guess — the parse's own
 // grams (or 100 g) at confidence 0.2, flagged for a follow-up.
 function portionOrPlaceholder(tables: PortionTables, input: Parameters<typeof computePortion>[1], parseG: number): PortionResult {
-  const r = computePortion(tables, input)
+  const r = computePortionGuarded(tables, input)
   if (r) return r
   const g = typeof parseG === 'number' && parseG > 0 ? Math.round(parseG * 10) / 10 : 100
   const conf = 0.2
