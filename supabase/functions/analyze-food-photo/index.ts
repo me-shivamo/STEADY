@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
       let invented = 0
       allFoods = (aiResult.foods as Array<Record<string, unknown>>).flatMap((raw): ParsedFood[] => {
         if (raw && typeof raw === 'object' && raw.label_macros) return [raw as unknown as ParsedFood]
-        const v = validateParsedFoodV2(raw, caption)
+        const v = validateParsedFoodV2(raw, caption, { channel: 'photo' })
         if (v.invented_stated) invented++
         if (!v.ok || !v.food) return []
         const f = v.food

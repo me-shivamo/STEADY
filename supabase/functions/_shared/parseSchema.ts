@@ -10,7 +10,7 @@
 //   log-food-v2 (Phase 8) passes PARSE_SCHEMA_V2 as response_format json_schema strict.
 
 import {
-  COUNT_WORDS, normalizeUnitWord, parseCountToken, sizeWord, STATED_UNITS, UNITS,
+  COUNT_WORDS, MASS_G, normalizeUnitWord, normText, parseCountToken, sizeWord, STATED_UNITS, UNITS, VOLUME_ML,
   type Size, type StatedUnit, type Unit,
 } from './portionText.ts'
 import { statedPerUnit, type CookingFat, type PortionParse } from './portions.ts'
@@ -86,7 +86,60 @@ export interface V2Validation {
 const COUNT_MAX = 50
 const r3 = (n: number) => Math.round(n * 1000) / 1000
 
-// Every number the user typed ("2.5", "250ml", "1/2", "1,000"), as numbers.
+// Amount words, read only when a weight or volume word follows ("half litre", "aadha kilo",
+// "pao kg", "dedh litre", "two kg"), so a bare "a" or "one" never vouches for a stated amount.
+const AMOUNT_WORDS: ReadonlyMap<string, number> = new Map([
+  ['half', 0.5], ['aadha', 0.5], ['aadhi', 0.5], ['adha', 0.5], ['adhi', 0.5],
+  ['quarter', 0.25], ['pao', 0.25], ['pau', 0.25],
+  ['a', 1], ['an', 1], ['one', 1], ['ek', 1], ['dedh', 1.5], ['dhai', 2.5], ['dhaai', 2.5],
+  ['two', 2], ['three', 3], ['four', 4], ['five', 5], ['six', 6], ['seven', 7], ['eight', 8], ['nine', 9], ['ten', 10],
+])
+const STATED_WORD: ReadonlyArray<[RegExp, StatedUnit]> = [
+  [/^(g|gm|gms|gram|grams|gramme|grammes)$/, 'g'],
+  [/^(kg|kgs|kilo|kilos|kilogram|kilograms)$/, 'kg'],
+  [/^(mg|milligram|milligrams)$/, 'mg'],
+  [/^(ml|mls|millilitre|millilitres|milliliter|milliliters)$/, 'ml'],
+  [/^(l|ltr|ltrs|litre|litres|liter|liters)$/, 'l'],
+  [/^(fl oz|floz)$/, 'fl_oz'],
+  [/^(oz|ounce|ounces)$/, 'oz'],
+  [/^(lb|lbs|pound|pounds)$/, 'lb'],
+]
+const statedWord = (w: string): StatedUnit | null => STATED_WORD.find(([rx]) => rx.test(w))?.[1] ?? null
+// [1] the amount: a number ("2.5", "1/2", "1 1/2") or an amount word; [2] "and a half"; [3] the unit word
+const AMOUNT_RE = new RegExp(
+  String.raw`(\d+(?:\.\d+)?(?:\s+\d+\s*/\s*\d+|\s*/\s*\d+)?|\b(?:${[...AMOUNT_WORDS.keys()].join('|')})\b)` +
+  String.raw`(\s+and\s+(?:a\s+)?half\b)?\s*(?:\b(?:a|an|of)\s+){0,2}(fl\.?\s?oz|[a-z]+)\b`, 'gi')
+
+// The weights and volumes the user typed: "250ml" → 250 ml, "half litre" → 0.5 l, "1.5 kg" → 1.5 kg,
+// "a quarter kg" → 0.25 kg, "one and a half litre" / "1 1/2 litre" → 1.5 l.
+export function statedInText(text: string | null | undefined): Array<{ amount: number; unit: StatedUnit; word: boolean }> {
+  if (!text) return []
+  const out: Array<{ amount: number; unit: StatedUnit; word: boolean }> = []
+  const s = text.toLowerCase().replace(/(\d),(\d{3})\b/g, '$1$2')
+  const re = new RegExp(AMOUNT_RE.source, 'gi')
+  for (let m = re.exec(s); m !== null; m = re.exec(s)) {
+    const unit = statedWord(m[3].replace(/[.\s]/g, '') === 'floz' ? 'fl oz' : m[3])
+    if (!unit) {
+      // only the amount itself is used up: "a half litre" reads on from "half", "a quarter kg" from "quarter"
+      re.lastIndex = m.index + m[1].length
+      continue
+    }
+    const raw = m[1].trim().replace(/\s*\/\s*/g, '/')
+    const word = AMOUNT_WORDS.has(raw)
+    const mixed = /^(\d+)\s+(\d+)\/(\d+)$/.exec(raw)
+    let amount: number
+    if (word) amount = AMOUNT_WORDS.get(raw)!
+    else if (mixed) { if (!(Number(mixed[3]) > 0)) continue; amount = Number(mixed[1]) + Number(mixed[2]) / Number(mixed[3]) }
+    else if (raw.includes('/')) { const [a, b] = raw.split('/').map(Number); if (!(b > 0)) continue; amount = a / b }
+    else amount = Number(raw)
+    if (m[2]) amount += 0.5
+    if (amount > 0) out.push({ amount, unit, word })
+  }
+  return out
+}
+
+// Every number the user typed ("2.5", "250ml", "1/2", "1,000"), as numbers. Amounts written as words
+// ("half litre") are not here: they count only with their weight or volume, through statedInText.
 export function numbersInText(text: string | null | undefined): number[] {
   if (!text) return []
   const out: number[] = []
@@ -100,6 +153,47 @@ export function numbersInText(text: string | null | undefined): number[] {
   }
   return out
 }
+
+// A stated amount is the user's when its number is in the text, or when it is the same weight or
+// volume as one the user typed, in any unit or in words ("half litre" → 0.5 l or 500 ml, "1 kg" →
+// 1000 g). A word amount never vouches for a number in another kind of unit ("a litre" is not 1 kg).
+function typedAmount(userText: string | null | undefined, amt: number, su: StatedUnit): boolean {
+  if (numbersInText(userText).some((x) => Math.abs(x - amt) < 1e-9)) return true
+  const base = (u: StatedUnit) => MASS_G[u] !== undefined ? ['mass', MASS_G[u]] as const : ['volume', VOLUME_ML[u]] as const
+  const [kind, f] = base(su)
+  return statedInText(userText).some((s) => {
+    const [k2, f2] = base(s.unit)
+    if (k2 !== kind || !(f > 0) || !(f2 > 0)) return false
+    const a = amt * f
+    const b = s.amount * f2
+    return Math.abs(a - b) <= 0.01 * Math.max(a, b)
+  })
+}
+
+// Does any word in the user's text name this unit ("2 scoops ice cream" → scoop)?
+function textNamesUnit(userText: string | null | undefined, unit: Unit): boolean {
+  if (!userText) return false
+  const toks = normText(userText).split(' ').filter(Boolean)
+  for (let i = 0; i < toks.length; i++) {
+    for (let n = 1; n <= 3 && i + n <= toks.length; n++) {
+      if (normalizeUnitWord(toks.slice(i, i + n).join(' '))?.unit === unit) return true
+    }
+  }
+  return false
+}
+
+// "had a lot of pasta": an amount said as a size. SIZE_WORDS (portionText.ts) is one of the 054
+// generator's hashed inputs, so these whole phrases are read here, by the validator only.
+const AMOUNT_SIZE: ReadonlyMap<string, Size> = new Map(
+  ['a lot of', 'a lot', 'lots of', 'lots', 'plenty of', 'plenty'].map((w) => [w, 'L'] as const))
+export function sizeOfWord(word: unknown): Size | null {
+  return sizeWord(word) ?? (typeof word === 'string' ? AMOUNT_SIZE.get(normText(word)) ?? null : null)
+}
+
+// Units the model is not trusted to add on its own: no row means R8, which serves its own
+// guess as if the user had typed the unit ("granola with yogurt" read as "1 scoop" of yogurt).
+// Vessels (katori, bowl, plate) are NOT here: their rows are the founder's defaults.
+const TYPED_ONLY_UNITS: ReadonlySet<Unit> = new Set(['scoop'])
 
 function countOf(v: unknown, issues: string[]): number {
   let c: number | null = null
@@ -134,8 +228,11 @@ export function describePortion(p: PortionParse, name: string, unitWord: string 
 
 // One parsed food (V2 shape, as the model returned it) → a validated food, or
 // ok:false when it has no usable name. `userText` is the message (or the photo's
-// caption): a stated amount is kept only if its number appears there.
-export function validateParsedFoodV2(raw: unknown, userText: string | null | undefined): V2Validation {
+// caption): a stated amount is kept only if its number appears there. `channel`
+// 'photo': units come from what the model sees, so a unit is never checked
+// against the caption.
+export function validateParsedFoodV2(raw: unknown, userText: string | null | undefined,
+  opts: { channel?: 'text' | 'photo' } = {}): V2Validation {
   const issues: string[] = []
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, issues: ['not_an_object'], invented_stated: false }
   const f = raw as Record<string, unknown>
@@ -158,7 +255,17 @@ export function validateParsedFoodV2(raw: unknown, userText: string | null | und
   let size: Size | null = fromWord?.size ?? null
   if (!size) {
     if (f.size === 'S' || f.size === 'M' || f.size === 'L') size = f.size
-    else if (typeof f.size === 'string') { size = sizeWord(f.size); if (!size) issues.push('size_unknown') }
+    else if (typeof f.size === 'string') { size = sizeOfWord(f.size); if (!size) issues.push('size_unknown') }
+  }
+  // a size phrase the model filed as the unit word ("a lot of", "large") is still the user's size
+  if (!size && !fromWord && unitWord) size = sizeOfWord(unitWord)
+  // a unit the model may not add on its own ("1 scoop" of yogurt nobody typed): no unit, so the
+  // food gets its usual serving and the app can ask
+  let unitDropped = false
+  if (unit && TYPED_ONLY_UNITS.has(unit) && opts.channel !== 'photo' && !textNamesUnit(userText, unit)) {
+    unit = null
+    unitDropped = true
+    issues.push('invented_unit')
   }
 
   // stated amounts: only the user's own numbers survive
@@ -175,9 +282,14 @@ export function validateParsedFoodV2(raw: unknown, userText: string | null | und
     const su = typeof f.stated_unit === 'string' ? f.stated_unit.toLowerCase().replace(/\s|\./g, '').replace(/^floz$/, 'fl_oz') : ''
     const okUnit = (STATED_UNITS as readonly string[]).includes(su)
     if (Number.isFinite(amt) && amt > 0 && okUnit) {
-      if (numbersInText(userText).some((x) => Math.abs(x - amt) < 1e-9)) {
+      if (typedAmount(userText, amt, su as StatedUnit)) {
         stated_amount = amt
         stated_unit = su as StatedUnit
+      } else if (Math.abs(count - 1) > 1e-9 && typedAmount(userText, amt * count, su as StatedUnit)) {
+        // "half litre" read as count 0.5 x 1 l: the user's amount once the count is applied
+        stated_amount = amt
+        stated_unit = su as StatedUnit
+        stated_per_unit = true
       } else {
         invented = true
         issues.push('invented_stated')
@@ -204,6 +316,14 @@ export function validateParsedFoodV2(raw: unknown, userText: string | null | und
   if (confidence < 0 || confidence > 1) { issues.push('confidence_clamped'); confidence = Math.max(0, Math.min(1, confidence)) }
 
   if (stated_amount === null) stated_per_unit = null
+  // A count other than 1 with no unit and no stated amount is a count of the food itself ("a third"
+  // of a pizza, "2 samosas"): a piece. With no unit the engine would scale its serving unit (one
+  // slice) instead. "serving" and tall/grande keep their meaning, and so does a unit dropped above: the
+  // count then multiplies the food's usual serving ("2 scoops" of whey nobody typed is 2 servings, not 2 pieces).
+  if (unit === null && !unitDropped && stated_amount === null && Math.abs(count - 1) > 1e-9) {
+    unit = 'piece'
+    issues.push('count_without_unit')
+  }
   const portion: PortionParse = { count, unit, size, stated_amount, stated_unit, stated_per_unit, context, fallback_g }
   const food: ParsedFoodV2 = {
     name, portion, unit_word: unitWord, prep, cooking_fat, confidence,

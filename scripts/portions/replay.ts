@@ -28,7 +28,7 @@
 import { readFileSync, writeFileSync } from 'fs'
 
 import { buildSeed, engineTables } from './lib'
-import { computePortion } from '../../supabase/functions/_shared/portions'
+import { computePortionGuarded } from '../../supabase/functions/_shared/portionGuards'
 import { portionFromDescription } from '../../supabase/functions/_shared/portionText'
 
 function arg(name: string): string | undefined {
@@ -83,7 +83,8 @@ function main(): void {
       ? { count: d.count, unit: d.unit, size: d.size, stated_amount: d.stated_amount, stated_unit: d.stated_unit, context: null, fallback_g: Number(r.median_g) || null }
       : { count: 1, unit: null, size: null, stated_amount: null, stated_unit: null, context: null, fallback_g: Number(r.median_g) || null }
     const id = r.food_item_id || null
-    const res = computePortion(tables, {
+    // the resolver's own call: the engine behind the input guards (portionGuards.ts)
+    const res = computePortionGuarded(tables, {
       parse, phrase: name, row: { id, fdc_id: r.fdc_id ? Number(r.fdc_id) : null, status: 'verified', name },
       foodRows, region, proposed: false, channel: 'text',
     })
