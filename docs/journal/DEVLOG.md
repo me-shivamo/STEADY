@@ -2611,3 +2611,13 @@ Next on the list is everything the founder has already approved but we haven't b
 *2026-11-15 · Setup*
 
 While migration 058 finishes in the main checkout, we started the four follow-up packages that touch separate files. They are the switch Gate B needs, research on Indian drink sizes, a cuisine classifier for "Indian data first", and the generator for the chain-menu table. Each runs in its own git worktree on its own branch, gets a builder and then a reviewer who tries to break it, and ships dark: nothing changes for real users until its own check passes.
+
+### Migration 058 is live: everyday words now reach the right dish
+*2026-11-17 · Milestone*
+
+Migration 058 went to production this morning, after a build, three adversarial reviews, a fix pass and a final verification. The verification included a real push, rollback and re-push on a local copy of the live database. "Rajma", "bhindi sabzi", "aloo ki sabzi", "upma", "biryani", "pizza" and "dal makhani" now land on their own checked rows instead of whatever search turned up. Upma, poha, biryani and dal makhani carry evidence-based values: lab-measured fat where a lab measured the dish, and a regular cheese pizza instead of a raw home recipe. The search test jumped from 17 to 23 of 23 correct top matches. Nobody's logged history changed, and the migration checked that before it committed. We also redeployed the logging functions with the switch the next test needs. With everything at its default, that changes nothing for users, and the smoke test passed 5 of 5.
+
+### Four follow-up packages merged, all still dark
+*2026-11-17 · Milestone*
+
+Each was built in its own checkout and then attacked by a reviewer. The reviewers caught a typo-shaped hole that could have quietly spoiled the next portion test, proposed drink sizes that would have logged an espresso as a full cup, a cuisine classifier hiding words it shouldn't, and a brand-table regression. All four were fixed before merging. The pieces are the test switch for Gate B, Indian drink-size research (values waiting for the founder), the "Indian data first" classifier, and the generator for the official chain-menu table. All four sit dark until each passes its own check.

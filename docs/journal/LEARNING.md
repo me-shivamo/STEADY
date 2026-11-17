@@ -1862,3 +1862,8 @@ When two tests share a resource, here the same API key and the same rate limits,
 *2026-11-15 · Tool*
 
 `git worktree add <dir> -b <branch>` creates a second working folder for the same repository, checked out on its own branch, sharing one history and object store, a bit like opening the same project twice on different branches without cloning. Changes in one folder can't clobber files in another, and each branch is merged back when it's reviewed. For STEADY it lets us build several independent packages at once, while a migration is being prepared in the main checkout, without any of them editing the same files.
+
+### Compare snapshots in the format they were taken
+*2026-11-17 · Tool*
+
+Before pushing 058 we re-ran its snapshot query on live to make sure nothing had drifted. A naive comparison said every field differed, because the raw query output is wrapped differently from the stored snapshot. Running it through the generator's own ingest step and letting git show the diff revealed the truth: only the timestamp had changed. For STEADY the rule is to compare like with like, using the same tool that produced the reference, before declaring drift or no drift.
