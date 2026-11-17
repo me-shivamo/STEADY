@@ -60,6 +60,13 @@ function hitsIn(toks: string[], idx: Map<string, Entry[]>): Hit[] {
   return out
 }
 
+// A listed phrase inside a longer listed phrase is not a word of its own, wherever the longer one sits:
+// "thai curry" shadows "curry" in "thai curry rice", "sandwich bread" shadows "sandwich" in "sandwich bread
+// toast". (Shadowing only the head would let the inner word tip a neutral head: "japanese curry rice" as Indian.)
+function outermost(hits: Hit[]): Hit[] {
+  return hits.filter((h) => !hits.some((o) => o.n > h.n && o.start <= h.start && o.end >= h.end))
+}
+
 // The head noun: the listed phrase that ends furthest right; a tie goes to the longer phrase, then the
 // smaller phrase (byte order) so the answer never depends on list order. Markers (Hindi grammar words)
 // are never the head.
@@ -83,7 +90,7 @@ export interface PhraseCuisine {
   via: 'head' | 'modifier' | 'mixed' | 'neutral_food' | 'none'
 }
 
-const NONE: PhraseCuisine = { cuisine: 'neutral', word: null, via: 'none' }
+const NONE: PhraseCuisine = Object.freeze({ cuisine: 'neutral', word: null, via: 'none' })
 
 // Classifies a typed food phrase ("masala dosa", "Paneer pizza", "milk"). Cut at the first cut word, as the
 // portion engine's category words are, except that a dish name joined by "and" keeps the full phrase when
@@ -96,9 +103,9 @@ export function phraseCuisine(text: string | null | undefined, vocab: ReadonlyAr
   const all = normText(text).split(' ').filter(Boolean)
   if (!all.length) return NONE
   const cut = all.findIndex((t) => CUT_WORDS.has(t))
-  let hits = hitsIn(cut > 0 ? all.slice(0, cut) : all, idx)
+  let hits = outermost(hitsIn(cut > 0 ? all.slice(0, cut) : all, idx))
   if (cut > 0 && all[cut] === 'and') {
-    const fullHits = hitsIn(all, idx)
+    const fullHits = outermost(hitsIn(all, idx))
     const full = headOf(fullHits)
     if (full && full.end === all.length) hits = fullHits
   }
@@ -192,9 +199,13 @@ export function candidateTier(c: { source?: string | null; derived?: boolean; lo
   return s === 'indb' || s === 'ifct' || s === 'usda' ? s : 'other'
 }
 
+// Western / neutral-for-US: verified USDA first, then the reviewed recalc copies. A recalc row that lands in
+// the Western or neutral group is a founder-approved copy of a USDA row (the 058 cheese pizza, the 053 rice
+// copies), so it outranks 055's local fallback and the live API (founder m2: "055/056 are a fallback, used
+// when nothing better matches"); the Indian sources (tagged Indian, so normally in the last group) follow.
 const TIER_ORDER: Readonly<Record<PreferredCuisine, ReadonlyArray<SourceTier>>> = {
   in: ['recalc', 'indb', 'ifct', 'usda', 'usda_local', 'usda_api', 'other'],
-  west: ['usda', 'usda_local', 'usda_api', 'recalc', 'indb', 'ifct', 'other'],
+  west: ['usda', 'recalc', 'usda_local', 'usda_api', 'indb', 'ifct', 'other'],
 }
 // "An Indian value" for the hard rule: Indian data, not USDA data on an Indian dish.
 const INDIAN_DATA_TIERS: ReadonlySet<SourceTier> = new Set(['recalc', 'indb', 'ifct'])

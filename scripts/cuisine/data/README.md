@@ -22,6 +22,7 @@ Sources: plan `.claude/plans/v1.2-followup-build-plan.md` WP6, with the adversar
 - `plan`: in WP6's backfill list or review #16.
 - `indb`: appears inside an INDB dish name (`scripts/data/indb.json`).
 - `live_key`: appears inside a live key or alias (`live_keys_snapshot.csv`).
+- `ifct`: an IFCT food name (allowed, unused so far; the test does not check it yet).
 - `common`: reviewer judgement only. These rows need the founder's eye first.
 
 The jest test checks every `indb` and `live_key` claim.
@@ -39,6 +40,7 @@ npx tsx scripts/cuisine/emit.ts --check   # exit 1 if any output is stale (jest 
 2. Cut at the first cut word, as the portion engine does: "dosa with chutney" is a dosa. A name joined by "and" keeps the full phrase when its head ends it ("mac and cheese").
 3. The head is the listed phrase that ends furthest right; the longer phrase wins a tie. An Indian or Western head decides: "paneer pizza" is a pizza, so USDA comes first.
 4. A neutral head (milk, rice...), or no head at all, is tipped by the other listed words: "masala rice", "toned milk" and "amul butter" are Indian. If those words disagree, the phrase stays neutral and the region decides.
+5. A listed phrase inside a longer listed phrase never counts on its own, wherever the longer one sits: "japanese curry rice" is rice (neutral), not tipped Indian by the "curry" inside "japanese curry".
 
 A row (`rowCuisine`) is classified in this order:
 1. Its tag (062's `food_item_cuisine`; this table needs a `neutral` value as well as `in` and `west`, see below).
@@ -59,13 +61,14 @@ The `action` column says what each row means:
 `today_fts` is what a real user (fts search) gets today.
 
 Biggest effects:
-- **US "tea"**: today it logs the 053 Indian chai row (about 78 kcal a cup). With the region row it logs black tea (SR 174155, 1 kcal).
-- **IN "cottage cheese"**: today it logs US low-fat cottage cheese (81 kcal/100 g). In Indian English "cottage cheese" means paneer (IFCT L003, 257.9), so today's log is about a third of the real calories.
+- **US "tea"**: today it logs the 053 Indian chai row (about 78 kcal a cup). With the region row it logs black tea (SR 174155, 1 kcal). This changes founder 053 (h)5 / addendum 1 (key 'tea' = the chai row) for US users only.
+- **IN "cottage cheese"**: today it logs US low-fat cottage cheese (81 kcal/100 g). In Indian English "cottage cheese" means paneer (IFCT L003, 257.9), so today's log is about a third of the real calories. **This reverses a recorded founder default:** 053 (h) accepted "chutney, buttermilk/chaas and cottage cheese keep their current targets". The row ships only if the founder explicitly reverses that.
 - **IN "banana"**: IFCT robusta (105.2) instead of USDA (89), +18%. Which Indian variety should be the default is a founder call.
 - **milk, rice, eggs, curd, potato**: today these are aliases only, which real users (fts) never reach. The region rows give them the rows the founder already chose in 052/053.
+- **Founder-held for IN**: buttermilk stays on today's row (`keep_today`), because 053 (h) accepted "buttermilk/chaas keep their current targets". The concern stands for the founder: Indian chaas is not US cultured buttermilk, and a STEADY chaas recipe would be a new founder question.
+- **IN "egg" / "eggs"** to IFCT boiled egg: the same energy (147.7 vs 148), but it changes 053 (h)'s default ('eggs' → the verified USDA 'egg' row 3d3e2c25) for IN users.
 - **Blocked for IN**:
   - coffee: no reviewed milk-coffee row exists, and today's black coffee (2 kcal) likely undercounts.
-  - buttermilk: Indian chaas is not US cultured buttermilk.
   - bread: today's row is SR "Bread, Italian".
   - cheese: today's row is SR brick cheese; IN users mostly mean processed cheese.
 - **After 055 for US**: milk (Foundation 746782, 60) and yogurt (Foundation 2259793, 77.3). No plain whole-milk US row is live today.
@@ -78,6 +81,7 @@ Not every listed key is a WP7 re-key target:
 - `chawal` and `boiled rice uble chawal` are the 053 rice copies of USDA 168930, chosen by founder decision (h)4. The plan tags them `neutral` explicitly. Classified from their keys alone they read as Indian, which is why `food_item_cuisine` must allow `neutral`.
 - `biryani` (a6958211, FNDDS 2706538) is superseded by 058 (`biryani_chicken_home`).
 - `ghee` and `ghee on parathas` point at SR 171314 "Butter, Clarified butter (ghee)", which is the same food. IFCT's ghee (T013) has no energy value. Probably keep these.
+- `chutney` and `buttermilk chaas` are held by founder 053 (h): "chutney, buttermilk/chaas and cottage cheese keep their current targets". Re-keying them in WP7 reverses that and needs the founder's explicit go-ahead, not only a Q14 value.
 - `amul lassi`, `haldiram bhujia sev`, `lassi`, `dahi`, `paani patashe` and `baingan bharta` sit on FoodData Central rows outside SR, FNDDS and Foundation (probably Branded). These are manufacturer data; check them against the kept brand data (WP10) before re-keying.
 
 Wrong USDA rows found while drafting (from the pinned USDA descriptions; for the data audit):
@@ -92,17 +96,22 @@ Wrong USDA rows found while drafting (from the pinned USDA descriptions; for the
 - vegetables lettuce tomatoes onions etc → a Subway teriyaki sub
 - corn soup → a branded corn chowder
 
+Known vocabulary false positive on 055's names (for WP12's tagging, review #30): SR "Groundcherries, (cape-gooseberries or poha), raw" reads Indian from "poha". It is harmless for ranking (an Indian-preference log with any Indian-data candidate drops 055 rows), but WP12 should tag it neutral explicitly.
+
 ## Sign-off checklist (Q15)
 
 1. Who signs the lists, and does approval go per file or per row?
 2. Hindi names of neutral foods (dahi, chawal, doodh, anda, kela) are drafted as **Indian**, matching review #16's dahi. The English words (curd, rice, milk, egg, banana) are neutral. Alternative: treat the Hindi names as neutral too.
 3. The head-noun rule: "paneer pizza", "paneer sandwich" and "masala pasta" are Western (USDA first).
-4. Indo-Chinese dishes (manchurian, hakka noodles, chowmein, chilli chicken) and momos are Indian. "fried rice" and "noodles" are neutral.
-5. Café drinks (cappuccino, latte, espresso, americano, mocha) are neutral: the region decides the size (l3, Q13).
+4. Indo-Chinese dishes (manchurian, hakka noodles, chowmein, chilli chicken and its one-l spelling "chili chicken") and momos are Indian. "fried rice" and "noodles" are neutral. "chili" alone stays Western (US chili with beans); "green chili" is neutral.
+5. Café drinks (cappuccino, latte, espresso, americano, mocha, chai latte, chai tea latte) are neutral: the region decides the size (l3, Q13).
 6. Brand words amul, haldiram, mtr, parle, britannia, maggi and others mark a phrase Indian.
 7. Each `region_keys.csv` row, in particular:
    - US curd → dahi
-   - IN egg → IFCT boiled egg
+   - IN egg / eggs → IFCT boiled egg (changes the 053 (h) 'eggs' default for IN users)
    - IN banana → robusta
+   - IN cottage cheese → paneer (**reverses** the 053 (h) default "cottage cheese keeps its current target")
+   - US tea → black tea (changes 053 (h)5's 'tea' = chai for US users)
+   - IN buttermilk stays on today's row per 053 (h); say whether a chaas recipe is wanted
    - the after_055 and blocked rows
-8. The `common` rows: 178 of the 431 Indian rows, 82 of the 137 Western rows and 11 of the 94 neutral rows have no repo evidence beyond reviewer judgement.
+8. The `common` rows: 179 of the 432 Indian rows, 82 of the 137 Western rows and 15 of the 98 neutral rows have no repo evidence beyond reviewer judgement.

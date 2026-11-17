@@ -73,6 +73,26 @@ describe('phraseCuisine: head noun, cut words and modifiers', () => {
     expect(cuisineOf('kele milkshake')).toBe('in')
     expect(cuisineOf('bbq chicken')).toBe('west')
   })
+  it('a longer listed phrase shadows the words inside it wherever it sits, not only as the head', () => {
+    // the neutral head (rice, noodles, toast) must not be tipped by the shadowed inner word
+    expect(phraseCuisine('japanese curry rice')).toEqual({ cuisine: 'neutral', word: 'rice', via: 'neutral_food' })
+    expect(cuisineOf('thai curry rice')).toBe('neutral')
+    expect(cuisineOf('green curry noodles')).toBe('neutral')
+    expect(cuisineOf('sandwich bread toast')).toBe('neutral')
+    expect(cuisineOf('chili sauce chicken')).toBe('neutral')
+    // a word next to (not inside) the longer phrase still tips it
+    expect(cuisineOf('masala rice')).toBe('in')
+    expect(cuisineOf('chicken curry rice')).toBe('in')
+  })
+  it('the two chili spellings and the cafe chai drinks (DRAFT rows from review)', () => {
+    expect(cuisineOf('chili chicken')).toBe('in')     // Indo-Chinese, one-l spelling
+    expect(cuisineOf('chilli chicken')).toBe('in')
+    expect(cuisineOf('green chili')).toBe('neutral')  // the pepper, not US chili
+    expect(cuisineOf('chili')).toBe('west')           // US chili with beans
+    expect(cuisineOf('chai latte')).toBe('neutral')   // cafe drink (l3, Q13)
+    expect(cuisineOf('chai tea latte')).toBe('neutral')
+    expect(cuisineOf('masala chai')).toBe('in')
+  })
   it('modifiers that disagree leave a neutral head neutral (the region decides)', () => {
     expect(phraseCuisine('bbq masala chicken')).toEqual({ cuisine: 'neutral', word: 'chicken', via: 'mixed' })
   })
@@ -90,9 +110,18 @@ describe('phraseCuisine: head noun, cut words and modifiers', () => {
   })
   it('a Hindi grammar word tips a phrase but is never its head', () => {
     expect(phraseCuisine('aloo ki sabzi').word).toBe('sabzi')
-    // "ka" is rightmost but a marker: the head is milk (neutral), tipped Indian by the marker
+    // "ka" is rightmost but a marker, so it is never the head: "doodh" is; "milk" (neutral) is tipped by it
     expect(phraseCuisine('doodh ka')).toEqual({ cuisine: 'in', word: 'doodh', via: 'head' })
     expect(phraseCuisine('milk ka')).toEqual({ cuisine: 'in', word: 'ka', via: 'modifier' })
+  })
+  it('cuts at exactly the portion engine\'s cut words (portions.ts CUT_WORDS; cuisine.ts keeps a copy until WP6 exports it)', () => {
+    const words = (file: string) => {
+      const src = readFileSync(join(REPO, 'supabase', 'functions', '_shared', file), 'utf8')
+      const m = src.match(/const CUT_WORDS: ReadonlySet<string> = new Set\(\[([^\]]*)\]\)/)
+      expect({ file, found: !!m }).toEqual({ file, found: true })
+      return [...m![1].matchAll(/'([^']+)'/g)].map((x) => x[1]).sort()
+    }
+    expect(words('cuisine.ts')).toEqual(words('portions.ts'))
   })
   it('is deterministic and independent of the vocabulary order', () => {
     const reversed: VocabEntry[] = [...CUISINE_VOCAB].reverse()
@@ -193,6 +222,14 @@ describe('orderCandidates', () => {
     const r = order(xs, 'west')
     expect(ids(r.ordered)).toEqual(['w', 'wLocal', 'wApi', 'wIndb', 'n', 'indb'])
     expect(r.dropped).toEqual([])
+  })
+  it('Western / US-neutral: a reviewed recalc copy of a USDA row outranks the 055 fallback and the API (m2)', () => {
+    // 058's cheese pizza (copy of SR 173292) and 053's rice copy (USDA 168930) are founder-approved values
+    const pizza = [c('local', 'west', 'usda_local'), c('api', 'west', 'usda_api'), c('pizza058', 'west', 'recalc'), c('usda', 'west', 'usda')]
+    expect(ids(order(pizza, 'west').ordered)).toEqual(['usda', 'pizza058', 'local', 'api'])
+    const rice = [c('local', 'neutral', 'usda_local'), c('rice053', 'neutral', 'recalc')]
+    expect(ids(order(rice, 'west').ordered)).toEqual(['rice053', 'local'])
+    expect(ids(order(rice, 'in').ordered)).toEqual(['rice053', 'local'])
   })
   it('is stable: equal ranks keep their search order', () => {
     const xs = [c('a', 'in', 'indb'), c('b', 'in', 'indb'), c('c', 'in', 'indb'), c('d', 'neutral', 'usda'), c('e', 'neutral', 'usda')]
@@ -330,6 +367,15 @@ describe('DRAFT data integrity (scripts/cuisine/data)', () => {
       else expect(r.target_food_item_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
       if (r.action === 'region_row' || r.action === 'keep_today') expect(r.target_key).not.toBe('')
     }
+  })
+  it('region keys: rows that touch a recorded founder decision say so (053 (h): cottage cheese, buttermilk/chaas, eggs, tea)', () => {
+    const row = (p: string, region: string) => regionRows.find((r) => r.phrase === p && r.region === region)!
+    // (h) "chutney, buttermilk/chaas and cottage cheese keep their current targets"
+    expect(row('buttermilk', 'IN')).toMatchObject({ action: 'keep_today', target_key: 'buttermilk', basis: 'founder 053 (h) default' })
+    expect(row('cottage cheese', 'IN').basis).toContain('reverses founder 053 (h) default')
+    expect(row('cottage cheese', 'IN').note).toContain('CONFLICT')
+    // (h) "'eggs' alias -> the verified 'egg' row (3d3e2c25)"; (h)5 / addendum 1: key 'tea' = the chai row
+    for (const [p, region] of [['egg', 'IN'], ['eggs', 'IN'], ['tea', 'US']]) expect(row(p, region).note).toMatch(/[Cc]hanges (a )?founder/)
   })
   it('region keys: targets agree with the snapshots and the pending 055 file', () => {
     const snap = new Map(parseCsv(readFileSync(SNAPSHOT, 'utf8')).map((r) => [r.normalized_name, r.food_item_id]))

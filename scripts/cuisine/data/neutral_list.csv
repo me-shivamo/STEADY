@@ -19,6 +19,8 @@ cake,,indb;live_key,draft,
 cappuccino,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
 cashews,cashew,live_key,draft,
 cereal,cereal_dry,indb;live_key,draft,
+chai latte,,common,draft,"Cafe drink (l3, Q13): shadows the Indian word chai."
+chai tea latte,,common,draft,"Cafe drink (l3, Q13): shadows the Indian word chai."
 cheese,,indb;live_key,draft,
 chicken,,indb;live_key,draft,
 chicken breast,,live_key,draft,
@@ -41,6 +43,7 @@ fried rice,cooked_rice,indb;live_key,draft,"Indo-Chinese in India, Chinese-Ameri
 fruit,fruit,indb;live_key,draft,
 grapes,fruit,indb;live_key,draft,
 greek yogurt,curd,live_key,draft,
+green chili,,common,draft,"The pepper (one-l spelling): shadows the Western word chili. INDB and live keys spell it ""green chilli"", which no list holds."
 green curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
 green tea,tea,live_key,draft,
 grilled chicken,,live_key,draft,
@@ -50,6 +53,7 @@ iced tea,tea,indb;live_key,draft,
 jam,spread,indb;live_key,draft,
 japanese curry,liquid_dish,common,draft,Not Indian: shadows the Indian word curry.
 juice,juice,indb;live_key,draft,
+lamb or mutton,,common,draft,"USDA FNDDS name pattern (""Lamb or mutton and potatoes with gravy"", ""Lamb or mutton loaf""): US dishes, so it shadows the Indian word mutton and the FNDDS food group decides."
 latte,cafe_coffee,live_key,draft,"Cafe drink (l3, Q13)."
 lemon tea,tea,common,draft,
 mango,fruit,indb;live_key,draft,
