@@ -1,0 +1,785 @@
+{
+ "_note": "Output of data/batch2/snapshot.sql (read-only) against the live project. Counts only: no user id, email or private food name. Re-take it right before `db push`; migration 058 compares every touched row, alias and key holder against these values and refuses to run if any changed.",
+ "aliases": [
+  {
+   "alias": "aalu ki sabzi",
+   "food_item_id": "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a",
+   "note": "1 real log; 053: now 1abbe3e2 (115.46 kcal/100 g)"
+  },
+  {
+   "alias": "almonds",
+   "food_item_id": "a1f3ed09-8be4-4cb9-9431-e70715a9f90b",
+   "note": "17 real logs / 5 users"
+  },
+  {
+   "alias": "aloo sabji",
+   "food_item_id": "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a",
+   "note": "2 real logs; 053: now 1abbe3e2 (115.46 kcal/100 g)"
+  },
+  {
+   "alias": "bhindi ki sabzi",
+   "food_item_id": "cd15763a-7373-54fe-860c-ba3d2e8c4c1c",
+   "note": "3 real logs; 053: now cd15763a (141.28 kcal/100 g)"
+  },
+  {
+   "alias": "chaas",
+   "food_item_id": "29c65def-14f9-424e-b9e8-fa04bb2f78fd",
+   "note": "founder: chaas -> Indian buttermilk; same row as the exact key buttermilk chaas"
+  },
+  {
+   "alias": "chai",
+   "food_item_id": "e21a4369-e513-534a-8968-4e4240e871d0",
+   "note": "053 founder decision 5 (standard home chai); chai -> the 'tea' row"
+  },
+  {
+   "alias": "chawal cooked rice",
+   "food_item_id": "d4043769-d2f2-5413-afd8-18a21da162aa",
+   "note": "founder default; parser bilingual pair; 2 real logs; 053: now d4043769 (130 kcal/100 g, 1 cup = 158 g)"
+  },
+  {
+   "alias": "chawal rice",
+   "food_item_id": "d4043769-d2f2-5413-afd8-18a21da162aa",
+   "note": "founder default; parser bilingual pair; 3 real logs; 053: now d4043769 (130 kcal/100 g, 1 cup = 158 g)"
+  },
+  {
+   "alias": "coconut chutney",
+   "food_item_id": "9ca15288-e06a-4ef4-9a93-772bd439d2a6",
+   "note": "4 real logs / 3 users"
+  },
+  {
+   "alias": "curd",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "founder: curd = dahi; 6 real logs / 2 users"
+  },
+  {
+   "alias": "curd yogurt",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "parser bilingual pair; 1 real log"
+  },
+  {
+   "alias": "dahi yogurt",
+   "food_item_id": "50d9a39a-bd2c-4f55-a78e-0416f7a4d63f",
+   "note": "parser bilingual pair; 1 real log"
+  },
+  {
+   "alias": "dal lentil curry",
+   "food_item_id": "8cbd7524-bc18-5e4c-862b-cd6d61ee08b6",
+   "note": "parser bilingual pair; 6 real logs / 4 users; 053: now 8cbd7524 (73.65 kcal/100 g, 1 katori = 150 g)"
+  },
+  {
+   "alias": "eggs",
+   "food_item_id": "3d3e2c25-938d-4923-a457-2b5e7ae4ffb7",
+   "note": "053 founder default; 'eggs' (4 logs / 2 users) ranked scrambled eggs first; alias to the verified 'egg' row (148)."
+  },
+  {
+   "alias": "maggi noodles",
+   "food_item_id": "6c3c915d-8147-4642-b381-805477205024",
+   "note": "2 real users"
+  },
+  {
+   "alias": "maggie noodles",
+   "food_item_id": "6c3c915d-8147-4642-b381-805477205024",
+   "note": "3 real logs"
+  },
+  {
+   "alias": "masala chai",
+   "food_item_id": "e21a4369-e513-534a-8968-4e4240e871d0",
+   "note": "053 founder decision 5 (standard home chai); masala chai -> the 'tea' row"
+  },
+  {
+   "alias": "matar paneer",
+   "food_item_id": "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+   "note": "1 real log"
+  },
+  {
+   "alias": "milk",
+   "food_item_id": "3857270e-27e9-487c-bc51-bb97dea319c7",
+   "note": "founder default; 25 real logs / 10 users"
+  },
+  {
+   "alias": "milk tea",
+   "food_item_id": "e21a4369-e513-534a-8968-4e4240e871d0",
+   "note": "053 founder decision 5 (standard home chai); milk tea -> the 'tea' row"
+  },
+  {
+   "alias": "mutter paneer",
+   "food_item_id": "b95d5b62-eb98-4990-bf09-9956d7df5ff2",
+   "note": "1 real log"
+  },
+  {
+   "alias": "pasteurized cow milk",
+   "food_item_id": "3857270e-27e9-487c-bc51-bb97dea319c7",
+   "note": "founder default; 2 real logs"
+  },
+  {
+   "alias": "potato",
+   "food_item_id": "98d43a5d-e07d-431a-a766-c1579ab88ad5",
+   "note": "founder default; 2 real users"
+  },
+  {
+   "alias": "rajma",
+   "food_item_id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "note": "search alone ranks raw rajmah 299 first; 1 real log; 053: now 7653a3be (66.76 kcal/100 g, 1 katori = 150 g)"
+  },
+  {
+   "alias": "rice",
+   "food_item_id": "d4043769-d2f2-5413-afd8-18a21da162aa",
+   "note": "founder default; 16 real logs / 7 users; 053: now d4043769 (130 kcal/100 g, 1 cup = 158 g)"
+  },
+  {
+   "alias": "roti chapati",
+   "food_item_id": "223963c6-4f2a-568d-bbd8-1d72c20276ab",
+   "note": "parser bilingual pair; 1 real log; same row as the exact key chapati roti; 053: now 223963c6 (244.09 kcal/100 g, 1 piece = 40 g)"
+  },
+  {
+   "alias": "sabudana khichdi",
+   "food_item_id": "37fce53a-f292-5ff9-b889-15c6f8ce2b9f",
+   "note": "2 real users; 053: now 37fce53a (150.30 kcal/100 g)"
+  },
+  {
+   "alias": "steamed rice",
+   "food_item_id": "d4043769-d2f2-5413-afd8-18a21da162aa",
+   "note": "founder default; 10 real logs / 2 users; 053: now d4043769 (130 kcal/100 g, 1 cup = 158 g)"
+  },
+  {
+   "alias": "upma",
+   "food_item_id": "137f6250-64aa-5339-a2d7-baa92e0ea192",
+   "note": "2 real users; search alone ranks rice upma first; 053: now 137f6250 (254.81 kcal/100 g)"
+  },
+  {
+   "alias": "white rice",
+   "food_item_id": "d4043769-d2f2-5413-afd8-18a21da162aa",
+   "note": "founder default; 2 real users; 053: now d4043769 (130 kcal/100 g, 1 cup = 158 g)"
+  },
+  {
+   "alias": "whole wheat roti chapati",
+   "food_item_id": "223963c6-4f2a-568d-bbd8-1d72c20276ab",
+   "note": "1 real log; same row as the exact key chapati roti; 053: now 223963c6 (244.09 kcal/100 g, 1 piece = 40 g)"
+  }
+ ],
+ "categories": [
+  "biryani",
+  "dry_sabzi",
+  "liquid_dish",
+  "pizza",
+  "poha_upma",
+  "sabzi_bhindi"
+ ],
+ "category_map": {
+  "137f6250-64aa-5339-a2d7-baa92e0ea192": "poha_upma",
+  "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a": "dry_sabzi",
+  "7653a3be-6680-578e-a90f-7dadf4b9898c": "liquid_dish",
+  "cd15763a-7373-54fe-860c-ba3d2e8c4c1c": "sabzi_bhindi"
+ },
+ "fdc_peers": {
+  "2706538": 0
+ },
+ "fts": {
+  "aalu ki sabzi": {
+   "exact": null,
+   "live": []
+  },
+  "aloo ki sabzi": {
+   "exact": null,
+   "live": [
+    "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a"
+   ]
+  },
+  "aloo sabji": {
+   "exact": null,
+   "live": []
+  },
+  "aloo sabzi": {
+   "exact": null,
+   "live": [
+    "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a"
+   ]
+  },
+  "bhindi": {
+   "exact": null,
+   "live": [
+    "cd15763a-7373-54fe-860c-ba3d2e8c4c1c",
+    "ea346143-b495-4ffe-a0c4-36bbe8d4c67c"
+   ]
+  },
+  "bhindi ki sabzi": {
+   "exact": null,
+   "live": []
+  },
+  "bhindi sabji": {
+   "exact": null,
+   "live": []
+  },
+  "bhindi sabzi": {
+   "exact": null,
+   "live": []
+  },
+  "bhindi subji": {
+   "exact": null,
+   "live": []
+  },
+  "biryani": {
+   "exact": "a6958211-43b7-446c-a785-262846a37ae0",
+   "live": [
+    "a6958211-43b7-446c-a785-262846a37ae0"
+   ]
+  },
+  "cheese pizza": {
+   "exact": "7e69675d-d35d-4cef-b7d5-071b33c5ebc6",
+   "live": [
+    "7e69675d-d35d-4cef-b7d5-071b33c5ebc6"
+   ]
+  },
+  "chicken biryani": {
+   "exact": null,
+   "live": []
+  },
+  "daal makhani": {
+   "exact": null,
+   "live": []
+  },
+  "dal makhani": {
+   "exact": "6afbebf2-7c87-49ae-b9cc-32d74bc214ed",
+   "live": [
+    "6afbebf2-7c87-49ae-b9cc-32d74bc214ed"
+   ]
+  },
+  "dal makhni": {
+   "exact": null,
+   "live": []
+  },
+  "kanda poha": {
+   "exact": null,
+   "live": []
+  },
+  "kidney bean curry rajmah curry": {
+   "exact": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "live": [
+    "7653a3be-6680-578e-a90f-7dadf4b9898c"
+   ]
+  },
+  "mutton biryani": {
+   "exact": null,
+   "live": []
+  },
+  "okra lady s fingers fry bhindi sabzi sabji subji": {
+   "exact": "cd15763a-7373-54fe-860c-ba3d2e8c4c1c",
+   "live": []
+  },
+  "pizza": {
+   "exact": "d1146229-34b7-46ab-a28f-42cb826d1157",
+   "live": [
+    "2726aa65-657e-43b9-b977-810402194eea",
+    "330c9881-1438-4239-8b8b-081b3f4e4e70",
+    "634f4024-b89c-4ebb-b2fa-37946a0a06be"
+   ]
+  },
+  "poha": {
+   "exact": "14a2b0ba-2195-4b11-85d4-569ef1d06408",
+   "live": [
+    "14a2b0ba-2195-4b11-85d4-569ef1d06408",
+    "6f2c0030-8e32-4586-9082-6a8a9c611d65",
+    "d7de7575-82d0-4731-a89a-cb9025e47f5a"
+   ]
+  },
+  "potato curry aloo ki sabzi": {
+   "exact": "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a",
+   "live": [
+    "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a"
+   ]
+  },
+  "rajma": {
+   "exact": null,
+   "live": []
+  },
+  "rajma chawal": {
+   "exact": null,
+   "live": []
+  },
+  "rajma curry": {
+   "exact": null,
+   "live": []
+  },
+  "rava upma": {
+   "exact": null,
+   "live": []
+  },
+  "semolina upma suji rava upma": {
+   "exact": "137f6250-64aa-5339-a2d7-baa92e0ea192",
+   "live": []
+  },
+  "upma": {
+   "exact": null,
+   "live": [
+    "137f6250-64aa-5339-a2d7-baa92e0ea192",
+    "519858a4-45e1-44a7-8e97-400490640dbb",
+    "58339566-740e-4aa8-82b6-8af840b45ce5"
+   ]
+  },
+  "upma rava": {
+   "exact": null,
+   "live": []
+  },
+  "veg biryani": {
+   "exact": null,
+   "live": []
+  }
+ },
+ "key_holders": [
+  {
+   "id": "a6958211-43b7-446c-a785-262846a37ae0",
+   "normalized_name": "biryani",
+   "status": "verified"
+  },
+  {
+   "id": "7e69675d-d35d-4cef-b7d5-071b33c5ebc6",
+   "normalized_name": "cheese pizza",
+   "status": "verified"
+  },
+  {
+   "id": "6afbebf2-7c87-49ae-b9cc-32d74bc214ed",
+   "normalized_name": "dal makhani",
+   "status": "verified"
+  },
+  {
+   "id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "normalized_name": "kidney bean curry rajmah curry",
+   "status": "verified"
+  },
+  {
+   "id": "cd15763a-7373-54fe-860c-ba3d2e8c4c1c",
+   "normalized_name": "okra lady s fingers fry bhindi sabzi sabji subji",
+   "status": "verified"
+  },
+  {
+   "id": "d1146229-34b7-46ab-a28f-42cb826d1157",
+   "normalized_name": "pizza",
+   "status": "verified"
+  },
+  {
+   "id": "14a2b0ba-2195-4b11-85d4-569ef1d06408",
+   "normalized_name": "poha",
+   "status": "verified"
+  },
+  {
+   "id": "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a",
+   "normalized_name": "potato curry aloo ki sabzi",
+   "status": "verified"
+  },
+  {
+   "id": "137f6250-64aa-5339-a2d7-baa92e0ea192",
+   "normalized_name": "semolina upma suji rava upma",
+   "status": "verified"
+  }
+ ],
+ "memory": {},
+ "migrations": [
+  "001",
+  "002",
+  "003",
+  "004",
+  "005",
+  "006",
+  "007",
+  "008",
+  "009",
+  "010",
+  "011",
+  "012",
+  "013",
+  "014",
+  "015",
+  "016",
+  "017",
+  "018",
+  "019",
+  "020",
+  "021",
+  "022",
+  "023",
+  "024",
+  "025",
+  "026",
+  "027",
+  "028",
+  "029",
+  "030",
+  "031",
+  "032",
+  "033",
+  "034",
+  "035",
+  "036",
+  "037",
+  "038",
+  "039",
+  "040",
+  "041",
+  "042",
+  "043",
+  "044",
+  "045",
+  "046",
+  "047",
+  "048",
+  "049",
+  "050",
+  "052",
+  "053",
+  "054"
+ ],
+ "phrase_usage": {
+  "aalu ki sabzi": {
+   "entries": 1,
+   "users": 1
+  },
+  "aloo sabji": {
+   "entries": 2,
+   "users": 1
+  },
+  "bhindi": {
+   "entries": 1,
+   "users": 1
+  },
+  "bhindi ki sabzi": {
+   "entries": 3,
+   "users": 1
+  },
+  "pizza": {
+   "entries": 2,
+   "users": 2
+  },
+  "poha": {
+   "entries": 4,
+   "users": 3
+  },
+  "rajma": {
+   "entries": 1,
+   "users": 1
+  },
+  "rajma chawal": {
+   "entries": 13,
+   "users": 1
+  },
+  "upma": {
+   "entries": 2,
+   "users": 2
+  }
+ },
+ "planned_ids_present": [],
+ "portion_units": [
+  {
+   "context": null,
+   "fdc_id": null,
+   "food_item_id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "grams": "150",
+   "id": "825f4194-7304-587b-ab62-5a4e10c331e8",
+   "is_default": true,
+   "ml": null,
+   "size": "M",
+   "source": "founder",
+   "source_text": "1 katori",
+   "status": "active",
+   "unit": "katori"
+  },
+  {
+   "context": null,
+   "fdc_id": null,
+   "food_item_id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "grams": "240",
+   "id": "83f97797-f752-5650-b956-6eb5862d8165",
+   "is_default": false,
+   "ml": "240",
+   "size": "M",
+   "source": "founder",
+   "source_text": "1 bowl (1 cup)",
+   "status": "active",
+   "unit": "cup"
+  },
+  {
+   "context": null,
+   "fdc_id": "2706538",
+   "food_item_id": null,
+   "grams": "196",
+   "id": "c3f681d8-c52c-5d83-83f1-fd38a3412334",
+   "is_default": false,
+   "ml": "240",
+   "size": "M",
+   "source": "food_items_portions",
+   "source_text": "1 cup",
+   "status": "active",
+   "unit": "cup"
+  },
+  {
+   "context": null,
+   "fdc_id": null,
+   "food_item_id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "grams": "240",
+   "id": "e47e011f-77d4-5ed6-a28d-f1945e3bd214",
+   "is_default": false,
+   "ml": null,
+   "size": "M",
+   "source": "founder",
+   "source_text": "1 bowl (1 cup)",
+   "status": "active",
+   "unit": "bowl"
+  }
+ ],
+ "rows": [
+  {
+   "carbs": "27.28",
+   "created_by_null": true,
+   "derivation": {
+    "calc_version": "recalc_v1",
+    "carbs": "27.28",
+    "confidence": "B",
+    "fat": "12.53",
+    "fiber": "5.42",
+    "kcal": "254.81",
+    "protein": "5.52",
+    "variant_key": "upma_rava"
+   },
+   "derivation_id": "1caf23fa-85ca-5544-aa20-9effcd919e91",
+   "external_id": "BFP039@recalc_v1",
+   "fat": "12.53",
+   "fdc_id": null,
+   "fiber": "5.42",
+   "id": "137f6250-64aa-5339-a2d7-baa92e0ea192",
+   "is_canonical": true,
+   "kcal": "254.81",
+   "key": "semolina upma suji rava upma",
+   "kind": "supersede",
+   "name": "Semolina upma (Suji/Rava upma)",
+   "normalized_name": "semolina upma suji rava upma",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "5.52",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "reviewed:053:recalc_v1:upma_rava",
+   "variant": "upma_rava_labfat"
+  },
+  {
+   "carbs": "35.05",
+   "created_by_null": true,
+   "derivation": null,
+   "derivation_id": null,
+   "external_id": "BFP044",
+   "fat": "14.14",
+   "fdc_id": null,
+   "fiber": "3.72",
+   "id": "14a2b0ba-2195-4b11-85d4-569ef1d06408",
+   "is_canonical": null,
+   "kcal": "294.53",
+   "key": "poha",
+   "kind": "supersede",
+   "name": "Poha",
+   "normalized_name": "poha",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.09",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass",
+   "variant": "poha_home_labfat"
+  },
+  {
+   "carbs": "12.96",
+   "created_by_null": true,
+   "derivation": {
+    "calc_version": "recalc_v1",
+    "carbs": "12.96",
+    "confidence": "B",
+    "fat": "5.56",
+    "fiber": "3.01",
+    "kcal": "115.46",
+    "protein": "1.89",
+    "variant_key": "sabzi_aloo"
+   },
+   "derivation_id": "5521eb41-30c2-57cf-93d8-6ecbc91cfec7",
+   "external_id": "BFP239@recalc_v1",
+   "fat": "5.56",
+   "fdc_id": null,
+   "fiber": "3.01",
+   "id": "1abbe3e2-6f5c-50ac-81b7-f79909d6c43a",
+   "is_canonical": true,
+   "kcal": "115.46",
+   "key": "potato curry aloo ki sabzi",
+   "kind": "source",
+   "name": "Potato curry (Aloo ki sabzi)",
+   "normalized_name": "potato curry aloo ki sabzi",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "1.89",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "reviewed:053:recalc_v1:sabzi_aloo",
+   "variant": "sabzi_aloo_key"
+  },
+  {
+   "carbs": "7.96",
+   "created_by_null": true,
+   "derivation": null,
+   "derivation_id": null,
+   "external_id": "OSR139",
+   "fat": "3.06",
+   "fdc_id": null,
+   "fiber": "2.27",
+   "id": "6afbebf2-7c87-49ae-b9cc-32d74bc214ed",
+   "is_canonical": null,
+   "kcal": "74.04",
+   "key": "dal makhani",
+   "kind": "supersede",
+   "name": "Dal makhani",
+   "normalized_name": "dal makhani",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "3.32",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass",
+   "variant": "dal_makhani_home"
+  },
+  {
+   "carbs": "7.15",
+   "created_by_null": true,
+   "derivation": {
+    "calc_version": "recalc_v1",
+    "carbs": "7.15",
+    "confidence": "B",
+    "fat": "2.52",
+    "fiber": "2.54",
+    "kcal": "66.76",
+    "protein": "2.60",
+    "variant_key": "curry_rajma"
+   },
+   "derivation_id": "9c26c3ed-4db4-5082-af65-7c8d5e12c890",
+   "external_id": "ASC165@recalc_v1",
+   "fat": "2.52",
+   "fdc_id": null,
+   "fiber": "2.54",
+   "id": "7653a3be-6680-578e-a90f-7dadf4b9898c",
+   "is_canonical": true,
+   "kcal": "66.76",
+   "key": "kidney bean curry rajmah curry",
+   "kind": "source",
+   "name": "Kidney bean curry (Rajmah curry)",
+   "normalized_name": "kidney bean curry rajmah curry",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 katori",
+     "gramWeight": 150
+    },
+    {
+     "description": "1 bowl (1 cup)",
+     "gramWeight": 240
+    }
+   ],
+   "protein": "2.60",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "reviewed:053:recalc_v1:curry_rajma",
+   "variant": "rajma_key"
+  },
+  {
+   "carbs": "13.55",
+   "created_by_null": true,
+   "derivation": null,
+   "derivation_id": null,
+   "external_id": null,
+   "fat": "2.38",
+   "fdc_id": "2706538",
+   "fiber": "1.1",
+   "id": "a6958211-43b7-446c-a785-262846a37ae0",
+   "is_canonical": null,
+   "kcal": "104",
+   "key": "biryani",
+   "kind": "supersede",
+   "name": "biryani",
+   "normalized_name": "biryani",
+   "parked_normalized_name": null,
+   "portions": [
+    {
+     "description": "1 cup",
+     "gramWeight": 196
+    }
+   ],
+   "protein": "7.15",
+   "source": "usda",
+   "status": "verified",
+   "status_reason": "rules_v1_pass",
+   "variant": "biryani_chicken_home"
+  },
+  {
+   "carbs": "5.49",
+   "created_by_null": true,
+   "derivation": {
+    "calc_version": "recalc_v1",
+    "carbs": "5.49",
+    "confidence": "B",
+    "fat": "11.30",
+    "fiber": "4.35",
+    "kcal": "141.28",
+    "protein": "2.23",
+    "variant_key": "sabzi_bhindi"
+   },
+   "derivation_id": "b0d42a6e-baec-5189-b54a-1999e765ab39",
+   "external_id": "BFP269@recalc_v1",
+   "fat": "11.30",
+   "fdc_id": null,
+   "fiber": "4.35",
+   "id": "cd15763a-7373-54fe-860c-ba3d2e8c4c1c",
+   "is_canonical": true,
+   "kcal": "141.28",
+   "key": "okra lady s fingers fry bhindi sabzi sabji subji",
+   "kind": "source",
+   "name": "Okra/Lady's fingers fry (Bhindi sabzi/sabji/subji)",
+   "normalized_name": "okra lady s fingers fry bhindi sabzi sabji subji",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "2.23",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "reviewed:053:recalc_v1:sabzi_bhindi",
+   "variant": "sabzi_bhindi_key"
+  },
+  {
+   "carbs": "9.94",
+   "created_by_null": true,
+   "derivation": null,
+   "derivation_id": null,
+   "external_id": "BFP122",
+   "fat": "8.72",
+   "fdc_id": null,
+   "fiber": "1.71",
+   "id": "d1146229-34b7-46ab-a28f-42cb826d1157",
+   "is_canonical": null,
+   "kcal": "146.77",
+   "key": "pizza",
+   "kind": "supersede",
+   "name": "Pizza",
+   "normalized_name": "pizza",
+   "parked_normalized_name": null,
+   "portions": null,
+   "protein": "6.85",
+   "source": "indb",
+   "status": "verified",
+   "status_reason": "rules_v1_pass",
+   "variant": "pizza_cheese_sr173292"
+  }
+ ],
+ "taken_at": "2026-11-15T15:21:22Z",
+ "usage_by_row": {
+  "14a2b0ba-2195-4b11-85d4-569ef1d06408": {
+   "entries": 3,
+   "users": 2
+  },
+  "d1146229-34b7-46ab-a28f-42cb826d1157": {
+   "entries": 2,
+   "users": 2
+  }
+ },
+ "verified_count": 1631,
+ "verified_keyless": 0
+}

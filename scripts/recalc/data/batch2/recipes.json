@@ -1,0 +1,159 @@
+{
+ "_note": "Batch-2 (recalc_v2, migration 058) recipes: an INDB recipe rebuilt line by line by the 053 engine (indb.py / method.parts, pinned INDB commit), then the founder-approved edits below. Every edit is applied by scripts/recalc/batch2.py, which also SOLVES the oil lines from their stated rule, so no gram here is tuned by hand except the ones written as numbers (the soak water and the biryani water line, both documented); a water line can also be SOLVED down to an external anchor's measured water (dal makhani: the pot simmers down, so the line may only lose water). Moisture: 'target' + 'lab:<id>' = the 053 anchor rule (Wc = dry matter / (1 - lab water)), allowed only for an INDB recipe in an anchor-only cooking class; 'keep' = every listed gram stays (Wc = W), so a dish that must reach a measured moisture carries an explicit, documented K505 water line instead (the engine has no target moisture for STEADY recipes, by design: spec section (a)). External studies are anchors here (anchors.json), never rows of lab.csv, which feeds calibrate. Spec .claude/plans/v1.2-recalc-053-spec.md section (i); audit docs/testing/dish-row-audit-2026-11-13.md (adversarial review values).",
+ "STEADY:upma_rava_labfat_v1": {
+  "name": "Rava upma, INDB BFP039 with the oil set to the Pune lab upma's fat share of dry matter",
+  "decided": "founder 2026-11-13, spec section (i) decision 2 (oil rule: lab-measured fat where a matching lab dish exists)",
+  "base": "INDB:BFP039",
+  "cooking_class": "grain_dish_dry",
+  "edits": [
+   {
+    "op": "set_g",
+    "i": 13,
+    "code": "T508",
+    "rule": {
+     "fat_share_of_dry_matter": {
+      "lab": "101"
+     }
+    },
+    "label": "Oil, sunflower: cut from INDB's 15 g per 40 g rava so the dish's fat is 12.5% of its dry matter, as measured in Pune lab dish 101 (rava upma, F 6.5 g at 48.0% water)"
+   }
+  ],
+  "moisture": {
+   "rule": "target",
+   "basis": "lab:101"
+  },
+  "checks": {
+   "fat_share_of_dry_matter": {
+    "lab": "101",
+    "tol_pct_points": 0.05
+   }
+  },
+  "cross_checks": [
+   {
+    "anchor": "nin_upma_cup",
+    "grain_code": "A022"
+   }
+  ]
+ },
+ "STEADY:poha_home_labfat_v1": {
+  "name": "Kanda/batata poha, INDB BFP044 with its soak water and the oil set to the Pune lab poha's fat share of dry matter",
+  "decided": "founder 2026-11-13, spec section (i) decision 2",
+  "base": "INDB:BFP044",
+  "cooking_class": "grain_dish_dry",
+  "edits": [
+   {
+    "op": "add",
+    "code": "K505",
+    "g": 60,
+    "label": "Water absorbed on rinsing/soaking the flakes: INDB BFP045's own line, 60 ml per 40 g poha (BFP044 lists none, so its 294.5 kcal is a dry raw mix)"
+   },
+   {
+    "op": "set_g",
+    "i": 11,
+    "code": "T508",
+    "rule": {
+     "fat_share_of_dry_matter": {
+      "lab": "99"
+     }
+    },
+    "label": "Oil, sunflower: cut from INDB's 10 g per 40 g poha so the dish's fat is the Pune kanda pohe's share of dry matter (lab 99: F 9.1 g at 22.3% water = 11.7%). The rule pins the dish's TOTAL fat, not its oil: BFP044's 10 g peanut (not in the lab dish, which has coconut instead) carries 58% of that fat, so the oil left over is likely leaner than the lab cook's"
+   }
+  ],
+  "moisture": {
+   "rule": "keep",
+   "basis": "keep:all listed water stays (BFP045's soak water line); lab 99's 22.3% water is drier than the unsoaked raw mix, so it is not used as a moisture anchor"
+  },
+  "checks": {
+   "fat_share_of_dry_matter": {
+    "lab": "99",
+    "tol_pct_points": 0.05
+   }
+  },
+  "cross_checks": [
+   {
+    "anchor": "nin_poha_cup",
+    "grain_code": "A011"
+   }
+  ]
+ },
+ "STEADY:chicken_biryani_home_v1": {
+  "name": "Home chicken biryani, INDB ASC122 with chicken in place of mutton and its rice-cooking water",
+  "decided": "founder 2026-11-13, spec section (i) decision 3",
+  "base": "INDB:ASC122",
+  "cooking_class": "grain_dish_dry",
+  "edits": [
+   {
+    "op": "replace",
+    "i": 12,
+    "code": "O064",
+    "with": [
+     {
+      "code": "N003",
+      "g": 50,
+      "label": "Chicken, breast, skinless (IFCT 2017 N003), half of INDB's 100 g boneless mutton"
+     },
+     {
+      "code": "N002",
+      "g": 50,
+      "label": "Chicken, thigh, skinless (IFCT 2017 N002), the other half"
+     }
+    ],
+    "label": "Boneless mutton 100 g (INDB O064) replaced by chicken: chicken is the default biryani (founder 2026-11-13)"
+   },
+   {
+    "op": "add",
+    "code": "K505",
+    "g": 75.0,
+    "label": "Rice-cooking water retained in the dish, set so it matches the measured 65.0% water of Khan et al. 2019's home chicken biryani (INDB ASC122 lists no cooking water)"
+   }
+  ],
+  "moisture": {
+   "rule": "keep",
+   "basis": "keep:explicit K505 water line set to the external anchor khan2019_chicken_biryani (65.0% water)"
+  },
+  "checks": {
+   "water_pct": {
+    "anchor": "khan2019_chicken_biryani",
+    "tol_pct_points": 0.05
+   }
+  }
+ },
+ "STEADY:dal_makhani_home_v1": {
+  "name": "Dal makhani, home style: INDB OSR139 as coded (its oil as written), simmered down to the measured water of a UK home urad dal",
+  "decided": "founder 2026-11-15, spec section (i) decision 6 (OSR139 as coded, recipe oil as written, water anchored to CoFID 12-468; its two coding errors are NOT fixed)",
+  "base": "INDB:OSR139",
+  "cooking_class": "legume_curry",
+  "edits": [
+   {
+    "op": "set_g",
+    "i": 19,
+    "code": "K505",
+    "rule": {
+     "water_pct": {
+      "anchor": "cofid_12_468_urad_dahl"
+     }
+    },
+    "label": "Water: INDB's 4 cups (960 g) go into the pot as written; this line is the water still in the dish once it has simmered down, solved so the dish has the 74.7% water CoFID 12-468 measured in UK home urad dal (Leeds, 5 homes). The rest evaporates. No other line changes: the 84.3% dal class rule is not applied (it would thin the dish further, to 68.5 kcal)"
+   }
+  ],
+  "moisture": {
+   "rule": "keep",
+   "basis": "keep:the water line is simmered down to the external anchor cofid_12_468_urad_dahl (74.7% water)"
+  },
+  "checks": {
+   "water_pct": {
+    "anchor": "cofid_12_468_urad_dahl",
+    "tol_pct_points": 0.05
+   }
+  },
+  "cross_checks": [
+   {
+    "anchor": "nin_dhal_half_cup",
+    "grain_codes": [
+     "B003",
+     "B020"
+    ]
+   }
+  ]
+ }
+}

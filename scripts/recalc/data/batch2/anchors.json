@@ -1,0 +1,47 @@
+{
+ "_note": "External evidence batch 2 checks against. Kept OUT of data/lab.csv on purpose: lab.csv feeds calibrate, the params fit and the frozen split, and adding a row there would move 053's fitted parameters (spec section (a); audit review). Each anchor is used for exactly what its 'use' says.",
+ "khan2019_chicken_biryani": {
+  "citation": "Khan I, Yasmeen F, Ahmad J et al. Progress in Nutrition 2019;21(2):421-429, doi:10.23751/pn.v21i2.6928, Table 2",
+  "dish": "Chicken biryani, home recipe (Peshawar; five housewives' recipes averaged and cooked in a lab kitchen; proximate analysis in duplicate, wet basis)",
+  "water_g": 65.0,
+  "energy_kcal": 160.22,
+  "protein_g": 6.43,
+  "fat_g": 5.23,
+  "cho_by_difference_g": 21.85,
+  "ash_g": 1.49,
+  "use": "moisture target of STEADY:chicken_biryani_home_v1 (its K505 water line); energy reported as a cross-check on the lab convention 4P + 9F + 4(CHO + fibre)"
+ },
+ "nin_poha_cup": {
+  "citation": "NIN Dietary Guidelines for Indians 2011, Annexure 8 and the sample meal plans ('Cereals 50 g -> Poha 1 cup', 'Poha 1 cup 270 kcal')",
+  "kcal": 270,
+  "dry_grain_g": 50,
+  "cup_ml": 200,
+  "use": "cross-check only: the batch-2 poha's energy per 50 g of dry flakes against NIN's 270 kcal (reported, not gated: it fixes energy per gram of grain, not moisture)"
+ },
+ "nin_upma_cup": {
+  "citation": "NIN Dietary Guidelines for Indians 2011, Annexure 8 and the sample meal plans ('Cereals 50 g -> Upma 1 cup', 'Upma 1 cup 270 kcal')",
+  "kcal": 270,
+  "dry_grain_g": 50,
+  "cup_ml": 200,
+  "use": "cross-check only: the batch-2 upma's energy per 50 g of dry rava against NIN's 270 kcal (reported, not gated)"
+ },
+ "cofid_12_468_urad_dahl": {
+  "citation": "McCance and Widdowson's Composition of Foods Integrated Dataset (CoFID, 2021 release), food 12-468 'Urad dahl, homemade' (University of Leeds analytical survey of South Asian home dishes, 2007)",
+  "dish": "Black lentil (urad) curry, homemade (UK South Asian households; 5 home samples, lab proximate analysis)",
+  "water_g": 74.7,
+  "energy_kcal": 81,
+  "protein_g": 4.8,
+  "fat_g": 3.2,
+  "carbs_avl_g": 8.7,
+  "fibre_aoac_g": 2.7,
+  "energy_comparable": false,
+  "use": "moisture only: the water OSR139's water line is simmered down to (STEADY:dal_makhani_home_v1). It is a plain urad dal with no butter or cream, so its energy and fat are reported for reference and never compared with dal makhani (founder 2026-11-15, spec section (i) decision 6; docs/testing/dal-makhani-research-2026-11-14.md)"
+ },
+ "nin_dhal_half_cup": {
+  "citation": "NIN Dietary Guidelines for Indians 2011, Annexure 8 and the sample meal plans ('Pulses 20 g -> Dhal 1/2 cup', 'Plain dhal 1/2 cup 100 kcal'; a NIN cup is 200 ml)",
+  "kcal": 100,
+  "dry_grain_g": 20,
+  "cup_ml": 100,
+  "use": "cross-check only: the batch-2 dal makhani's energy per 20 g of dry pulse against NIN's plain dhal (reported, not gated; dal makhani carries butter and cream, so it should sit above a plain dhal)"
+ }
+}
