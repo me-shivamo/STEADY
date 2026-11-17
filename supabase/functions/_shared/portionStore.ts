@@ -10,17 +10,48 @@ import { UNITS, type Size, type Unit } from './portionText.ts'
 
 // ── Flag (same kill-switch pattern as RESOLVER_SEARCH) ────────────────────────
 // legacy (default; unset or misspelt) | shadow (log the table grams, serve legacy)
-// | eval_only (table for @steadyapp.internal accounts, proposed rows included) | table.
+// | eval_only (table for @steadyapp.internal accounts, proposed rows included unless
+// PORTION_EVAL_PROPOSED=off) | table.
 export type PortionMode = 'legacy' | 'shadow' | 'eval_only' | 'table'
 export const portionModeFromEnv = (v: string | undefined): PortionMode =>
   v === 'shadow' || v === 'eval_only' || v === 'table' ? v : 'legacy'
 
+// PORTION_EVAL_PROPOSED secret (v1.2 follow-up WP0): on (default; unset or misspelt) | off. It narrows
+// eval_only and nothing else: under PORTION_MODE=eval_only the eval account gets table mode WITH the
+// 'proposed' rows when on (today's behaviour) and WITHOUT them when off, i.e. the portion behaviour table
+// mode would serve everyone (the eval account's other eval_only secrets, such as RESOLVER_SEARCH, still
+// apply to it). Gate B's held-out leg measures that table, never table+proposed (fixer (m)1, founder F3),
+// so it runs with off. Real users, and legacy / shadow / table mode, are never affected.
+// Exact match like the other flags: only the lowercase word 'off' turns it off.
+export type PortionEvalProposed = 'on' | 'off'
+export const portionEvalProposedFromEnv = (v: string | undefined): PortionEvalProposed => (v === 'off' ? 'off' : 'on')
+
+// Read inside effectivePortion so both endpoints pick the flag up with no call-site edit: Deno.env on the
+// edge, process.env under jest and tsx. Any failure reads as unset (= on, today's behaviour).
+function envFlag(name: string): string | undefined {
+  const g = globalThis as { Deno?: { env?: { get?(k: string): string | undefined } }; process?: { env?: Record<string, string | undefined> } }
+  try { return g.Deno?.env?.get?.(name) ?? g.process?.env?.[name] } catch { return undefined }
+}
+
+// A value that is set but is neither 'on' nor 'off' (e.g. 'OFF') reads as on, which would silently put the
+// proposed rows back into a Gate B leg. It is logged, so the function logs show the typo; behaviour is unchanged.
+function evalProposedFromRuntime(): PortionEvalProposed {
+  const v = envFlag('PORTION_EVAL_PROPOSED')
+  if (v !== undefined && v !== '' && v !== 'on' && v !== 'off') {
+    console.warn('[portions] PORTION_EVAL_PROPOSED is set but is neither "on" nor "off": read as on (eval_only serves proposed rows)')
+  }
+  return portionEvalProposedFromEnv(v)
+}
+
 export interface EffectivePortion { mode: 'legacy' | 'shadow' | 'table'; proposed: boolean }
 export const LEGACY_PORTION: EffectivePortion = Object.freeze({ mode: 'legacy', proposed: false }) as EffectivePortion
-export function effectivePortion(m: PortionMode, email?: string | null): EffectivePortion {
+export function effectivePortion(
+  m: PortionMode, email?: string | null,
+  evalProposed: PortionEvalProposed = evalProposedFromRuntime(),
+): EffectivePortion {
   if (m === 'table') return { mode: 'table', proposed: false }
   if (m === 'shadow') return { mode: 'shadow', proposed: false }
-  if (m === 'eval_only' && !!email && email.toLowerCase().endsWith('@steadyapp.internal')) return { mode: 'table', proposed: true }
+  if (m === 'eval_only' && !!email && email.toLowerCase().endsWith('@steadyapp.internal')) return { mode: 'table', proposed: evalProposed !== 'off' }
   return { mode: 'legacy', proposed: false }
 }
 
