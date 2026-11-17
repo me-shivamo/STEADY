@@ -1867,3 +1867,8 @@ When two tests share a resource, here the same API key and the same rate limits,
 *2026-11-17 · Tool*
 
 Before pushing 058 we re-ran its snapshot query on live to make sure nothing had drifted. A naive comparison said every field differed, because the raw query output is wrapped differently from the stored snapshot. Running it through the generator's own ingest step and letting git show the diff revealed the truth: only the timestamp had changed. For STEADY the rule is to compare like with like, using the same tool that produced the reference, before declaring drift or no drift.
+
+### A failing gate is a result, not a setback
+*2026-11-17 · Pattern*
+
+A gate is a test written down before the result is known, with a rule that decides go or no-go: here, "the new engine must be at least as accurate as today on meals we never tuned on". When it fails, it has done its job by catching a regression before users saw it. For STEADY the portion engine logged about 20% low on held-out meals. Shipping it on faith would have quietly under-counted every gainer's day.

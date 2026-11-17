@@ -102,6 +102,14 @@ test says otherwise.
 
 ## 5. Results log (newest first)
 
+### 2026-11-17 · Gate B: portion engine (table) vs legacy — FAIL
+
+Held-out, back to back (legacy → engine → engine → legacy), eval account only, fts, proposed rows off, after 058: calories in band 81.7% / 69.9% / 66.7% / 81.7%; median error 18.6% / 29.7% / 31.4% / 23.0%; lean −7.6% / −20.2% / −22.7% / −7.4%. The engine under-counts by about 20%; table mode stays off. Dev leg was partly invalidated by network errors (re-run for diagnosis). Full record: `docs/testing/gate-b-2026-11-17.md`.
+
+### 2026-11-17 · Intent gate on the V2 parse prompt (pre-table gate)
+
+`npx tsx scripts/eval/intent-check.mts --prompt=v2 openai/gpt-4o-mini`: **85/85** (log 60/60, coach 25/25), 0 dishes split into parts. V2 is the prompt `PORTION_MODE=table` / `eval_only` serves; this was its first run and a required gate before table mode (follow-up plan review #9). Run on the eval key, alone on the key. Output saved with the Gate B run files.
+
 ### 2026-11-13 · ChatGPT model bake-off
 
 **Question:** is a newer ChatGPT model a better balance of accuracy, speed and cost than
