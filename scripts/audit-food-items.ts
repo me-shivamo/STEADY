@@ -351,10 +351,11 @@ async function runCheck(items: ItemRow[], memory: MemoryRow[]): Promise<boolean>
 
   if (SINCE) {
     const t0 = Date.parse(SINCE)
-    // Rows a reviewed migration created on purpose are not "new rows" in this sense: migration 053 inserts
+    // Rows a reviewed migration created on purpose are not "new rows" in this sense: migrations 053 and 058 insert
     // verified, ownerless, keyed reference rows (recalculated Indian dishes, status_reason
-    // 'reviewed:053:recalc_v1:<variant>'; after its down script they stay, quarantined, as
-    // 'reviewed:rollback_053'), which is exactly what the checks below forbid the resolver to create.
+    // 'reviewed:053:recalc_v1:<variant>' / 'reviewed:058:recalc_v2:<variant>'; after their down scripts they stay,
+    // quarantined, as 'reviewed:rollback_053' / 'reviewed:rollback_058'), which is exactly what the checks below
+    // forbid the resolver to create.
     // The exemption is keyed on public.food_derivation_items, not on status_reason: 050's guard keeps the API
     // roles off the status columns on UPDATE, but an API-role INSERT of an unverified or quarantined row keeps
     // the status_reason it supplies, so a prefix alone could be forged. food_derivation_items is written by
@@ -362,11 +363,11 @@ async function runCheck(items: ItemRow[], memory: MemoryRow[]): Promise<boolean>
     // 053 the table does not exist and nothing is exempt. Every invariant above still covers these rows.
     const derived = await derivedItemIds()
     const reviewed = (r: ItemRow) => derived.has(r.id) && r.created_by === null &&
-      /^reviewed:(053:|rollback_053$)/.test(r.status_reason ?? '')
+      /^reviewed:(05[38]:|rollback_05[38]$)/.test(r.status_reason ?? '')
     const created = items.filter((r) => r.created_at && Date.parse(r.created_at) > t0)
     const fresh = created.filter((r) => !reviewed(r))
     const exempt = created.length - fresh.length
-    if (exempt) console.log(`Since ${SINCE}: ${exempt} row(s) created by migration 053 (in food_derivation_items), exempt from the new-row checks.`)
+    if (exempt) console.log(`Since ${SINCE}: ${exempt} row(s) created by migration 053 or 058 (in food_derivation_items), exempt from the new-row checks.`)
     const ownerless = fresh.filter((r) => r.created_by === null)
     if (ownerless.length) fail(`${ownerless.length} row(s) created since ${SINCE} have no owner`, ownerless.map((r) => `${id8(r.id)} ${r.name}`))
     const keyed = fresh.filter((r) => r.normalized_name !== null)

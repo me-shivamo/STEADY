@@ -10,9 +10,9 @@
 --   npx supabase db query --linked -o csv -f scripts/eval/search-check.sql > /tmp/g2.csv && cmp /tmp/g1.csv /tmp/g2.csv
 -- Plus timing: EXPLAIN (ANALYZE) SELECT * FROM public.search_foods('paneer butter masala', 5);   -- <= 20 ms
 --
--- PASS (with all of 052's founder defaults seeded, and 053's):
---   alias  13/13  the curated phrase returns its alias row first, match_kind 'alias'
---   top1   >= 19/21  the expected verified row is ranked first (2 misses allowed, as the judge set it)
+-- PASS (with all of 052's founder defaults seeded, 053's and 058's):
+--   alias  11/11  the curated phrase returns its alias row first, match_kind 'alias'
+--   top1   >= 21/23  the expected verified row is ranked first (2 misses allowed, as the judge set it)
 --   top5   6/6   the expected row is somewhere in the top 5 (what the matcher sees)
 --   known  reported only: a right row EXISTS but search does not offer it; pass shows whether it is in the
 --          top 5 (f until the fix lands). None left: 053 made masala chai a gated alias case (founder
@@ -44,12 +44,21 @@
 -- 053 kept chaas on its 052 row (founder default); 'rice' follows its 052 row 5f20d673 to that row's 053 copy
 -- (same numbers, the founder's 2026-11-13 rice portions: 053 changes no row in place); the roti family moved
 -- with its keys.
+-- 058 (batch 2) rewrote six lines the same way (scripts/recalc/batch2.py emit; its `check` diffs them, edit them through
+-- scripts/recalc/data/batch2/targets.csv): 'rajma' and 'upma' moved from alias to top1 (their 052 aliases retired; exact
+-- keys on 058 rows now), 'aloo ki sabzi' expects its 058 key row, 'upma rava' expects the 'rava upma' key row (same
+-- numbers as every 058 upma row), and 'daal makhani' / 'dal makhni' expect their own 058 key rows (founder (i)6:
+-- spelling copies of the dal makhani row that supersedes 6afbebf2). So this version passes only WITH 058 applied
+-- (fresh local copy of live, 2026-11-15: alias 11/11, top1 23/23, top5 6/6 with 058, byte-identical on two runs;
+-- before 058 the same file scores top1 17/23). The PASS counts above are generated from this block. The down
+-- script is SQL and cannot touch this file: when 058's down script is run, revert these lines (git history) in
+-- the same change.
 WITH cases(q, want, rule) AS (VALUES
   ('curd',                 '50d9a39a-bd2c-4f55-a78e-0416f7a4d63f'::uuid, 'alias'),
   ('phulka',               'f1cf4b91-0c2c-58d6-8e16-0849b57c59d3'::uuid, 'top1'),
   ('chaas',                '29c65def-14f9-424e-b9e8-fa04bb2f78fd'::uuid, 'alias'),
-  ('upma',                 '137f6250-64aa-5339-a2d7-baa92e0ea192'::uuid, 'alias'),
-  ('rajma',                '7653a3be-6680-578e-a90f-7dadf4b9898c'::uuid, 'alias'),
+  ('upma',                 'a0eafa15-9bea-5d42-ba63-995131082070'::uuid, 'top1'),
+  ('rajma',                '55aeaebc-8d37-59ff-912f-ecc954265c29'::uuid, 'top1'),
   ('almonds',              'a1f3ed09-8be4-4cb9-9431-e70715a9f90b'::uuid, 'alias'),
   ('maggie noodles',       '6c3c915d-8147-4642-b381-805477205024'::uuid, 'alias'),
   ('coconut chutney',      '9ca15288-e06a-4ef4-9a93-772bd439d2a6'::uuid, 'alias'),
@@ -64,12 +73,12 @@ WITH cases(q, want, rule) AS (VALUES
   ('curd rice',            '1796a1e7-1c74-4782-a729-838eddb264f4'::uuid, 'top1'),
   ('dahi chawal',          '1796a1e7-1c74-4782-a729-838eddb264f4'::uuid, 'top1'),
   ('paneer butter masala', '717f6316-613d-415e-93dc-260add7d8480'::uuid, 'top1'),
-  ('daal makhani',         '6afbebf2-7c87-49ae-b9cc-32d74bc214ed'::uuid, 'top1'),
-  ('dal makhni',           '6afbebf2-7c87-49ae-b9cc-32d74bc214ed'::uuid, 'top1'),
+  ('daal makhani',         '230235ee-1314-59d3-9f03-a932b410c7b4'::uuid, 'top1'),
+  ('dal makhni',           'dbb9f02b-6bd7-5ceb-8493-cacefd01a66f'::uuid, 'top1'),
   ('bhindi subji',         'cd15763a-7373-54fe-860c-ba3d2e8c4c1c'::uuid, 'top1'),
-  ('aloo ki sabzi',        '1abbe3e2-6f5c-50ac-81b7-f79909d6c43a'::uuid, 'top1'),
+  ('aloo ki sabzi',        'f524a46c-f4e1-54d5-ab3f-dccffabb8382'::uuid, 'top1'),
   ('mattar paneer',        'b95d5b62-eb98-4990-bf09-9956d7df5ff2'::uuid, 'top1'),
-  ('upma rava',            '137f6250-64aa-5339-a2d7-baa92e0ea192'::uuid, 'top1'),
+  ('upma rava',            '7c58cf36-ff31-53a3-b945-c36f1073179b'::uuid, 'top1'),
   ('sabudana khichri',     '37fce53a-f292-5ff9-b889-15c6f8ce2b9f'::uuid, 'top1'),
   ('panir tikka',          '1807172a-318f-420c-a731-df230d4c8123'::uuid, 'top1'),
   ('oatmeal',              'fbc428a0-a978-4059-bcf3-76eb58080d90'::uuid, 'top1'),

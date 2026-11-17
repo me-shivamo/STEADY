@@ -23,3 +23,24 @@ Then `git mv` them (keep their numbers), regenerate to confirm (`npx tsx scripts
 run `psql -f scripts/usda/check_056_determinism.sql` against it.
 
 Rollback scripts stay in `supabase/rollback/` (057 down, then 056 down, then 055 down).
+
+## If 058 (Indian dishes, batch 2) is live first
+
+`supabase/migrations/058_recalc_indian_v2.sql` is numbered after these files on purpose: they keep their numbers
+(054's committed rollback and generator key on 055's status_reason `rules_v1 import:055 …`, so 055 cannot be
+renumbered). 058 and 055 can go live in either order, and 058's down script works with 055 live: 058 checks keys only
+on its own rows and that the number of key-less verified rows is unchanged, so 055's 11,986 key-less rows never block
+it, and 055's run-once precondition (no key-less verified row before it) still holds when 058 goes first. (Before the
+2026-11-15 review fix, 058 checked every verified row: it could not apply after 055, nor be rolled back or re-applied
+with 055 live.) A migrations-only replay with 055-057 in migrations/ also passes 058: it decides replay vs production
+from its own rows and 053's backup marker, not from a row count. Checked with the real CLI on local copies of live
+(2026-11-15; test record in `docs/reviews/058-recalc-indian-v2.md`). Two consequences remain:
+
+1. **`--include-all`.** Once 058 is in the remote history, a plain `supabase db push` refuses 055-057 ("Found local
+   migration files to be inserted before the last migration on remote database"). Push them with
+   `supabase db push --include-all` (dry run first: `--include-all --dry-run` lists exactly 055, 056, 057).
+2. **Regenerate 055/056 first.** 058 quarantines the only verified row with FDC 2706538 (the FNDDS biryani it
+   supersedes). 056's `_need056` lists that fdc_id, so 056 as generated stops with "only 96 of the 97 live verified
+   fdc_ids it keys have a verified row" (safely, before any change; re-checked 2026-11-15 after the fix: 055 applied,
+   then 056 stopped exactly so). Re-take `scripts/usda/data/verified_fdc_snapshot.csv` after 058 and regenerate
+   (`npx tsx scripts/import-usda.ts`, then `--check`) before moving the files.
